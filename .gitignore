@@ -1,0 +1,11 @@
+bin/
+target/
+*.class
+*.jar
+*.exe
+
+.metadata/
+.settings/
+
+.DS_Store
+Thumbs.db
