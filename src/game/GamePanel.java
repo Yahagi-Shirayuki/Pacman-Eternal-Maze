@@ -1,5 +1,6 @@
 package game;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Random;
 import java.io.File;
 import java.io.IOException;
@@ -56,15 +57,20 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     final int carriedGhostSpawnInterval = framesPerSecond;
     final int ghostSpawnWarningTime = framesPerSecond;
     final int fruitScoreInterval = 10000;
-    final int powerUpDropSmallDots = 200;
+    final int maxFruitsPerLevel = 5;
+    final int powerUpDropSmallDots = 50;
     int powerUpDuration = framesPerSecond * 5; // power timer
-    final int spikeTrapCount = 5;
+    final int spikeTrapCount = 20;
+    final int ghostDeathFrameTime = 8;
+    final double ghostEyesSpeed = 4.0;
 
     BufferedImage[] pacSprites = new BufferedImage[5];
     BufferedImage[] ghostSprites = new BufferedImage[6];
+    BufferedImage ghostDeathSprite;
+    BufferedImage ghostEyesSprite;
     BufferedImage[] outSprites = new BufferedImage[4];
     BufferedImage[] fruitSprites = new BufferedImage[4];
-    BufferedImage[] powerUpSprites = new BufferedImage[4];
+    BufferedImage[] powerUpSprites = new BufferedImage[5];
     BufferedImage[] spikeSprites = new BufferedImage[2];
     BufferedImage[] warnSprites = new BufferedImage[2];
     BufferedImage dotSmall;
@@ -129,6 +135,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     int level = 1;
     int roomInitialScore = 0;
     int nextFruitScore = fruitScoreInterval;
+    int fruitsSpawnedThisLevel = 0;
     int elapsedFrames = 0;
     int powerModeTimer = 0;
     int ghostSpawnTimer = 0;
@@ -138,8 +145,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     int carriedGhostSpawnTimer = 0;
     int warningPortalX = -1;
     int smallDotsTowardPowerUp = 0;
-    int activePowerUpType = -1;
-    int activePowerUpTimer = 0;
+    int[] powerUpTimers = new int[5];
     int[] collectedFruits = new int[4];
     // Larger value = slower death animation.
     final int deathFrameDelay = 8;
@@ -149,6 +155,8 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     ArrayList<Fruit> fruits = new ArrayList<>();
     ArrayList<PowerUp> powerUps = new ArrayList<>();
     ArrayList<SpikeTrap> spikeTraps = new ArrayList<>();
+    ArrayList<GhostDeathEffect> ghostDeathEffects = new ArrayList<>();
+    Camera camera = new Camera();
 
     Thread gameThread;
 
@@ -184,6 +192,8 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 if (gameStarted && !playerDead) {
                     updateGhosts();
                 }
+
+                updateGhostDeathEffects();
 
                 if (!playerDead) {
                     checkGhostCollision();
@@ -231,17 +241,22 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             return;
         }
 
-        drawOuterWall(g2);
-        drawMaze(g2);
-        drawGrid(g2);
-        drawDots(g2);
-        drawFruits(g2);
-        drawPowerUps(g2);
-        drawSpikeTraps(g2);
-        drawExitMarkers(g2);
-        drawSpawnWarning(g2);
-        drawGhosts(g2);
-        drawPlayer(g2);
+        updateCamera();
+
+        Graphics2D boardGraphics = (Graphics2D) g2.create();
+        boardGraphics.setClip(0, hudHeight, getWidth(), getViewportBoardHeight());
+        drawOuterWall(boardGraphics);
+        drawMaze(boardGraphics);
+        drawDots(boardGraphics);
+        drawFruits(boardGraphics);
+        drawPowerUps(boardGraphics);
+        drawSpikeTraps(boardGraphics);
+        drawExitMarkers(boardGraphics);
+        drawSpawnWarning(boardGraphics);
+        drawGhosts(boardGraphics);
+        drawGhostDeathEffects(boardGraphics);
+        drawPlayer(boardGraphics);
+        boardGraphics.dispose();
         drawOverScreen(g2);
         drawPauseScreen(g2);
         drawHud(g2);
@@ -255,17 +270,17 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
         // Vertical lines
         for (int col = 0; col <= maxScreenCol; col++) {
-            int x = col * tileSize;
-            g2.drawLine(x, hudHeight, x, hudHeight + boardHeight);
+            int x = worldToScreenX(col * tileSize);
+            g2.drawLine(x, hudHeight, x, hudHeight + getViewportBoardHeight());
         }
 
         // Horizontal lines
         for (int row = 0; row <= maxScreenRow; row++) {
-            int y = hudHeight + row * tileSize;
-            g2.drawLine(0, y, screenWidth, y);
+            int y = worldBoundaryToScreenY(row * tileSize);
+            g2.drawLine(0, y, getWidth(), y);
         }
     }
-    
+
     //draw wall
     public void drawOuterWall(Graphics2D g2) {
         g2.setColor(Color.RED.darker().darker().darker());
@@ -291,17 +306,43 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     
     //draw tiles
     public void drawTile(Graphics2D g2, int x, int y) {
-        int screenX = x * tileSize;
-        int screenY = hudHeight + (maxScreenRow - 1 - y) * tileSize;
+        int screenX = worldToScreenX(x * tileSize);
+        int screenY = worldToScreenY(y * tileSize);
 
         g2.fillRect(screenX, screenY, tileSize, tileSize);
     }
 
     public void drawImageAtTile(Graphics2D g2, BufferedImage image, int x, int y) {
-        int screenX = x * tileSize;
-        int screenY = hudHeight + (maxScreenRow - 1 - y) * tileSize;
+        int screenX = worldToScreenX(x * tileSize);
+        int screenY = worldToScreenY(y * tileSize);
 
         g2.drawImage(image, screenX, screenY, tileSize, tileSize, null);
+    }
+
+    public void updateCamera() {
+        camera.update(
+                playerPixelX + tileSize / 2.0,
+                playerPixelY + tileSize / 2.0,
+                screenWidth,
+                boardHeight,
+                Math.max(tileSize, getWidth()),
+                getViewportBoardHeight());
+    }
+
+    public int getViewportBoardHeight() {
+        return Math.max(tileSize, getHeight() - hudHeight);
+    }
+
+    public int worldToScreenX(double worldX) {
+        return (int) Math.round(worldX - camera.viewX);
+    }
+
+    public int worldToScreenY(double worldY) {
+        return hudHeight + (int) Math.round(getViewportBoardHeight() - tileSize - (worldY - camera.viewY));
+    }
+
+    public int worldBoundaryToScreenY(double worldY) {
+        return hudHeight + (int) Math.round(getViewportBoardHeight() - (worldY - camera.viewY));
     }
     
     //maze gen algo
@@ -493,6 +534,8 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             ghostSprites[3] = ImageIO.read(new File("res/sprite/ghost_3.png"));
             ghostSprites[4] = ImageIO.read(new File("res/sprite/ghost_4.png"));
             ghostSprites[5] = ImageIO.read(new File("res/sprite/ghost_5.png"));
+            ghostDeathSprite = loadOptionalSprite("res/sprite/ghost_7.png", ghostSprites[4]);
+            ghostEyesSprite = loadOptionalSprite("res/sprite/eyes.png", ghostDeathSprite);
             outSprites[0] = ImageIO.read(new File("res/sprite/out_0.png"));
             outSprites[1] = ImageIO.read(new File("res/sprite/out_1.png"));
             outSprites[2] = ImageIO.read(new File("res/sprite/out_2.png"));
@@ -509,6 +552,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             powerUpSprites[1] = ImageIO.read(new File("res/sprite/pow_1.png"));
             powerUpSprites[2] = ImageIO.read(new File("res/sprite/pow_2.png"));
             powerUpSprites[3] = ImageIO.read(new File("res/sprite/pow_3.png"));
+            powerUpSprites[4] = ImageIO.read(new File("res/sprite/pow_4.png"));
             spikeSprites[0] = ImageIO.read(new File("res/sprite/spike_0.png"));
             spikeSprites[1] = ImageIO.read(new File("res/sprite/spike_1.png"));
             overScreen = ImageIO.read(new File("res/sprite/overscreen.png"));
@@ -596,6 +640,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         level = 1;
         roomInitialScore = 0;
         nextFruitScore = fruitScoreInterval;
+        fruitsSpawnedThisLevel = 0;
         elapsedFrames = 0;
         powerModeTimer = 0;
         ghostSpawnTimer = 0;
@@ -605,8 +650,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         carriedGhostSpawnTimer = 0;
         warningPortalX = -1;
         smallDotsTowardPowerUp = 0;
-        activePowerUpType = -1;
-        activePowerUpTimer = 0;
+        Arrays.fill(powerUpTimers, 0);
         collectedFruits = new int[4];
         finalScoreHandled = false;
         pendingFinalScore = 0;
@@ -633,6 +677,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         fruits.clear();
         powerUps.clear();
         spikeTraps.clear();
+        ghostDeathEffects.clear();
         spawnGhosts();
         eatDotAtPlayer();
     }
@@ -651,6 +696,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
     public void addGhostAtTile(int ghostType, int tileX, int tileY) {
         Ghost ghost = new Ghost(ghostType, tileX, tileY, tileSize);
+        ghost.speedOffset = getRandomGhostSpeedOffset();
         setRandomGhostDirection(ghost);
         ghosts.add(ghost);
     }
@@ -671,6 +717,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         int directionX = fromLeft ? 1 : -1;
         Ghost ghost = new Ghost(random.nextInt(4), tileX, tunnelY, tileSize);
 
+        ghost.speedOffset = getRandomGhostSpeedOffset();
         ghost.directionX = directionX;
         ghost.directionY = 0;
         ghost.targetPixelX = (tileX + directionX) * tileSize;
@@ -757,7 +804,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         }
 
         elapsedFrames++;
-        updateActivePowerUp();
+        updatePowerUpTimers();
         updateSpikeTraps();
 
         if (!boardClear) {
@@ -787,16 +834,11 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         }
     }
 
-    public void updateActivePowerUp() {
-        if (activePowerUpType == -1) {
-            return;
-        }
-
-        activePowerUpTimer--;
-
-        if (activePowerUpTimer <= 0) {
-            activePowerUpType = -1;
-            activePowerUpTimer = 0;
+    public void updatePowerUpTimers() {
+        for (int i = 0; i < powerUpTimers.length; i++) {
+            if (powerUpTimers[i] > 0) {
+                powerUpTimers[i]--;
+            }
         }
     }
 
@@ -886,11 +928,16 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     }
 
     public double getPlayerSpeed() {
-        return activePowerUpType == 2 ? playerSpeed + 1.0 : playerSpeed;
+        return isPowerUpActive(2) ? playerSpeed + 1.0 : playerSpeed;
     }
 
-    public double getGhostSpeed() {
-        return activePowerUpType == 2 ? ghostSpeed * 0.35 : ghostSpeed;
+    public double getRandomGhostSpeedOffset() {
+        return random.nextDouble() - 0.5;
+    }
+
+    public double getGhostSpeed(Ghost ghost) {
+        double adjustedSpeed = Math.max(0.1, ghostSpeed + ghost.speedOffset);
+        return isPowerUpActive(2) ? adjustedSpeed * 0.35 : adjustedSpeed;
     }
 
     public boolean canMove(int x, int y) {
@@ -935,11 +982,11 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         applyFruitBonuses();
         roomInitialScore = score;
         nextFruitScore = fruitScoreInterval;
+        fruitsSpawnedThisLevel = 0;
         collectedFruits = new int[4];
         boardClear = false;
         powerMode = false;
-        activePowerUpType = -1;
-        activePowerUpTimer = 0;
+        Arrays.fill(powerUpTimers, 0);
         powerModeTimer = 0;
         ghostEatScore = 200;
         ghostSpawnTimer = 0;
@@ -955,6 +1002,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         fruits.clear();
         powerUps.clear();
         spikeTraps.clear();
+        ghostDeathEffects.clear();
         ghosts.clear();
 
         if (enteredFromLeft) {
@@ -1001,7 +1049,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         eatFruitAtPlayer(tileX, tileY);
         eatPowerUpAtPlayer(tileX, tileY);
 
-        if (activePowerUpType == 0) {
+        if (isPowerUpActive(0)) {
             collectMagnetPellets(tileX, tileY);
         }
 
@@ -1030,11 +1078,11 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     }
 
     public int getSmallDotScore() {
-        return activePowerUpType == 3 ? 5 : 1;
+        return isPowerUpActive(3) ? 5 : 1;
     }
 
     public int getBigDotScore() {
-        return activePowerUpType == 3 ? 50 : 10;
+        return isPowerUpActive(3) ? 50 : 10;
     }
 
     public void checkPowerUpDrop() {
@@ -1077,12 +1125,18 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
     public void updateFruitSpawns() {
         while (score - roomInitialScore >= nextFruitScore) {
-            spawnFruit();
+            if (fruitsSpawnedThisLevel < maxFruitsPerLevel) {
+                spawnFruit();
+            }
             nextFruitScore += fruitScoreInterval;
         }
     }
 
     public void spawnFruit() {
+        if (fruitsSpawnedThisLevel >= maxFruitsPerLevel) {
+            return;
+        }
+
         ArrayList<int[]> spawnTiles = new ArrayList<>();
 
         for (int x = 1; x < maxScreenCol - 1; x++) {
@@ -1100,6 +1154,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
         int[] tile = spawnTiles.get(random.nextInt(spawnTiles.size()));
         fruits.add(new Fruit(random.nextInt(fruitSprites.length), tile[0], tile[1]));
+        fruitsSpawnedThisLevel++;
     }
 
     public boolean hasFruitAt(int tileX, int tileY) {
@@ -1165,15 +1220,20 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     }
 
     public void activatePowerUp(int powerUpType) {
-        activePowerUpType = powerUpType;
-        activePowerUpTimer += powerUpDuration;
+        if (powerUpType == 4) {
+            startPowerMode();
+            return;
+        }
+
+        powerUpTimers[powerUpType] += powerUpDuration;
 
         if (powerUpType == 1) {
-            placeSpikeTraps();
+            extendSpikeTraps(powerUpTimers[powerUpType]);
+            placeSpikeTraps(powerUpTimers[powerUpType]);
         }
     }
 
-    public void placeSpikeTraps() {
+    public void placeSpikeTraps(int timer) {
         for (int i = 0; i < spikeTrapCount; i++) {
             ArrayList<int[]> trapTiles = new ArrayList<>();
 
@@ -1191,8 +1251,18 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             }
 
             int[] tile = trapTiles.get(random.nextInt(trapTiles.size()));
-            spikeTraps.add(new SpikeTrap(tile[0], tile[1], powerUpDuration));
+            spikeTraps.add(new SpikeTrap(tile[0], tile[1], timer));
         }
+    }
+
+    public void extendSpikeTraps(int timer) {
+        for (SpikeTrap spikeTrap : spikeTraps) {
+            spikeTrap.timer = Math.max(spikeTrap.timer, timer);
+        }
+    }
+
+    public boolean isPowerUpActive(int powerUpType) {
+        return powerUpType >= 0 && powerUpType < powerUpTimers.length && powerUpTimers[powerUpType] > 0;
     }
 
     public boolean hasSpikeAt(int tileX, int tileY) {
@@ -1237,7 +1307,8 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             if (Math.abs(playerPixelX - ghost.pixelX) < tileSize && Math.abs(playerPixelY - ghost.pixelY) < tileSize) {
                 if (powerMode) {
                     addScore(getGhostEatScore());
-                    ghostEatScore *= 2;
+                    ghostEatScore = Math.min(1600, ghostEatScore * 2);
+                    spawnGhostDeathEffect(ghost);
                     ghosts.remove(i);
                     continue;
                 }
@@ -1262,7 +1333,78 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     }
 
     public int getGhostEatScore() {
-        return activePowerUpType == 3 ? ghostEatScore * 5 : ghostEatScore;
+        return isPowerUpActive(3) ? ghostEatScore * 5 : ghostEatScore;
+    }
+
+    public void spawnGhostDeathEffect(Ghost ghost) {
+        int startX = clampInt((int) Math.round(ghost.pixelX / tileSize), 0, maxScreenCol - 1);
+        int startY = clampInt((int) Math.round(ghost.pixelY / tileSize), 0, maxScreenRow - 1);
+        ArrayList<int[]> path = getShortestEyesPathToPortal(startX, startY);
+
+        ghostDeathEffects.add(new GhostDeathEffect(
+                ghost.pixelX,
+                ghost.pixelY,
+                path,
+                ghostDeathFrameTime));
+    }
+
+    public ArrayList<int[]> getShortestEyesPathToPortal(int startX, int startY) {
+        ArrayList<int[]> leftPath = findAStarPath(startX, startY, 0, tunnelY);
+        ArrayList<int[]> rightPath = findAStarPath(startX, startY, maxScreenCol - 1, tunnelY);
+
+        if (startX == 0 && startY == tunnelY) {
+            return leftPath;
+        }
+        if (startX == maxScreenCol - 1 && startY == tunnelY) {
+            return rightPath;
+        }
+        if (leftPath.isEmpty()) {
+            return rightPath;
+        }
+        if (rightPath.isEmpty()) {
+            return leftPath;
+        }
+
+        return leftPath.size() <= rightPath.size() ? leftPath : rightPath;
+    }
+
+    public void updateGhostDeathEffects() {
+        for (int i = ghostDeathEffects.size() - 1; i >= 0; i--) {
+            GhostDeathEffect effect = ghostDeathEffects.get(i);
+
+            if (effect.deathFrameTimer > 0) {
+                effect.deathFrameTimer--;
+                continue;
+            }
+
+            if (moveGhostEyesTowardPortal(effect)) {
+                ghostDeathEffects.remove(i);
+            }
+        }
+    }
+
+    public boolean moveGhostEyesTowardPortal(GhostDeathEffect effect) {
+        if (effect.pixelX == effect.targetPixelX && effect.pixelY == effect.targetPixelY) {
+            if (effect.path.isEmpty()) {
+                return true;
+            }
+
+            int[] nextTile = effect.path.remove(0);
+            effect.targetPixelX = nextTile[0] * tileSize;
+            effect.targetPixelY = nextTile[1] * tileSize;
+        }
+
+        double dx = effect.targetPixelX - effect.pixelX;
+        double dy = effect.targetPixelY - effect.pixelY;
+        double distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance <= ghostEyesSpeed) {
+            return true;
+        }
+
+        effect.pixelX += dx / distance * ghostEyesSpeed;
+        effect.pixelY += dy / distance * ghostEyesSpeed;
+        return false;
     }
 
     public void updateDeathAnimation() {
@@ -1345,6 +1487,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             updateGhost(ghost);
 
             if (checkSpikeTrapCollision(ghost)) {
+                spawnGhostDeathEffect(ghost);
                 ghosts.remove(i);
             }
         }
@@ -1441,11 +1584,34 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     }
 
     public int[] chooseRandomWallBounceDirection(Ghost ghost, int tileX, int tileY) {
-        if (canMove(tileX + ghost.directionX, tileY + ghost.directionY)) {
-            return new int[] { ghost.directionX, ghost.directionY };
+        if (ghost.directionX == 0 && ghost.directionY == 0) {
+            return getRandomValidDirection(tileX, tileY);
         }
 
-        return getRandomValidDirection(tileX, tileY);
+        int[][] forwardChoices = {
+            { ghost.directionX, ghost.directionY },
+            { ghost.directionY, -ghost.directionX },
+            { -ghost.directionY, ghost.directionX }
+        };
+
+        ArrayList<int[]> validForwardChoices = new ArrayList<>();
+
+        for (int[] direction : forwardChoices) {
+            if (canMove(tileX + direction[0], tileY + direction[1])) {
+                validForwardChoices.add(direction);
+            }
+        }
+
+        if (!validForwardChoices.isEmpty()) {
+            return validForwardChoices.get(random.nextInt(validForwardChoices.size()));
+        }
+
+        int[] reverse = { -ghost.directionX, -ghost.directionY };
+        if (canMove(tileX + reverse[0], tileY + reverse[1])) {
+            return reverse;
+        }
+
+        return null;
     }
 
     public int[] chooseTurnDirection(Ghost ghost, int tileX, int tileY, boolean turnRight) {
@@ -1539,8 +1705,9 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
 	// Moves a ghost toward its target tile.
     public void moveGhostTowardTarget(Ghost ghost) {
-        ghost.pixelX = moveValueToward(ghost.pixelX, ghost.targetPixelX, getGhostSpeed());
-        ghost.pixelY = moveValueToward(ghost.pixelY, ghost.targetPixelY, getGhostSpeed());
+        double speed = getGhostSpeed(ghost);
+        ghost.pixelX = moveValueToward(ghost.pixelX, ghost.targetPixelX, speed);
+        ghost.pixelY = moveValueToward(ghost.pixelY, ghost.targetPixelY, speed);
 
         if (!isGhostMoving(ghost)) {
             handleGhostPortalWrap(ghost);
@@ -1552,7 +1719,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         int tileY = (int) (ghost.pixelY / tileSize);
 
         for (SpikeTrap spikeTrap : spikeTraps) {
-            if (!spikeTrap.used && spikeTrap.tileX == tileX && spikeTrap.tileY == tileY) {
+            if (spikeTrap.tileX == tileX && spikeTrap.tileY == tileY) {
                 spikeTrap.used = true;
                 addScore(200);
                 return true;
@@ -1742,10 +1909,10 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         BufferedImage sprite = outSprites[(elapsedFrames / animationDelay) % outSprites.length];
         int leftX = tileSize;
         int rightX = (maxScreenCol - 2) * tileSize;
-        int screenY = hudHeight + (maxScreenRow - 1 - tunnelY) * tileSize;
+        int screenY = worldToScreenY(tunnelY * tileSize);
 
-        g2.drawImage(sprite, leftX + tileSize, screenY, -tileSize, tileSize, null);
-        g2.drawImage(sprite, rightX, screenY, tileSize, tileSize, null);
+        g2.drawImage(sprite, worldToScreenX(leftX) + tileSize, screenY, -tileSize, tileSize, null);
+        g2.drawImage(sprite, worldToScreenX(rightX), screenY, tileSize, tileSize, null);
     }
 
     public void drawSpawnWarning(Graphics2D g2) {
@@ -1754,8 +1921,8 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         }
 
         BufferedImage sprite = warnSprites[(elapsedFrames / animationDelay) % warnSprites.length];
-        int screenX = warningPortalX * tileSize;
-        int screenY = hudHeight + (maxScreenRow - 1 - tunnelY) * tileSize;
+        int screenX = worldToScreenX(warningPortalX * tileSize);
+        int screenY = worldToScreenY(tunnelY * tileSize);
 
         if (warningPortalX == maxScreenCol - 1) {
             g2.drawImage(sprite, screenX + tileSize, screenY, -tileSize, tileSize, null);
@@ -1772,8 +1939,8 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         BufferedImage sprite = playerDead
                 ? pacSprites[deathFrame]
                 : pacSprites[(animationCounter / animationDelay) % 2];
-        int screenX = (int) Math.round(playerPixelX);
-        int screenY = (int) Math.round(screenHeight - tileSize - playerPixelY);
+        int screenX = worldToScreenX(playerPixelX);
+        int screenY = worldToScreenY(playerPixelY);
         double angle = getPlayerAngle();
 
         Graphics2D playerGraphics = (Graphics2D) g2.create();
@@ -1797,13 +1964,13 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
     public void drawOverScreen(Graphics2D g2) {
         if (deathAnimationDone) {
-            g2.drawImage(overScreen, 0, 0, screenWidth, screenHeight, null);
+            g2.drawImage(overScreen, 0, 0, getWidth(), getHeight(), null);
         }
     }
 
     public void drawPauseScreen(Graphics2D g2) {
         if (paused) {
-            g2.drawImage(pauseScreen, 0, 0, screenWidth, screenHeight, null);
+            g2.drawImage(pauseScreen, 0, 0, getWidth(), getHeight(), null);
 
             if (quitConfirmVisible) {
                 drawQuitConfirm(g2);
@@ -1836,30 +2003,21 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
     public void drawHud(Graphics2D g2) {
         g2.setColor(Color.BLACK);
-        g2.fillRect(0, 0, screenWidth, hudHeight);
+        g2.fillRect(0, 0, getWidth(), hudHeight);
 
         g2.setColor(Color.WHITE);
         g2.setFont(new Font("Arial", Font.BOLD, 16));
         g2.drawString("SCORE " + score, 12, 20);
-        g2.drawString("LEVEL " + level, screenWidth / 2 - 38, 20);
-        g2.drawString("TIME " + getElapsedTimeText(), screenWidth - 115, 20);
+        g2.drawString("LEVEL " + level, getWidth() / 2 - 38, 20);
+        g2.drawString("TIME " + getElapsedTimeText(), getWidth() - 115, 20);
 
         if (boardClear) {
             g2.setColor(Color.YELLOW);
-            g2.drawString("BOARD CLEAR", screenWidth / 2 - 58, 42);
+            g2.drawString("BOARD CLEAR", getWidth() / 2 - 58, 42);
             return;
         }
 
-        if (powerMode) {
-            g2.setColor(Color.CYAN);
-            g2.drawString("POWER " + ((powerModeTimer + framesPerSecond - 1) / framesPerSecond), 12, 42);
-        }
-
-        if (activePowerUpType != -1) {
-            g2.setColor(Color.GREEN);
-            g2.drawString(getPowerUpName(activePowerUpType) + " " + ((activePowerUpTimer + framesPerSecond - 1) / framesPerSecond),
-                    screenWidth / 2 - 52, 42);
-        }
+        drawActiveEffectTimers(g2);
     }
 
     public void drawMenu(Graphics2D g2) {
@@ -2011,7 +2169,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         screenWidth = tileSize * maxScreenCol;
         boardHeight = tileSize * maxScreenRow;
         screenHeight = boardHeight + hudHeight;
-        setPreferredSize(new Dimension(screenWidth, screenHeight));
+        setPreferredSize(new Dimension(tileSize * 25, tileSize * 31 + hudHeight));
         revalidate();
 
         Window window = SwingUtilities.getWindowAncestor(this);
@@ -2123,8 +2281,11 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         if (powerUpType == 2) {
             return "SPEED";
         }
+        if (powerUpType == 3) {
+            return "MULTI";
+        }
 
-        return "MULTI";
+        return "POWER";
     }
 
     public String getElapsedTimeText() {
@@ -2135,16 +2296,58 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         return String.format("%02d:%02d", minutes, seconds);
     }
 
+    public void drawActiveEffectTimers(Graphics2D g2) {
+        int x = 12;
+        int y = 42;
+
+        if (powerMode) {
+            g2.setColor(Color.CYAN);
+            String text = "POWER " + getTimerSeconds(powerModeTimer);
+            g2.drawString(text, x, y);
+            x += g2.getFontMetrics().stringWidth(text) + 18;
+        }
+
+        g2.setColor(Color.GREEN);
+
+        for (int i = 0; i < powerUpTimers.length; i++) {
+            if (i == 4 || powerUpTimers[i] <= 0) {
+                continue;
+            }
+
+            String text = getPowerUpName(i) + " " + getTimerSeconds(powerUpTimers[i]);
+            g2.drawString(text, x, y);
+            x += g2.getFontMetrics().stringWidth(text) + 18;
+
+            if (x > getWidth() - 90) {
+                return;
+            }
+        }
+    }
+
+    public int getTimerSeconds(int timer) {
+        return (timer + framesPerSecond - 1) / framesPerSecond;
+    }
+
     public void drawGhosts(Graphics2D g2) {
         for (Ghost ghost : ghosts) {
             drawGhost(g2, ghost);
         }
     }
 
+    public void drawGhostDeathEffects(Graphics2D g2) {
+        for (GhostDeathEffect effect : ghostDeathEffects) {
+            BufferedImage sprite = effect.isShowingDeathFrame() ? ghostDeathSprite : ghostEyesSprite;
+            int screenX = worldToScreenX(effect.pixelX);
+            int screenY = worldToScreenY(effect.pixelY);
+
+            g2.drawImage(sprite, screenX, screenY, tileSize, tileSize, null);
+        }
+    }
+
     public void drawGhost(Graphics2D g2, Ghost ghost) {
         BufferedImage sprite = getGhostSprite(ghost);
-        int screenX = (int) Math.round(ghost.pixelX);
-        int screenY = (int) Math.round(screenHeight - tileSize - ghost.pixelY);
+        int screenX = worldToScreenX(ghost.pixelX);
+        int screenY = worldToScreenY(ghost.pixelY);
         boolean flipped = (ghostAnimationCounter / animationDelay) % 2 == 1;
 
         if (flipped) {

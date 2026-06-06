@@ -13,6 +13,7 @@ public class Ghost {
     int directionY;
     int goalX;
     int goalY;
+    double speedOffset;
     int preferredTurnCount = 0;
     ArrayList<int[]> path = new ArrayList<>();
 
