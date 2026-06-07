@@ -15,6 +15,12 @@ public class Ghost {
     int goalY;
     double speedOffset;
     int preferredTurnCount = 0;
+    int chargeTimer = 0;
+    int warningTimer = 0;
+    int restTimer = 0;
+    int pelletsCollected = 0;
+    boolean laserActive = false;
+    boolean speedDashActive = false;
     ArrayList<int[]> path = new ArrayList<>();
 
     Ghost(int type, int tileX, int tileY, int tileSize) {
