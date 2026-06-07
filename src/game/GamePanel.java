@@ -43,6 +43,8 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     boolean[][] dots;
     boolean[][] bigDots;
     boolean[][] burnedWalls;
+    int[][] blockTextureIndexes;
+    int[][] wallTextureIndexes;
     Random random = new Random();
 
     int tunnelY = maxScreenRow / 2;
@@ -80,10 +82,26 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     final int ghostSpeedRecoverTime = framesPerSecond * 2; // ghost_11 pause after it dashes into a wall.
     final int ghostLaserChargeTime = framesPerSecond * 5; // ghost_9 still charge time before it starts warning.
     final int ghostLaserWarningTime = framesPerSecond * 2; // ghost_9 flashing warning time before it fires.
+    final int ghostLaserFireTime = framesPerSecond * 5; // ghost_9 active laser duration before it recharges.
+    final int ghostBombFuseTime = framesPerSecond; // ghost_8 stops this long before exploding.
+    final int ghostBombTriggerRadiusTiles = 1; // 1 tile around ghost = 3x3 danger zone.
+    final double ghostBombStartSpeed = 0.5;
+    final double ghostBombSpeedGainPerSecond = 0.1;
+    final double ghostBombMaxSpeedOverPlayer = 0.5;
     final int ghostSpikeTrapCount = 10;
     final int decalAshType = 0;
     final int decalBloodType = 1;
     final int laserWidth = 4;
+    final int blockTextureFileCount = 7;
+    final int wallTextureFileCount = 7;
+    final double specialGhostBaseChance = 0.10;
+    final double specialGhostChancePerLevel = 0.02;
+    final double specialGhostChanceCap = 0.50;
+    final int minGhostSpawnInterval = framesPerSecond * 2;
+    final double speedIncreasePerLevel = 0.2;
+    final double maxPlayerSpeed = 10.0;
+    final double maxGhostSpeed = 9.0;
+    final int maxSmallDotScore = 10;
 
     BufferedImage[] pacSprites = new BufferedImage[5];
     BufferedImage[] pacBombSprites = new BufferedImage[2];
@@ -103,6 +121,10 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     BufferedImage[] spikeSprites = new BufferedImage[2];
     BufferedImage[] decalSprites = new BufferedImage[2];
     BufferedImage[] warnSprites = new BufferedImage[2];
+    BufferedImage[] blockTextureSprites = new BufferedImage[blockTextureFileCount];
+    int blockTextureCount = 0;
+    BufferedImage[] wallTextureSprites = new BufferedImage[wallTextureFileCount];
+    int wallTextureCount = 0;
     BufferedImage dotSmall;
     BufferedImage dotBig;
     BufferedImage overScreen;
@@ -175,7 +197,6 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     double bombExplosionMaxX = 0;
     double bombExplosionMaxY = 0;
     int ghostEatScore = 200;
-    int pendingCarriedGhosts = 0;
     int boardGhostDelayTimer = 0;
     int carriedGhostSpawnTimer = 0;
     int warningPortalX = -1;
@@ -187,6 +208,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     boolean boardClear = false;
 
     ArrayList<Ghost> ghosts = new ArrayList<>();
+    ArrayList<GhostTransferData> pendingCarriedGhosts = new ArrayList<>();
     ArrayList<Fruit> fruits = new ArrayList<>();
     ArrayList<PowerUp> powerUps = new ArrayList<>();
     ArrayList<SpikeTrap> spikeTraps = new ArrayList<>();
@@ -360,7 +382,26 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         }
 
         g2.fillRect(screenX, screenY, tileSize, tileSize);
+        drawWallTexture(g2, x, y, screenX, screenY);
         g2.setColor(originalColor);
+    }
+
+    public void drawWallTexture(Graphics2D g2, int tileX, int tileY, int screenX, int screenY) {
+        BufferedImage[] textureSprites = isOuterWallTile(tileX, tileY) ? wallTextureSprites : blockTextureSprites;
+        int textureCount = isOuterWallTile(tileX, tileY) ? wallTextureCount : blockTextureCount;
+        int[][] textureIndexes = isOuterWallTile(tileX, tileY) ? wallTextureIndexes : blockTextureIndexes;
+
+        if (textureCount <= 0 || textureIndexes == null) {
+            return;
+        }
+
+        int textureIndex = textureIndexes[tileX][tileY];
+
+        if (textureIndex < 0 || textureIndex >= textureCount) {
+            return;
+        }
+
+        g2.drawImage(textureSprites[textureIndex], screenX, screenY, tileSize, tileSize, null);
     }
 
     public void drawImageAtTile(Graphics2D g2, BufferedImage image, int x, int y) {
@@ -622,6 +663,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             spikeSprites[1] = ImageIO.read(new File("res/sprite/spike_1.png"));
             decalSprites[decalAshType] = ImageIO.read(new File("res/sprite/ash.png"));
             decalSprites[decalBloodType] = ImageIO.read(new File("res/sprite/blood.png"));
+            loadWallTextureSprites();
             overScreen = ImageIO.read(new File("res/sprite/overscreen.png"));
             pauseScreen = ImageIO.read(new File("res/sprite/pausescreen.png"));
             menuScreen = ImageIO.read(new File("res/sprite/menuscreen_0.png"));
@@ -629,6 +671,26 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         } catch (IOException e) {
             throw new RuntimeException("Could not load sprite images from res/sprite.", e);
         }
+    }
+
+    public void loadWallTextureSprites() throws IOException {
+        blockTextureCount = loadTextureSprites("block_", blockTextureSprites);
+        wallTextureCount = loadTextureSprites("wall_", wallTextureSprites);
+    }
+
+    public int loadTextureSprites(String prefix, BufferedImage[] sprites) throws IOException {
+        int textureCount = 0;
+
+        for (int i = 0; i < sprites.length; i++) {
+            File textureFile = new File("res/sprite/" + prefix + i + ".png");
+
+            if (textureFile.exists()) {
+                sprites[textureCount] = ImageIO.read(textureFile);
+                textureCount++;
+            }
+        }
+
+        return textureCount;
     }
 
     public void loadHighScores() {
@@ -713,7 +775,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         ghostSpawnTimer = 0;
         clearBombExplosionEffect();
         ghostEatScore = 200;
-        pendingCarriedGhosts = 0;
+        pendingCarriedGhosts.clear();
         boardGhostDelayTimer = 0;
         carriedGhostSpawnTimer = 0;
         warningPortalX = -1;
@@ -758,7 +820,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
         for (int i = 0; i < cornerSpawns.length; i++) {
             int[] spawnTile = findGhostSpawnTileNear(cornerSpawns[i][0], cornerSpawns[i][1]);
-            int ghostType = random.nextInt(4);
+            int ghostType = getNaturalSpawnGhostType();
 
             addGhostAtTile(ghostType, spawnTile[0], spawnTile[1]);
         }
@@ -776,6 +838,10 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     }
 
     public void spawnGhostThroughPortal(int tileX) {
+        spawnGhostThroughPortal(tileX, null);
+    }
+
+    public void spawnGhostThroughPortal(int tileX, GhostTransferData transferData) {
         boolean fromLeft = random.nextBoolean();
         if (tileX == 0) {
             fromLeft = true;
@@ -785,7 +851,8 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
         tileX = fromLeft ? 0 : maxScreenCol - 1;
         int directionX = fromLeft ? 1 : -1;
-        Ghost ghost = new Ghost(random.nextInt(4), tileX, tunnelY, tileSize);
+        int ghostType = transferData == null ? getNaturalSpawnGhostType() : transferData.type;
+        Ghost ghost = new Ghost(ghostType, tileX, tunnelY, tileSize);
 
         ghost.speedOffset = getRandomGhostSpeedOffset();
         ghost.directionX = directionX;
@@ -794,6 +861,38 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         ghost.targetPixelY = tunnelY * tileSize;
         ghosts.add(ghost);
         warningPortalX = -1;
+    }
+
+    public ArrayList<GhostTransferData> getGhostTransferData() {
+        ArrayList<GhostTransferData> transferData = new ArrayList<>();
+
+        for (Ghost ghost : ghosts) {
+            transferData.add(new GhostTransferData(ghost.type));
+        }
+
+        return transferData;
+    }
+
+    public int getNaturalSpawnGhostType() {
+        if (random.nextDouble() >= getSpecialGhostSpawnChance()) {
+            return random.nextInt(4);
+        }
+
+        int[] specialGhostTypes = {
+            ghostBombType,
+            ghostLaserType,
+            ghostBonusType,
+            ghostSpeedType,
+            ghostMagnetType
+        };
+
+        return specialGhostTypes[random.nextInt(specialGhostTypes.length)];
+    }
+
+    public double getSpecialGhostSpawnChance() {
+        return Math.min(
+                specialGhostChanceCap,
+                specialGhostBaseChance + Math.max(0, level - 1) * specialGhostChancePerLevel);
     }
 
     public int getWarningPortalX() {
@@ -882,16 +981,17 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         if (!boardClear) {
             updateBoardGhostSpawns();
 
-            if (boardGhostDelayTimer == 0 && pendingCarriedGhosts == 0) {
+            if (boardGhostDelayTimer == 0 && pendingCarriedGhosts.isEmpty()) {
                 ghostSpawnTimer++;
             }
 
-            if (boardGhostDelayTimer == 0 && pendingCarriedGhosts == 0
-                    && ghostSpawnTimer >= ghostSpawnInterval - ghostSpawnWarningTime) {
+            if (boardGhostDelayTimer == 0 && pendingCarriedGhosts.isEmpty()
+                    && ghostSpawnTimer >= getLevelGhostSpawnInterval() - ghostSpawnWarningTime) {
                 getWarningPortalX();
             }
 
-            if (boardGhostDelayTimer == 0 && pendingCarriedGhosts == 0 && ghostSpawnTimer >= ghostSpawnInterval) {
+            if (boardGhostDelayTimer == 0 && pendingCarriedGhosts.isEmpty()
+                    && ghostSpawnTimer >= getLevelGhostSpawnInterval()) {
                 ghostSpawnTimer = 0;
                 spawnGhostThroughPortal(warningPortalX);
             }
@@ -963,7 +1063,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             return;
         }
 
-        if (pendingCarriedGhosts <= 0) {
+        if (pendingCarriedGhosts.isEmpty()) {
             return;
         }
 
@@ -975,13 +1075,18 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
         if (carriedGhostSpawnTimer >= carriedGhostSpawnInterval) {
             carriedGhostSpawnTimer = 0;
-            pendingCarriedGhosts--;
-            spawnGhostThroughPortal(warningPortalX);
+            GhostTransferData transferData = pendingCarriedGhosts.remove(0);
+            spawnGhostThroughPortal(warningPortalX, transferData);
         }
     }
 
     public boolean isPlayerMoving() {
         return playerPixelX != targetPixelX || playerPixelY != targetPixelY;
+    }
+
+    public int getLevelGhostSpawnInterval() {
+        int completedTwoLevelSets = Math.max(0, level - 1) / 2;
+        return Math.max(minGhostSpawnInterval, ghostSpawnInterval - completedTwoLevelSets * framesPerSecond);
     }
 
     public void chooseNextTarget() {
@@ -1032,16 +1137,36 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     }
 
     public double getPlayerSpeed() {
-        return isPowerUpActive(2) ? playerSpeed + 1.0 : playerSpeed;
+        double adjustedSpeed = getLevelPlayerSpeed();
+
+        if (isPowerUpActive(2)) {
+            adjustedSpeed += 1.0;
+        }
+
+        return Math.min(maxPlayerSpeed, adjustedSpeed);
     }
 
     public double getRandomGhostSpeedOffset() {
         return random.nextDouble() - 0.5;
     }
 
+    public double getLevelPlayerSpeed() {
+        return Math.min(maxPlayerSpeed, playerSpeed + Math.max(0, level - 1) * speedIncreasePerLevel);
+    }
+
+    public double getLevelGhostSpeed() {
+        return Math.min(maxGhostSpeed, ghostSpeed + Math.max(0, level - 1) * speedIncreasePerLevel);
+    }
+
     public double getGhostSpeed(Ghost ghost) {
         if (ghost.type == ghostBombType) {
-            return 0.5;
+            if (ghost.fuseTimer > 0) {
+                return 0.0;
+            }
+
+            return Math.min(
+                    getPlayerSpeed() + ghostBombMaxSpeedOverPlayer,
+                    ghostBombStartSpeed + (ghost.speedRampTimer / (double) framesPerSecond) * ghostBombSpeedGainPerSecond);
         }
         if (ghost.type == ghostMagnetType) {
             return 1.0;
@@ -1050,11 +1175,11 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             return 0.0;
         }
         if (ghost.type == ghostSpeedType && ghost.speedDashActive) {
-            return playerSpeed + 1.5;
+            return getPlayerSpeed() + 1.5;
         }
 
-        double adjustedSpeed = Math.max(0.1, ghostSpeed + ghost.speedOffset);
-        return isPowerUpActive(2) ? adjustedSpeed * 0.35 : adjustedSpeed;
+        double adjustedSpeed = Math.min(maxGhostSpeed, Math.max(0.1, getLevelGhostSpeed() + ghost.speedOffset));
+        return isPowerUpActive(2) ? Math.max(0.1, adjustedSpeed * 0.35) : adjustedSpeed;
     }
 
     public boolean canMove(int x, int y) {
@@ -1092,7 +1217,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     }
 
     public void advanceToNextBoard(int exitTileX) {
-        int carriedGhostCount = ghosts.size();
+        ArrayList<GhostTransferData> carriedGhosts = getGhostTransferData();
         boolean enteredFromLeft = exitTileX == 0;
 
         level++;
@@ -1108,7 +1233,8 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         ghostEatScore = 200;
         ghostSpawnTimer = 0;
         clearBombExplosionEffect();
-        pendingCarriedGhosts = carriedGhostCount;
+        pendingCarriedGhosts.clear();
+        pendingCarriedGhosts.addAll(carriedGhosts);
         boardGhostDelayTimer = boardGhostDelay;
         carriedGhostSpawnTimer = 0;
         warningPortalX = -1;
@@ -1147,8 +1273,21 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
     public void resetBoardVisuals() {
         burnedWalls = new boolean[maxScreenCol][maxScreenRow];
+        randomizeWallTextures();
         visualDecals.clear();
         clearBombExplosionEffect();
+    }
+
+    public void randomizeWallTextures() {
+        blockTextureIndexes = new int[maxScreenCol][maxScreenRow];
+        wallTextureIndexes = new int[maxScreenCol][maxScreenRow];
+
+        for (int x = 0; x < maxScreenCol; x++) {
+            for (int y = 0; y < maxScreenRow; y++) {
+                blockTextureIndexes[x][y] = blockTextureCount > 0 ? random.nextInt(blockTextureCount) : -1;
+                wallTextureIndexes[x][y] = wallTextureCount > 0 ? random.nextInt(wallTextureCount) : -1;
+            }
+        }
     }
 
     public void applyFruitBonuses() {
@@ -1204,11 +1343,16 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     }
 
     public int getSmallDotScore() {
-        return isPowerUpActive(3) ? 5 : 1;
+        int score = getLevelSmallDotScore();
+        return isPowerUpActive(3) ? score * 5 : score;
     }
 
     public int getBigDotScore() {
         return isPowerUpActive(3) ? 50 : 10;
+    }
+
+    public int getLevelSmallDotScore() {
+        return Math.min(maxSmallDotScore, 1 + Math.max(0, level - 1) / 3);
     }
 
     public void checkPowerUpDrop() {
@@ -1226,9 +1370,16 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         for (int x = centerX - 2; x <= centerX + 2; x++) {
             for (int y = centerY - 2; y <= centerY + 2; y++) {
                 if (x > 0 && x < maxScreenCol - 1 && y > 0 && y < maxScreenRow - 1) {
-                    collectPelletAt(x, y, false);
+                    collectSmallPelletAt(x, y);
                 }
             }
+        }
+    }
+
+    public void collectSmallPelletAt(int tileX, int tileY) {
+        if (dots[tileX][tileY]) {
+            dots[tileX][tileY] = false;
+            addScore(getSmallDotScore());
         }
     }
 
@@ -1271,12 +1422,9 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             }
         }
 
-        if (bigDots[tileX][tileY]) {
+        if (!countForMagnetScore && bigDots[tileX][tileY]) {
             bigDots[tileX][tileY] = false;
             addScore(-10);
-            if (countForMagnetScore) {
-                ghost.pelletsCollected++;
-            }
         }
     }
 
@@ -1290,6 +1438,23 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         }
 
         return true;
+    }
+
+    public int getRemainingPelletCount() {
+        int count = 0;
+
+        for (int x = 1; x < maxScreenCol - 1; x++) {
+            for (int y = 1; y < maxScreenRow - 1; y++) {
+                if (dots[x][y]) {
+                    count++;
+                }
+                if (bigDots[x][y]) {
+                    count++;
+                }
+            }
+        }
+
+        return count;
     }
 
     public void addScore(int points) {
@@ -1412,7 +1577,6 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         if (powerUpType == 0) {
             transformGhost(ghost, ghostMagnetType);
         } else if (powerUpType == 1) {
-            transformGhost(ghost, ghostSpikeType);
             placeGhostSpikeTraps(powerUpDuration);
         } else if (powerUpType == 2) {
             transformGhost(ghost, ghostSpeedType);
@@ -1424,6 +1588,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             transformGhost(ghost, ghostLaserType);
             ghost.chargeTimer = ghostLaserChargeTime;
             ghost.warningTimer = ghostLaserWarningTime;
+            ghost.activeTimer = ghostLaserFireTime;
             ghost.laserActive = false;
         }
     }
@@ -1437,6 +1602,9 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         ghost.restTimer = 0;
         ghost.chargeTimer = 0;
         ghost.warningTimer = 0;
+        ghost.activeTimer = 0;
+        ghost.fuseTimer = 0;
+        ghost.speedRampTimer = 0;
         ghost.laserActive = type != ghostLaserType;
         ghost.pelletsCollected = 0;
     }
@@ -1572,7 +1740,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                     return;
                 }
 
-                if (ghost.type == ghostBombType || ghost.type == ghostLaserType) {
+                if (ghost.type == ghostLaserType) {
                     startDeathAnimation();
                     return;
                 }
@@ -1935,6 +2103,10 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 && (tileX == 0 || tileX == maxScreenCol - 1 || tileY == 0 || tileY == maxScreenRow - 1);
     }
 
+    public boolean isOuterWallTile(int tileX, int tileY) {
+        return tileX == 0 || tileX == maxScreenCol - 1 || tileY == 0 || tileY == maxScreenRow - 1;
+    }
+
     public boolean rectsIntersect(double minX1, double minY1, double maxX1, double maxY1,
             double minX2, double minY2, double maxX2, double maxY2) {
         return minX1 < maxX2
@@ -2130,8 +2302,12 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     }
 
     public boolean updateGhostSpecialState(Ghost ghost) {
-        if (ghost.type == ghostLaserType && !ghost.laserActive) {
-            updateChargingLaserGhost(ghost);
+        if (ghost.type == ghostBombType) {
+            return updateBombGhostState(ghost);
+        }
+
+        if (ghost.type == ghostLaserType) {
+            updateLaserGhostState(ghost);
             return true;
         }
 
@@ -2142,9 +2318,66 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         return false;
     }
 
-    public void updateChargingLaserGhost(Ghost ghost) {
+    public boolean updateBombGhostState(Ghost ghost) {
+        if (ghost.fuseTimer > 0) {
+            ghost.fuseTimer--;
+            ghost.targetPixelX = ghost.pixelX;
+            ghost.targetPixelY = ghost.pixelY;
+
+            if (ghost.fuseTimer <= 0) {
+                killBombGhostWithoutRespawn(ghost);
+            }
+
+            return true;
+        }
+
+        ghost.speedRampTimer++;
+
+        if (isPlayerInBombGhostTriggerZone(ghost)) {
+            ghost.fuseTimer = ghostBombFuseTime;
+            ghost.directionX = 0;
+            ghost.directionY = 0;
+            ghost.targetPixelX = ghost.pixelX;
+            ghost.targetPixelY = ghost.pixelY;
+            return true;
+        }
+
+        return false;
+    }
+
+    public boolean isPlayerInBombGhostTriggerZone(Ghost ghost) {
+        int ghostTileX = clampInt((int) ((ghost.pixelX + tileSize / 2.0) / tileSize), 0, maxScreenCol - 1);
+        int ghostTileY = clampInt((int) ((ghost.pixelY + tileSize / 2.0) / tileSize), 0, maxScreenRow - 1);
+
+        return Math.abs(getPlayerCenterTileX() - ghostTileX) <= ghostBombTriggerRadiusTiles
+                && Math.abs(getPlayerCenterTileY() - ghostTileY) <= ghostBombTriggerRadiusTiles;
+    }
+
+    public void killBombGhostWithoutRespawn(Ghost ghost) {
+        int index = ghosts.indexOf(ghost);
+
+        if (index == -1) {
+            return;
+        }
+
+        addVisualDecal(decalAshType, ghost.pixelX, ghost.pixelY);
+        ghosts.remove(index);
+        triggerGhostBombExplosion(ghost.pixelX + tileSize / 2.0, ghost.pixelY + tileSize / 2.0);
+    }
+
+    public void updateLaserGhostState(Ghost ghost) {
         ghost.targetPixelX = ghost.pixelX;
         ghost.targetPixelY = ghost.pixelY;
+
+        if (ghost.laserActive) {
+            ghost.activeTimer--;
+
+            if (ghost.activeTimer <= 0) {
+                resetLaserGhostCycle(ghost);
+            }
+
+            return;
+        }
 
         if (ghost.chargeTimer > 0) {
             ghost.chargeTimer--;
@@ -2157,6 +2390,14 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         }
 
         ghost.laserActive = true;
+        ghost.activeTimer = ghostLaserFireTime;
+    }
+
+    public void resetLaserGhostCycle(Ghost ghost) {
+        ghost.laserActive = false;
+        ghost.chargeTimer = ghostLaserChargeTime;
+        ghost.warningTimer = ghostLaserWarningTime;
+        ghost.activeTimer = ghostLaserFireTime;
     }
 
     public boolean updateSpeedGhostState(Ghost ghost) {
@@ -2887,7 +3128,14 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             return;
         }
 
+        drawBoardStats(g2);
         drawActiveEffectTimers(g2);
+    }
+
+    public void drawBoardStats(Graphics2D g2) {
+        g2.setColor(Color.WHITE);
+        g2.drawString("PELLETS " + getRemainingPelletCount(), 12, 42);
+        g2.drawString("GHOSTS " + ghosts.size(), 122, 42);
     }
 
     public void drawMenu(Graphics2D g2) {
@@ -3173,7 +3421,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     }
 
     public void drawActiveEffectTimers(Graphics2D g2) {
-        int x = 12;
+        int x = 220;
         int y = 42;
 
         if (powerMode) {
@@ -3237,6 +3485,10 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
     public BufferedImage getGhostSprite(Ghost ghost) {
         if (ghost.type == ghostBombType) {
+            if (ghost.fuseTimer > 0 && (ghostAnimationCounter / animationDelay) % 2 == 1) {
+                return ghostSprites[5];
+            }
+
             return ghostBombSprite;
         }
         if (ghost.type == ghostLaserType) {

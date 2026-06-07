@@ -17,6 +17,9 @@ public class Ghost {
     int preferredTurnCount = 0;
     int chargeTimer = 0;
     int warningTimer = 0;
+    int activeTimer = 0;
+    int fuseTimer = 0;
+    int speedRampTimer = 0;
     int restTimer = 0;
     int pelletsCollected = 0;
     boolean laserActive = false;
