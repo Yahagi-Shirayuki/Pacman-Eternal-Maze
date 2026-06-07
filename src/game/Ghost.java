@@ -20,6 +20,10 @@ public class Ghost {
     int activeTimer = 0;
     int fuseTimer = 0;
     int speedRampTimer = 0;
+    int lastFireTileX = -1;
+    int lastFireTileY = -1;
+    int laserDirectionX = 1;
+    int laserDirectionY = 0;
     int restTimer = 0;
     int pelletsCollected = 0;
     boolean laserActive = false;
