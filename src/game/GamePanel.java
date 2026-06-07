@@ -77,7 +77,9 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     final int ghostSpikeType = 13;
     final int bombRadiusTiles = 3;
     final int bombExplosionFrameTime = 18;
-    final int ghostLaserWarningTime = framesPerSecond * 2;
+    final int ghostSpeedRecoverTime = framesPerSecond * 2; // ghost_11 pause after it dashes into a wall.
+    final int ghostLaserChargeTime = framesPerSecond * 5; // ghost_9 still charge time before it starts warning.
+    final int ghostLaserWarningTime = framesPerSecond * 2; // ghost_9 flashing warning time before it fires.
     final int ghostSpikeTrapCount = 10;
     final int decalAshType = 0;
     final int decalBloodType = 1;
@@ -1420,7 +1422,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             transformGhost(ghost, ghostBombType);
         } else if (powerUpType == powerLaserType) {
             transformGhost(ghost, ghostLaserType);
-            ghost.chargeTimer = powerUpDuration;
+            ghost.chargeTimer = ghostLaserChargeTime;
             ghost.warningTimer = ghostLaserWarningTime;
             ghost.laserActive = false;
         }
@@ -1567,6 +1569,11 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             if (Math.abs(playerPixelX - ghost.pixelX) < tileSize && Math.abs(playerPixelY - ghost.pixelY) < tileSize) {
                 if (isPowerUpActive(powerBombType)) {
                     triggerBombExplosion();
+                    return;
+                }
+
+                if (ghost.type == ghostBombType || ghost.type == ghostLaserType) {
+                    startDeathAnimation();
                     return;
                 }
 
@@ -2156,7 +2163,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         if (ghost.speedDashActive) {
             if (!isGhostMoving(ghost)) {
                 ghost.speedDashActive = false;
-                ghost.restTimer = powerUpDuration;
+                ghost.restTimer = ghostSpeedRecoverTime;
                 return true;
             }
             return false;
@@ -2186,19 +2193,29 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     public void startSpeedGhostDash(Ghost ghost, int[] direction) {
         int tileX = (int) (ghost.pixelX / tileSize);
         int tileY = (int) (ghost.pixelY / tileSize);
+        int[] endTile = getDashEndTile(tileX, tileY, direction[0], direction[1]);
 
         ghost.directionX = direction[0];
         ghost.directionY = direction[1];
-        ghost.targetPixelX = getPlayerCenterTileX() * tileSize;
-        ghost.targetPixelY = getPlayerCenterTileY() * tileSize;
+        ghost.targetPixelX = endTile[0] * tileSize;
+        ghost.targetPixelY = endTile[1] * tileSize;
         ghost.speedDashActive = true;
         ghost.restTimer = 0;
         ghost.path.clear();
 
         if (tileX == getPlayerCenterTileX() && tileY == getPlayerCenterTileY()) {
             ghost.speedDashActive = false;
-            ghost.restTimer = powerUpDuration;
+            ghost.restTimer = ghostSpeedRecoverTime;
         }
+    }
+
+    public int[] getDashEndTile(int tileX, int tileY, int directionX, int directionY) {
+        while (canMove(tileX + directionX, tileY + directionY)) {
+            tileX += directionX;
+            tileY += directionY;
+        }
+
+        return new int[] { tileX, tileY };
     }
 
     public boolean isGhostMoving(Ghost ghost) {
@@ -2232,6 +2249,10 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             return chooseRandomWallBounceDirection(ghost, tileX, tileY);
         }
 
+        if (ghost.type == ghostBombType || ghost.type == ghostLaserType) {
+            return chooseAStarDirection(ghost, tileX, tileY);
+        }
+
         if (powerMode) {
             return chooseFleeDirection(tileX, tileY);
         }
@@ -2245,8 +2266,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         if (ghost.type == 2) {
             return chooseTurnDirection(ghost, tileX, tileY, false);
         }
-        if (ghost.type == ghostBombType || ghost.type == ghostMagnetType || ghost.type == ghostBonusType
-                || ghost.type == ghostSpikeType || ghost.type == ghostLaserType) {
+        if (ghost.type == ghostMagnetType || ghost.type == ghostBonusType || ghost.type == ghostSpikeType) {
             return chooseAStarDirection(ghost, tileX, tileY);
         }
 
