@@ -179,6 +179,12 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     boolean draftNoPowerMode = false;
     int draftMazeWidth = maxScreenCol;
     int draftMazeHeight = maxScreenRow;
+    int masterVolume = 100;
+    int musicVolume = 100;
+    int sfxVolume = 100;
+    int draftMasterVolume = masterVolume;
+    int draftMusicVolume = musicVolume;
+    int draftSfxVolume = sfxVolume;
 
     double playerPixelX = (maxScreenCol - 2) * tileSize;
     double playerPixelY = tunnelY * tileSize;
@@ -221,6 +227,10 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     int warningPortalX = -1;
     int warningPortalY = -1;
     int smallDotsTowardPowerUp = 0;
+    int initialPelletCount = 0;
+    boolean boardHalfSoundPlayed = false;
+    boolean boardFullClearAwarded = false;
+    int consecutiveBoardClears = 0;
     int[] powerUpTimers = new int[powerUpTypeCount];
     int[] collectedFruits = new int[4];
     // Larger value = slower death animation.
@@ -239,6 +249,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     ArrayList<GhostDeathEffect> ghostDeathEffects = new ArrayList<>();
     ArrayList<VisualDecal> visualDecals = new ArrayList<>();
     Camera camera = new Camera();
+    SoundManager soundManager = new SoundManager();
 
     Thread gameThread;
 
@@ -292,7 +303,10 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 }
             }
 
+            syncContinuousSoundEffects();
+
             repaint();
+            soundManager.update();
 
             try {
                 Thread.sleep(16); // roughly 60 FPS
@@ -641,6 +655,12 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         }
     }
 
+    public void resetBoardPelletProgress() {
+        initialPelletCount = getRemainingPelletCount();
+        boardHalfSoundPlayed = false;
+        boardFullClearAwarded = false;
+    }
+
     public boolean isPortalEntrance(int x, int y) {
         return (y == tunnelY && (x == 1 || x == maxScreenCol - 2))
                 || (x == getTunnelX() && (y == 1 || y == maxScreenRow - 2));
@@ -903,6 +923,10 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         carriedGhostSpawnTimer = 0;
         clearWarningPortal();
         smallDotsTowardPowerUp = 0;
+        initialPelletCount = 0;
+        boardHalfSoundPlayed = false;
+        boardFullClearAwarded = false;
+        consecutiveBoardClears = 0;
         Arrays.fill(powerUpTimers, 0);
         collectedFruits = new int[4];
         finalScoreHandled = false;
@@ -911,6 +935,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         nameEntryIndex = 0;
         powerMode = false;
         boardClear = false;
+        soundManager.stopLaser();
 
         playerPixelX = (maxScreenCol - 2) * tileSize;
         playerPixelY = tunnelY * tileSize;
@@ -927,6 +952,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
         generateMaze();
         generateDots();
+        resetBoardPelletProgress();
         resetBoardVisuals();
         fruits.clear();
         powerUps.clear();
@@ -1160,7 +1186,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         updateSpikeTraps();
         updateGhostSpikeTraps();
 
-        if (!boardClear) {
+        if (!boardFullClearAwarded) {
             updateBoardGhostSpawns();
 
             if (boardGhostDelayTimer == 0 && pendingCarriedGhosts.isEmpty()) {
@@ -1186,6 +1212,28 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 stopPowerMode();
             }
         }
+    }
+
+    public void syncContinuousSoundEffects() {
+        soundManager.setLaserActive(isAnyLaserActiveForSound());
+    }
+
+    public boolean isAnyLaserActiveForSound() {
+        if (screenState != STATE_GAME || paused || playerDead || deathAnimationDone) {
+            return false;
+        }
+
+        if (isPowerUpActive(powerLaserType)) {
+            return true;
+        }
+
+        for (Ghost ghost : ghosts) {
+            if (ghost.type == ghostLaserType && ghost.laserActive) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public void updatePowerUpTimers() {
@@ -1306,7 +1354,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         int tileX = (int) (clone.pixelX / tileSize);
         int tileY = (int) (clone.pixelY / tileSize);
 
-        if (boardClear) {
+        if (boardFullClearAwarded) {
             clone.path.clear();
             choosePacCloneRandomTarget(clone, tileX, tileY);
             return;
@@ -1552,9 +1600,13 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
     public void advanceToNextBoard(int exitTileX, int exitTileY) {
         ArrayList<GhostTransferData> carriedGhosts = getGhostTransferData();
+        boolean leftEarly = !boardFullClearAwarded;
 
         level++;
         applyFruitBonuses();
+        if (leftEarly) {
+            consecutiveBoardClears = 0;
+        }
         roomInitialScore = score;
         nextFruitScore = fruitScoreInterval;
         fruitsSpawnedThisLevel = 0;
@@ -1562,6 +1614,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         boardClear = false;
         powerMode = false;
         Arrays.fill(powerUpTimers, 0);
+        soundManager.stopLaser();
         powerModeTimer = 0;
         ghostEatScore = 200;
         ghostSpawnTimer = 0;
@@ -1576,6 +1629,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
         generateMaze();
         generateDots();
+        resetBoardPelletProgress();
         resetBoardVisuals();
         fruits.clear();
         powerUps.clear();
@@ -1667,16 +1721,14 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             collectMagnetPellets(tileX, tileY);
         }
 
-        if (!boardClear && areAllPelletsEaten()) {
-            boardClear = true;
-            clearWarningPortal();
-        }
+        checkBoardPelletProgress();
     }
 
     public void collectPelletAt(int tileX, int tileY, boolean countTowardPowerDrop) {
         if (dots[tileX][tileY]) {
             dots[tileX][tileY] = false;
             addScore(getSmallDotScore());
+            playGameSoundEatDot();
 
             if (countTowardPowerDrop) {
                 smallDotsTowardPowerUp++;
@@ -1687,6 +1739,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         if (bigDots[tileX][tileY]) {
             bigDots[tileX][tileY] = false;
             addScore(getBigDotScore());
+            playGameSoundEatPower();
             startPowerMode();
         }
     }
@@ -1729,6 +1782,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         if (dots[tileX][tileY]) {
             dots[tileX][tileY] = false;
             addScore(getSmallDotScore());
+            playGameSoundEatDot();
         }
     }
 
@@ -1740,20 +1794,19 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             dots[tileX][tileY] = false;
             clone.path.clear();
             addScore(getClonePelletScore());
+            playGameSoundEatDot();
         } else if (bigDots[tileX][tileY]) {
             bigDots[tileX][tileY] = false;
             clone.path.clear();
             addScore(getClonePelletScore());
+            playGameSoundEatPower();
         }
 
         if (isPowerUpActive(0)) {
             collectPacCloneMagnetPellets(tileX, tileY);
         }
 
-        if (!boardClear && areAllPelletsEaten()) {
-            boardClear = true;
-            clearWarningPortal();
-        }
+        checkBoardPelletProgress();
     }
 
     public void collectPacCloneMagnetPellets(int centerX, int centerY) {
@@ -1762,6 +1815,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 if (x > 0 && x < maxScreenCol - 1 && y > 0 && y < maxScreenRow - 1 && dots[x][y]) {
                     dots[x][y] = false;
                     addScore(getClonePelletScore());
+                    playGameSoundEatDot();
                 }
             }
         }
@@ -1800,10 +1854,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             collectGhostMagnetPellets(ghost, tileX, tileY);
         }
 
-        if (!boardClear && areAllPelletsEaten()) {
-            boardClear = true;
-            clearWarningPortal();
-        }
+        checkBoardPelletProgress();
     }
 
     public void collectGhostMagnetPellets(Ghost ghost, int centerX, int centerY) {
@@ -1820,6 +1871,9 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         if (dots[tileX][tileY]) {
             dots[tileX][tileY] = false;
             addScore(-10);
+            if (ghost.type == ghostBonusType) {
+                ghost.path.clear();
+            }
             if (countForMagnetScore) {
                 ghost.pelletsCollected++;
             }
@@ -1828,6 +1882,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         if (!countForMagnetScore && bigDots[tileX][tileY]) {
             bigDots[tileX][tileY] = false;
             addScore(-10);
+            ghost.path.clear();
 
             if (ghost.type == ghostBonusType) {
                 splitBonusGhostAtPowerPellet(ghost);
@@ -1892,6 +1947,99 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         }
 
         return count;
+    }
+
+    public void checkBoardPelletProgress() {
+        if (initialPelletCount <= 0 || boardFullClearAwarded) {
+            return;
+        }
+
+        int remainingPellets = getRemainingPelletCount();
+        int clearedPellets = initialPelletCount - remainingPellets;
+
+        if (!boardClear && clearedPellets >= getBoardExitRequirement()) {
+            markBoardExitOpen();
+        }
+
+        if (remainingPellets == 0) {
+            awardBoardClearBonus();
+        }
+    }
+
+    public int getBoardExitRequirement() {
+        return initialPelletCount / 2;
+    }
+
+    public void markBoardExitOpen() {
+        if (boardClear) {
+            return;
+        }
+
+        boardClear = true;
+        clearWarningPortal();
+        boardHalfSoundPlayed = true;
+        playGameSoundBoardHalf();
+    }
+
+    public void awardBoardClearBonus() {
+        if (boardFullClearAwarded) {
+            return;
+        }
+
+        if (!boardClear) {
+            markBoardExitOpen();
+        }
+
+        int bonus = getBoardClearBonus();
+        if (bonus > 0) {
+            addScore(bonus);
+        }
+
+        boardFullClearAwarded = true;
+        consecutiveBoardClears++;
+        playGameSoundBoardClear();
+    }
+
+    public int getBoardClearBonus() {
+        return initialPelletCount * getBoardClearBonusMultiplier();
+    }
+
+    public int getBoardClearBonusMultiplier() {
+        return Math.min(100, (consecutiveBoardClears + 1) * 10);
+    }
+
+    public boolean shouldPlayGameSound() {
+        return screenState == STATE_GAME && gameStarted;
+    }
+
+    public void playGameSoundEatDot() {
+        if (shouldPlayGameSound()) {
+            soundManager.playEatDot();
+        }
+    }
+
+    public void playGameSoundEatPower() {
+        if (shouldPlayGameSound()) {
+            soundManager.playEatPower();
+        }
+    }
+
+    public void playGameSoundEatFruit() {
+        if (shouldPlayGameSound()) {
+            soundManager.playEatFruit();
+        }
+    }
+
+    public void playGameSoundBoardHalf() {
+        if (shouldPlayGameSound()) {
+            soundManager.playBoardHalf();
+        }
+    }
+
+    public void playGameSoundBoardClear() {
+        if (shouldPlayGameSound()) {
+            soundManager.playBoardClear();
+        }
     }
 
     public void addScore(int points) {
@@ -1980,6 +2128,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             if (fruit.tileX == tileX && fruit.tileY == tileY) {
                 collectedFruits[fruit.type]++;
                 fruits.remove(i);
+                playGameSoundEatFruit();
             }
         }
     }
@@ -1989,6 +2138,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             PowerUp powerUp = powerUps.get(i);
 
             if (powerUp.tileX == tileX && powerUp.tileY == tileY) {
+                playGameSoundEatPower();
                 activatePowerUp(powerUp.type);
                 powerUps.remove(i);
             }
@@ -2251,6 +2401,9 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         }
 
         fireTrails.add(new FireTrail(tileX, tileY, fireTrailDuration, ghostFire));
+        if (shouldPlayGameSound()) {
+            soundManager.playFire();
+        }
     }
 
     public void checkGhostCollision() {
@@ -2285,6 +2438,12 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     }
 
     public void startDeathAnimation() {
+        if (playerDead || deathAnimationDone) {
+            return;
+        }
+
+        soundManager.playDeath();
+        soundManager.fadeOutMusicAndStop();
         playerDead = true;
         gameStarted = false;
         directionX = 0;
@@ -2309,6 +2468,9 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         Ghost ghost = ghosts.get(index);
         if (points != 0) {
             addScore(getAdjustedGhostKillScore(ghost, points));
+        }
+        if (shouldPlayGameSound()) {
+            soundManager.playEatGhost();
         }
         spawnGhostDeathEffect(ghost);
         if (leaveAsh) {
@@ -2391,6 +2553,9 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         bombExplosionMaxX = blast[2];
         bombExplosionMaxY = blast[3];
         bombExplosionTimer = bombExplosionFrameTime;
+        if (shouldPlayGameSound()) {
+            soundManager.playExplosion();
+        }
         burnWallsInRect(bombExplosionMinX, bombExplosionMinY, bombExplosionMaxX, bombExplosionMaxY);
     }
 
@@ -3039,6 +3204,9 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             ghost.directionY = 0;
             ghost.targetPixelX = ghost.pixelX;
             ghost.targetPixelY = ghost.pixelY;
+            if (shouldPlayGameSound()) {
+                soundManager.playBombAim();
+            }
             return true;
         }
 
@@ -3146,6 +3314,10 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         int tileY = (int) (ghost.pixelY / tileSize);
         int[] endTile = getDashEndTile(tileX, tileY, direction[0], direction[1]);
 
+        if (!ghost.speedDashActive && shouldPlayGameSound()) {
+            soundManager.playDetection();
+        }
+
         ghost.directionX = direction[0];
         ghost.directionY = direction[1];
         ghost.targetPixelX = endTile[0] * tileSize;
@@ -3208,6 +3380,10 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             return chooseAStarDirection(ghost, tileX, tileY);
         }
 
+        if (ghost.type == ghostBonusType) {
+            return chooseBonusGhostDirection(ghost, tileX, tileY);
+        }
+
         if (powerMode) {
             return chooseFleeDirection(tileX, tileY);
         }
@@ -3221,11 +3397,30 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         if (ghost.type == 2) {
             return chooseTurnDirection(ghost, tileX, tileY, false);
         }
-        if (ghost.type == ghostMagnetType || ghost.type == ghostBonusType || ghost.type == ghostSpikeType) {
+        if (ghost.type == ghostMagnetType || ghost.type == ghostSpikeType) {
             return chooseAStarDirection(ghost, tileX, tileY);
         }
 
         return chooseAStarDirection(ghost, tileX, tileY);
+    }
+
+    public int[] chooseBonusGhostDirection(Ghost ghost, int tileX, int tileY) {
+        if (ghost.path.isEmpty()) {
+            int[] pelletTile = findNearestPelletTile(tileX, tileY);
+
+            if (pelletTile == null) {
+                return chooseRandomWallBounceDirection(ghost, tileX, tileY);
+            }
+
+            ghost.path = findAStarPath(tileX, tileY, pelletTile[0], pelletTile[1]);
+        }
+
+        if (ghost.path.isEmpty()) {
+            return chooseRandomWallBounceDirection(ghost, tileX, tileY);
+        }
+
+        int[] nextTile = ghost.path.remove(0);
+        return new int[] { nextTile[0] - tileX, nextTile[1] - tileY };
     }
 
     public int[] chooseFleeDirection(int tileX, int tileY) {
@@ -3738,7 +3933,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     }
 
     public void drawSpawnWarning(Graphics2D g2) {
-        if (warningPortalX == -1 || warningPortalY == -1 || boardClear || playerDead) {
+        if (warningPortalX == -1 || warningPortalY == -1 || boardFullClearAwarded || playerDead) {
             return;
         }
 
@@ -3932,10 +4127,15 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         g2.drawString("LEVEL " + level, getWidth() / 2 - 38, 20);
         g2.drawString("TIME " + getElapsedTimeText(), getWidth() - 115, 20);
 
-        if (boardClear) {
+        if (boardFullClearAwarded) {
             g2.setColor(Color.YELLOW);
             g2.drawString("BOARD CLEAR", getWidth() / 2 - 58, 42);
             return;
+        }
+
+        if (boardClear) {
+            g2.setColor(Color.YELLOW);
+            g2.drawString("EXIT OPEN", getWidth() / 2 - 44, 42);
         }
 
         drawBoardStats(g2);
@@ -3965,7 +4165,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
     public void drawOptions(Graphics2D g2) {
         g2.drawImage(blankMenuScreen, 0, 0, getWidth(), getHeight(), null);
-        g2.setFont(new Font("Bahnschrift SemiBold", Font.BOLD, 20));
+        g2.setFont(new Font("Bahnschrift SemiBold", Font.BOLD, 18));
 
         String[] options = {
             "GHOST SPEED: " + formatDouble(draftGhostSpeed),
@@ -3976,20 +4176,24 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             "SPECIAL GHOST CHANCE: " + draftSpecialGhostChancePercent + "%",
             "NO POWER MODE: " + draftNoPowerMode,
             "MAZE WIDTH: " + draftMazeWidth,
-            "MAZE HEIGHT: " + draftMazeHeight
+            "MAZE HEIGHT: " + draftMazeHeight,
+            "MASTER VOLUME: " + draftMasterVolume + "%",
+            "MUSIC VOLUME: " + draftMusicVolume + "%",
+            "SFX VOLUME: " + draftSfxVolume + "%"
         };
 
         int centerX = getWidth() / 2;
-        int startY = 90;
+        int startY = 70;
+        int rowSpacing = 30;
 
         for (int i = 0; i < options.length; i++) {
             String text = i == optionChoice ? ">" + options[i] + "<" : options[i];
-            drawCenteredMenuText(g2, text, centerX, startY + i * 34);
+            drawCenteredMenuText(g2, text, centerX, startY + i * rowSpacing);
         }
 
         String saveText = optionChoice == options.length && optionActionChoice == 0 ? ">SAVE<" : "SAVE";
         String cancelText = optionChoice == options.length && optionActionChoice == 1 ? ">CANCEL<" : "CANCEL";
-        drawCenteredMenuText(g2, saveText + "   ||   " + cancelText, centerX, startY + options.length * 34 + 22);
+        drawCenteredMenuText(g2, saveText + "   ||   " + cancelText, centerX, startY + options.length * rowSpacing + 22);
     }
 
     public void drawHallOfFame(Graphics2D g2) {
@@ -4188,6 +4392,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     public void startNewRun() {
         resetGame();
         screenState = STATE_GAME;
+        soundManager.startMusic();
     }
 
     public void openOptions() {
@@ -4200,6 +4405,9 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         draftNoPowerMode = noPowerMode;
         draftMazeWidth = normalizeOddInt(maxScreenCol, 11, 51);
         draftMazeHeight = normalizeOddInt(maxScreenRow, 11, 51);
+        draftMasterVolume = masterVolume;
+        draftMusicVolume = musicVolume;
+        draftSfxVolume = sfxVolume;
         optionChoice = 0;
         optionActionChoice = 0;
         screenState = STATE_OPTIONS;
@@ -4215,9 +4423,27 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         noPowerMode = draftNoPowerMode;
         maxScreenCol = normalizeOddInt(draftMazeWidth, 11, 51);
         maxScreenRow = normalizeOddInt(draftMazeHeight, 11, 51);
+        masterVolume = draftMasterVolume;
+        musicVolume = draftMusicVolume;
+        sfxVolume = draftSfxVolume;
+        applyAudioVolumes(masterVolume, musicVolume, sfxVolume);
         tunnelY = maxScreenRow / 2;
         updatePanelSize();
         screenState = STATE_MENU;
+    }
+
+    public void cancelOptions() {
+        draftMasterVolume = masterVolume;
+        draftMusicVolume = musicVolume;
+        draftSfxVolume = sfxVolume;
+        applyAudioVolumes(masterVolume, musicVolume, sfxVolume);
+        screenState = STATE_MENU;
+    }
+
+    public void applyAudioVolumes(int master, int music, int sfx) {
+        soundManager.setMasterVolume(master);
+        soundManager.setMusicVolume(music);
+        soundManager.setSfxVolume(sfx);
     }
 
     public void updatePanelSize() {
@@ -4236,9 +4462,12 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     public void handleMenuKey(int keyCode) {
         if (isMoveUpKey(keyCode) || isMoveLeftKey(keyCode)) {
             menuChoice = (menuChoice + 4) % 5;
+            soundManager.playMenuMove();
         } else if (isMoveDownKey(keyCode) || isMoveRightKey(keyCode)) {
             menuChoice = (menuChoice + 1) % 5;
+            soundManager.playMenuMove();
         } else if (keyCode == KeyEvent.VK_ENTER || keyCode == KeyEvent.VK_SPACE) {
+            soundManager.playMenuConfirm();
             if (menuChoice == 0) {
                 startNewRun();
             } else if (menuChoice == 1) {
@@ -4265,17 +4494,22 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     }
 
     public void handleOptionsKey(int keyCode) {
-        int optionCount = 10;
+        int optionCount = 13;
 
         if (isMoveUpKey(keyCode)) {
             optionChoice = (optionChoice + optionCount - 1) % optionCount;
+            soundManager.playMenuMove();
         } else if (isMoveDownKey(keyCode)) {
             optionChoice = (optionChoice + 1) % optionCount;
+            soundManager.playMenuMove();
         } else if (isMoveLeftKey(keyCode)) {
             changeOption(-1);
+            soundManager.playMenuMove();
         } else if (isMoveRightKey(keyCode)) {
             changeOption(1);
+            soundManager.playMenuMove();
         } else if (keyCode == KeyEvent.VK_ENTER || keyCode == KeyEvent.VK_SPACE) {
+            soundManager.playMenuConfirm();
             selectOption();
         }
     }
@@ -4299,13 +4533,22 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             draftMazeWidth = normalizeOddInt(draftMazeWidth + direction * 2, 11, 51);
         } else if (optionChoice == 8) {
             draftMazeHeight = normalizeOddInt(draftMazeHeight + direction * 2, 11, 51);
+        } else if (optionChoice == 9) {
+            draftMasterVolume = clampInt(draftMasterVolume + direction * 5, 0, 100);
+            applyAudioVolumes(draftMasterVolume, draftMusicVolume, draftSfxVolume);
+        } else if (optionChoice == 10) {
+            draftMusicVolume = clampInt(draftMusicVolume + direction * 5, 0, 100);
+            applyAudioVolumes(draftMasterVolume, draftMusicVolume, draftSfxVolume);
+        } else if (optionChoice == 11) {
+            draftSfxVolume = clampInt(draftSfxVolume + direction * 5, 0, 100);
+            applyAudioVolumes(draftMasterVolume, draftMusicVolume, draftSfxVolume);
         } else {
             optionActionChoice = optionActionChoice == 0 ? 1 : 0;
         }
     }
 
     public void selectOption() {
-        if (optionChoice < 9) {
+        if (optionChoice < 12) {
             changeOption(1);
             return;
         }
@@ -4313,7 +4556,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         if (optionActionChoice == 0) {
             saveOptions();
         } else {
-            screenState = STATE_MENU;
+            cancelOptions();
         }
     }
 
@@ -4498,6 +4741,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         }
 
         if (screenState == STATE_HALL_OF_FAME) {
+            soundManager.playMenuConfirm();
             screenState = STATE_MENU;
             return;
         }
@@ -4513,8 +4757,10 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         }
 
         if (keyCode == KeyEvent.VK_R) {
+            soundManager.playMenuConfirm();
             resetGame();
             screenState = STATE_GAME;
+            soundManager.startMusic();
             return;
         }
 
@@ -4526,6 +4772,10 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         if (keyCode == KeyEvent.VK_P && !playerDead && !deathAnimationDone) {
             paused = !paused;
             quitConfirmVisible = false;
+            if (paused) {
+                soundManager.stopLaser();
+            }
+            soundManager.setMusicPaused(paused);
             return;
         }
 
@@ -4557,9 +4807,13 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     }
 
     public void handleGameEscape() {
+        soundManager.playMenuConfirm();
+
         if (!paused) {
             paused = true;
             quitConfirmVisible = false;
+            soundManager.stopLaser();
+            soundManager.setMusicPaused(true);
             return;
         }
 
@@ -4570,6 +4824,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
         resetGame();
         screenState = STATE_MENU;
+        soundManager.fadeOutMusicAndStop();
     }
 
     public boolean isMoveUpKey(int keyCode) {
@@ -4590,6 +4845,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
     public void handleAlmanacKey(int keyCode) {
         if (keyCode == KeyEvent.VK_ESCAPE || keyCode == KeyEvent.VK_ENTER || keyCode == KeyEvent.VK_SPACE) {
+            soundManager.playMenuConfirm();
             screenState = STATE_MENU;
             return;
         }
@@ -4600,21 +4856,28 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
         if (isMoveLeftKey(keyCode) || isMoveUpKey(keyCode)) {
             almanacIndex = (almanacIndex + almanacTitles.size() - 1) % almanacTitles.size();
+            soundManager.playMenuMove();
         } else if (isMoveRightKey(keyCode) || isMoveDownKey(keyCode)) {
             almanacIndex = (almanacIndex + 1) % almanacTitles.size();
+            soundManager.playMenuMove();
         }
     }
 
     public void handleNameEntryKey(int keyCode) {
         if (isMoveLeftKey(keyCode)) {
             nameEntryIndex = (nameEntryIndex + nameEntry.length - 1) % nameEntry.length;
+            soundManager.playMenuMove();
         } else if (isMoveRightKey(keyCode)) {
             nameEntryIndex = (nameEntryIndex + 1) % nameEntry.length;
+            soundManager.playMenuMove();
         } else if (isMoveUpKey(keyCode)) {
             nameEntry[nameEntryIndex] = nameEntry[nameEntryIndex] == 'Z' ? 'A' : (char) (nameEntry[nameEntryIndex] + 1);
+            soundManager.playMenuMove();
         } else if (isMoveDownKey(keyCode)) {
             nameEntry[nameEntryIndex] = nameEntry[nameEntryIndex] == 'A' ? 'Z' : (char) (nameEntry[nameEntryIndex] - 1);
+            soundManager.playMenuMove();
         } else if (keyCode == KeyEvent.VK_ENTER || keyCode == KeyEvent.VK_SPACE) {
+            soundManager.playMenuConfirm();
             saveNewHighScore();
         }
     }
