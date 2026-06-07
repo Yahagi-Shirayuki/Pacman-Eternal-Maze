@@ -3723,8 +3723,8 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         int leftScreenY = worldToScreenY(tunnelY * tileSize);
         g2.drawImage(sprite, worldToScreenX(tileSize) + tileSize, leftScreenY, -tileSize, tileSize, null);
         g2.drawImage(sprite, worldToScreenX((maxScreenCol - 2) * tileSize), leftScreenY, tileSize, tileSize, null);
-        drawRotatedTileSprite(g2, sprite, getTunnelX(), 1, -Math.PI / 2);
-        drawRotatedTileSprite(g2, sprite, getTunnelX(), maxScreenRow - 2, Math.PI / 2);
+        drawRotatedTileSprite(g2, sprite, getTunnelX(), 1, Math.PI / 2);
+        drawRotatedTileSprite(g2, sprite, getTunnelX(), maxScreenRow - 2, -Math.PI / 2);
     }
 
     public void drawRotatedTileSprite(Graphics2D g2, BufferedImage sprite, int tileX, int tileY, double angle) {
