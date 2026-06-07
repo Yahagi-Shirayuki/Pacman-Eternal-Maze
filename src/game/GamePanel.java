@@ -156,6 +156,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     static final int STATE_ALMANAC = 5;
     int screenState = STATE_MENU;
     int menuChoice = 0;
+    int optionCategory = -1;
     int optionChoice = 0;
     int optionActionChoice = 0;
     int almanacIndex = 0;
@@ -185,6 +186,19 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     int draftMasterVolume = masterVolume;
     int draftMusicVolume = musicVolume;
     int draftSfxVolume = sfxVolume;
+    boolean showHudScore = true;
+    boolean showHudTime = true;
+    boolean showHudActivePower = true;
+    boolean showHudBoardState = true;
+    boolean showHudPelletCount = true;
+    boolean showHudGhostCount = true;
+    boolean draftShowHudScore = showHudScore;
+    boolean draftShowHudTime = showHudTime;
+    boolean draftShowHudActivePower = showHudActivePower;
+    boolean draftShowHudBoardState = showHudBoardState;
+    boolean draftShowHudPelletCount = showHudPelletCount;
+    boolean draftShowHudGhostCount = showHudGhostCount;
+    final Color menuTextColor = new Color(0xff7f00);
 
     double playerPixelX = (maxScreenCol - 2) * tileSize;
     double playerPixelY = tunnelY * tileSize;
@@ -4123,29 +4137,39 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
         g2.setColor(Color.WHITE);
         g2.setFont(new Font("Arial", Font.BOLD, 16));
-        g2.drawString("SCORE " + score, 12, 20);
+        if (showHudScore) {
+            g2.drawString("SCORE " + score, 12, 20);
+        }
         g2.drawString("LEVEL " + level, getWidth() / 2 - 38, 20);
-        g2.drawString("TIME " + getElapsedTimeText(), getWidth() - 115, 20);
+        if (showHudTime) {
+            g2.drawString("TIME " + getElapsedTimeText(), getWidth() - 115, 20);
+        }
 
-        if (boardFullClearAwarded) {
-            g2.setColor(Color.YELLOW);
+        if (showHudBoardState && boardFullClearAwarded) {
+            g2.setColor(menuTextColor);
             g2.drawString("BOARD CLEAR", getWidth() / 2 - 58, 42);
             return;
         }
 
-        if (boardClear) {
-            g2.setColor(Color.YELLOW);
+        if (showHudBoardState && boardClear) {
+            g2.setColor(menuTextColor);
             g2.drawString("EXIT OPEN", getWidth() / 2 - 44, 42);
         }
 
         drawBoardStats(g2);
-        drawActiveEffectTimers(g2);
+        if (showHudActivePower) {
+            drawActiveEffectTimers(g2);
+        }
     }
 
     public void drawBoardStats(Graphics2D g2) {
         g2.setColor(Color.WHITE);
-        g2.drawString("PELLETS " + getRemainingPelletCount(), 12, 42);
-        g2.drawString("GHOSTS " + ghosts.size(), 122, 42);
+        if (showHudPelletCount) {
+            g2.drawString("PELLETS " + getRemainingPelletCount(), 12, 42);
+        }
+        if (showHudGhostCount) {
+            g2.drawString("GHOSTS " + ghosts.size(), 122, 42);
+        }
     }
 
     public void drawMenu(Graphics2D g2) {
@@ -4165,9 +4189,78 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
     public void drawOptions(Graphics2D g2) {
         g2.drawImage(blankMenuScreen, 0, 0, getWidth(), getHeight(), null);
+        if (optionCategory == -1) {
+            drawOptionCategoryMenu(g2);
+        } else {
+            drawOptionCategoryPage(g2);
+        }
+    }
+
+    public void drawOptionCategoryMenu(Graphics2D g2) {
+        String[] categories = { "GAMEPLAY", "AUDIO", "UI OPTION" };
+        int centerX = getWidth() / 2;
+        int startY = Math.max(150, getHeight() / 2 - 76);
+
+        g2.setFont(new Font("Bahnschrift SemiBold", Font.BOLD, 28));
+        drawCenteredMenuText(g2, "OPTION", centerX, startY - 55);
+        g2.setFont(new Font("Bahnschrift SemiBold", Font.BOLD, 24));
+
+        for (int i = 0; i < categories.length; i++) {
+            String text = i == optionChoice ? ">" + categories[i] + "<" : categories[i];
+            drawCenteredMenuText(g2, text, centerX, startY + i * 42);
+        }
+
+        String saveText = optionChoice == categories.length && optionActionChoice == 0 ? ">SAVE<" : "SAVE";
+        String cancelText = optionChoice == categories.length && optionActionChoice == 1 ? ">CANCEL<" : "CANCEL";
+        drawCenteredMenuText(g2, saveText + "   ||   " + cancelText, centerX, startY + categories.length * 42 + 26);
+    }
+
+    public void drawOptionCategoryPage(Graphics2D g2) {
+        String[] options = getCurrentOptionLabels();
+        int centerX = getWidth() / 2;
+        int y = 78;
+        int rowSpacing = 32;
+
+        g2.setFont(new Font("Bahnschrift SemiBold", Font.BOLD, 25));
+        drawCenteredMenuText(g2, getOptionCategoryTitle(), centerX, 42);
         g2.setFont(new Font("Bahnschrift SemiBold", Font.BOLD, 18));
 
-        String[] options = {
+        for (int i = 0; i < options.length; i++) {
+            String text = i == optionChoice ? ">" + options[i] + "<" : options[i];
+            drawCenteredMenuText(g2, text, centerX, y);
+            y += rowSpacing;
+        }
+
+        String backText = optionChoice == options.length ? ">BACK<" : "BACK";
+        drawCenteredMenuText(g2, backText, centerX, y + 10);
+    }
+
+    public String getOptionCategoryTitle() {
+        if (optionCategory == 0) {
+            return "GAMEPLAY";
+        }
+        if (optionCategory == 1) {
+            return "AUDIO";
+        }
+        return "UI OPTION";
+    }
+
+    public String[] getCurrentOptionLabels() {
+        if (optionCategory == 0) {
+            return getGameplayOptionLabels();
+        }
+        if (optionCategory == 1) {
+            return getAudioOptionLabels();
+        }
+        if (optionCategory == 2) {
+            return getUiOptionLabels();
+        }
+
+        return new String[0];
+    }
+
+    public String[] getGameplayOptionLabels() {
+        return new String[] {
             "GHOST SPEED: " + formatDouble(draftGhostSpeed),
             "PACMAN SPEED: " + formatDouble(draftPlayerSpeed),
             "GHOST SPAWN INTERVAL: " + draftGhostSpawnSeconds,
@@ -4176,24 +4269,46 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             "SPECIAL GHOST CHANCE: " + draftSpecialGhostChancePercent + "%",
             "NO POWER MODE: " + draftNoPowerMode,
             "MAZE WIDTH: " + draftMazeWidth,
-            "MAZE HEIGHT: " + draftMazeHeight,
+            "MAZE HEIGHT: " + draftMazeHeight
+        };
+    }
+
+    public String[] getAudioOptionLabels() {
+        return new String[] {
             "MASTER VOLUME: " + draftMasterVolume + "%",
             "MUSIC VOLUME: " + draftMusicVolume + "%",
             "SFX VOLUME: " + draftSfxVolume + "%"
         };
+    }
 
-        int centerX = getWidth() / 2;
-        int startY = 70;
-        int rowSpacing = 30;
+    public String[] getUiOptionLabels() {
+        return new String[] {
+            areAnyDraftUiOptionsEnabled() ? "DISABLE ALL UI" : "ENABLE ALL UI",
+            "SCORE: " + draftShowHudScore,
+            "TIME: " + draftShowHudTime,
+            "ACTIVE POWER: " + draftShowHudActivePower,
+            "BOARD STATE: " + draftShowHudBoardState,
+            "PELLET COUNT: " + draftShowHudPelletCount,
+            "GHOST COUNT: " + draftShowHudGhostCount
+        };
+    }
 
-        for (int i = 0; i < options.length; i++) {
-            String text = i == optionChoice ? ">" + options[i] + "<" : options[i];
-            drawCenteredMenuText(g2, text, centerX, startY + i * rowSpacing);
-        }
+    public boolean areAnyDraftUiOptionsEnabled() {
+        return draftShowHudScore
+                || draftShowHudTime
+                || draftShowHudActivePower
+                || draftShowHudBoardState
+                || draftShowHudPelletCount
+                || draftShowHudGhostCount;
+    }
 
-        String saveText = optionChoice == options.length && optionActionChoice == 0 ? ">SAVE<" : "SAVE";
-        String cancelText = optionChoice == options.length && optionActionChoice == 1 ? ">CANCEL<" : "CANCEL";
-        drawCenteredMenuText(g2, saveText + "   ||   " + cancelText, centerX, startY + options.length * rowSpacing + 22);
+    public void setAllDraftUiOptions(boolean enabled) {
+        draftShowHudScore = enabled;
+        draftShowHudTime = enabled;
+        draftShowHudActivePower = enabled;
+        draftShowHudBoardState = enabled;
+        draftShowHudPelletCount = enabled;
+        draftShowHudGhostCount = enabled;
     }
 
     public void drawHallOfFame(Graphics2D g2) {
@@ -4355,7 +4470,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
             if (i == nameEntryIndex) {
                 int letterWidth = g2.getFontMetrics().stringWidth(letter);
-                g2.setColor(Color.YELLOW);
+                g2.setColor(menuTextColor);
                 g2.drawLine(x, y + 8, x + letterWidth, y + 8);
                 g2.setColor(Color.WHITE);
                 g2.drawLine(x, y + 10, x + letterWidth, y + 10);
@@ -4377,7 +4492,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         g2.drawString(text, x + 1, y);
         g2.drawString(text, x, y - 1);
         g2.drawString(text, x, y + 1);
-        g2.setColor(Color.YELLOW);
+        g2.setColor(menuTextColor);
         g2.drawString(text, x, y);
     }
 
@@ -4408,6 +4523,13 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         draftMasterVolume = masterVolume;
         draftMusicVolume = musicVolume;
         draftSfxVolume = sfxVolume;
+        draftShowHudScore = showHudScore;
+        draftShowHudTime = showHudTime;
+        draftShowHudActivePower = showHudActivePower;
+        draftShowHudBoardState = showHudBoardState;
+        draftShowHudPelletCount = showHudPelletCount;
+        draftShowHudGhostCount = showHudGhostCount;
+        optionCategory = -1;
         optionChoice = 0;
         optionActionChoice = 0;
         screenState = STATE_OPTIONS;
@@ -4426,6 +4548,12 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         masterVolume = draftMasterVolume;
         musicVolume = draftMusicVolume;
         sfxVolume = draftSfxVolume;
+        showHudScore = draftShowHudScore;
+        showHudTime = draftShowHudTime;
+        showHudActivePower = draftShowHudActivePower;
+        showHudBoardState = draftShowHudBoardState;
+        showHudPelletCount = draftShowHudPelletCount;
+        showHudGhostCount = draftShowHudGhostCount;
         applyAudioVolumes(masterVolume, musicVolume, sfxVolume);
         tunnelY = maxScreenRow / 2;
         updatePanelSize();
@@ -4436,7 +4564,14 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         draftMasterVolume = masterVolume;
         draftMusicVolume = musicVolume;
         draftSfxVolume = sfxVolume;
+        draftShowHudScore = showHudScore;
+        draftShowHudTime = showHudTime;
+        draftShowHudActivePower = showHudActivePower;
+        draftShowHudBoardState = showHudBoardState;
+        draftShowHudPelletCount = showHudPelletCount;
+        draftShowHudGhostCount = showHudGhostCount;
         applyAudioVolumes(masterVolume, musicVolume, sfxVolume);
+        optionCategory = -1;
         screenState = STATE_MENU;
     }
 
@@ -4494,7 +4629,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     }
 
     public void handleOptionsKey(int keyCode) {
-        int optionCount = 13;
+        int optionCount = getOptionChoiceCount();
 
         if (isMoveUpKey(keyCode)) {
             optionChoice = (optionChoice + optionCount - 1) % optionCount;
@@ -4511,10 +4646,42 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         } else if (keyCode == KeyEvent.VK_ENTER || keyCode == KeyEvent.VK_SPACE) {
             soundManager.playMenuConfirm();
             selectOption();
+        } else if (keyCode == KeyEvent.VK_ESCAPE) {
+            soundManager.playMenuConfirm();
+            backOutOfOptions();
         }
     }
 
+    public int getOptionChoiceCount() {
+        if (optionCategory == -1) {
+            return 4;
+        }
+
+        return getCurrentOptionLabels().length + 1;
+    }
+
     public void changeOption(int direction) {
+        if (optionCategory == -1) {
+            if (optionChoice == 3) {
+                optionActionChoice = optionActionChoice == 0 ? 1 : 0;
+            }
+            return;
+        }
+
+        if (optionChoice >= getCurrentOptionLabels().length) {
+            return;
+        }
+
+        if (optionCategory == 0) {
+            changeGameplayOption(direction);
+        } else if (optionCategory == 1) {
+            changeAudioOption(direction);
+        } else if (optionCategory == 2) {
+            changeUiOption();
+        }
+    }
+
+    public void changeGameplayOption(int direction) {
         if (optionChoice == 0) {
             draftGhostSpeed = clampDouble(draftGhostSpeed + direction * 0.5, 1, 10);
         } else if (optionChoice == 1) {
@@ -4533,31 +4700,73 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             draftMazeWidth = normalizeOddInt(draftMazeWidth + direction * 2, 11, 51);
         } else if (optionChoice == 8) {
             draftMazeHeight = normalizeOddInt(draftMazeHeight + direction * 2, 11, 51);
-        } else if (optionChoice == 9) {
+        }
+    }
+
+    public void changeAudioOption(int direction) {
+        if (optionChoice == 0) {
             draftMasterVolume = clampInt(draftMasterVolume + direction * 5, 0, 100);
             applyAudioVolumes(draftMasterVolume, draftMusicVolume, draftSfxVolume);
-        } else if (optionChoice == 10) {
+        } else if (optionChoice == 1) {
             draftMusicVolume = clampInt(draftMusicVolume + direction * 5, 0, 100);
             applyAudioVolumes(draftMasterVolume, draftMusicVolume, draftSfxVolume);
-        } else if (optionChoice == 11) {
+        } else if (optionChoice == 2) {
             draftSfxVolume = clampInt(draftSfxVolume + direction * 5, 0, 100);
             applyAudioVolumes(draftMasterVolume, draftMusicVolume, draftSfxVolume);
-        } else {
-            optionActionChoice = optionActionChoice == 0 ? 1 : 0;
+        }
+    }
+
+    public void changeUiOption() {
+        if (optionChoice == 0) {
+            setAllDraftUiOptions(!areAnyDraftUiOptionsEnabled());
+        } else if (optionChoice == 1) {
+            draftShowHudScore = !draftShowHudScore;
+        } else if (optionChoice == 2) {
+            draftShowHudTime = !draftShowHudTime;
+        } else if (optionChoice == 3) {
+            draftShowHudActivePower = !draftShowHudActivePower;
+        } else if (optionChoice == 4) {
+            draftShowHudBoardState = !draftShowHudBoardState;
+        } else if (optionChoice == 5) {
+            draftShowHudPelletCount = !draftShowHudPelletCount;
+        } else if (optionChoice == 6) {
+            draftShowHudGhostCount = !draftShowHudGhostCount;
         }
     }
 
     public void selectOption() {
-        if (optionChoice < 12) {
+        if (optionCategory == -1) {
+            if (optionChoice < 3) {
+                optionCategory = optionChoice;
+                optionChoice = 0;
+                return;
+            }
+
+            if (optionActionChoice == 0) {
+                saveOptions();
+            } else {
+                cancelOptions();
+            }
+            return;
+        }
+
+        if (optionChoice < getCurrentOptionLabels().length) {
             changeOption(1);
             return;
         }
 
-        if (optionActionChoice == 0) {
-            saveOptions();
-        } else {
-            cancelOptions();
+        optionCategory = -1;
+        optionChoice = 0;
+    }
+
+    public void backOutOfOptions() {
+        if (optionCategory != -1) {
+            optionCategory = -1;
+            optionChoice = 0;
+            return;
         }
+
+        cancelOptions();
     }
 
     public int clampInt(int value, int min, int max) {
