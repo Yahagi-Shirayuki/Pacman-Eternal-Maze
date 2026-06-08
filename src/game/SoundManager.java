@@ -53,6 +53,11 @@ public class SoundManager {
         load("eatdot", "eatdot.wav");
         load("die", "die.wav");
         load("detection", "detection.wav");
+        load("spikekill", "spikekill.wav");
+        load("pelletdown", "pelletdown.wav");
+        load("freeze", "freeze.wav");
+        load("firedie", "firedie.wav");
+        load("eatice", "eatice.wav");
     }
 
     public void playEatDot() {
@@ -61,6 +66,27 @@ public class SoundManager {
 
     public void playEatGhost() {
         playExclusive("eatghost");
+    }
+
+    public void playEatIce() {
+        playExclusive("eatice");
+    }
+
+    public void playFireDie() {
+        playExclusive("firedie");
+    }
+
+    public void playSpikeKill() {
+        playExclusive("spikekill");
+    }
+
+    public void playPelletDown() {
+        playExclusive("pelletdown");
+    }
+
+    public void playFreeze() {
+        stopLaser();
+        playExclusive("freeze");
     }
 
     public void playEatPower() {

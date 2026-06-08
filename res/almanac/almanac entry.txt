@@ -27,18 +27,28 @@ Pinky considers herself a ghost of principle and consistency. Unfortunately, tho
 ---
 
 Blinky
-Actively chases Pacman.
+He actively chases Pacman around the maze.
 
 According to Blinky, he can smell Pacman from fifteen blocks away. Nobody knows what a ghost's nose looks like, and nobody is brave enough to ask.
 
 ---
 
 Clony
-Is blind.
+This guy is blind.
 
-How exactly a ghost becomes blind remains one of the Eternal Maze's greatest mysteries. Despite being unable to see anything, Clony somehow continues moving around with surprising confidence.
+Why? Well, when a ghost loves another ghost very much...
 
-His success rate is significantly lower.
+Just kidding. Ghosts clone themselves using strange magic left behind in the maze.
+
+Unfortunately, the cloning process appears to copy everything except eyesight and personality, despite every Clony insisting they're a completely unique individual.
+
+Despite being totally blind, Clony charges through the maze with remarkable confidence and absolutely no sense of self-preservation.
+
+He is also strangely unaffected by Power Pellets. As Clony himself puts it:
+
+"You can't be scared of what you can't see."
+
+This explanation raises several questions.
 
 ---
 
@@ -63,37 +73,85 @@ Worth 3,200 points, largely because she insists she is "a big one."
 Sprintee
 Charges forward at maximum speed until colliding with a wall.
 
-Winner of numerous Ghost Marathon championships. Following allegations of "excessive haunting-enhanced performance," he was permanently banned from all human athletic competitions.
+Winner of numerous Ghost Marathon championships. Following allegations of "haunting-enhanced performance," he was permanently banned from all human athletic competitions.
 
 ---
 
 Infernity
 Leaves a trail of fire wherever he travels.
 
-Claims the flames are merely a side effect of his haunting abilities. Local fire departments remain unconvinced. If Infernity is approaching, consider relocating to somewhere less flammable.
+Claims the flames are merely a harmless side effect of his haunting abilities. Local fire departments remain unconvinced.
+
+If Infernity is approaching, consider relocating to somewhere less flammable.
+
+He and Lazory appear to have formed an unofficial alliance dedicated entirely to ruining whatever Icy is currently working on. Whether this is a coordinated effort or merely a remarkable coincidence remains under investigation.
+
+It's possible that they do that just because it's funny
 
 ---
 
 Bomby
 Runs directly toward Pacman and explodes on contact.
 
-Experts recommend maintaining a safe distance. Bomby insists he's simply expressing himself. Everyone else describes it as a severe anger-management problem.
+Experts recommend maintaining a safe distance.
+
+Bomby insists he's simply expressing himself. Everyone else describes it as a severe anger-management problem.
+
+"Infernity pissed me off" quote Bomby
 
 ---
 
 Magnety
 Steals all pellets within a 5×5 area.
 
-A menace to snack enthusiasts everywhere. Magnety rarely attacks directly, preferring instead to remove your food and laugh from a safe distance.
+He also somehow steals your lunch from five meters away, despite his powers supposedly working only on metal.
 
-"No more food for you! Hahahaha!" Magnety, probably
+This raises several important questions.
+
+Are pellets made of metal?
+
+Does Pacman eat metal?
+
+Is your lunch made of metal?
+
+Nobody knows.
+
+Magnety certainly isn't helping. Every time someone asks, he steals another sandwich and leaves.
+
+This guy is an absolute menace to snacks, rivaling even Biggy. What's so tasty about pellets, anyway?
+
+Magnety rarely attacks directly, preferring instead to remove all available food and laugh from a safe distance.
+
+"No more pellets for you, Pac-guy! Hahahaha!" Magnety, probably
 
 ---
 
 Icy
-Slows anyone he touches and turns the ground into ice.
+Slows anyone he touches and turns the ground into ice... mostly so he can slide around on it himself.
 
-He has always dreamed of opening his own ski resort. Winter is his favorite season, entirely unironically.
+He has always dreamed of opening a ski resort somewhere inside the Eternal Maze. Winter is his favorite season, entirely unironically.
 
-He despises Infernity, who keeps melting all the ice he painstakingly puts down.
+According to Icy, Pacman's inability to turn corners while sliding is simply a "skill issue."
 
+According to Pacman, ice physics were a mistake.
+
+He absolutely despises Infernity, who somehow manages to melt every carefully constructed ice path within minutes of its completion.
+
+Their rivalry has caused enough property damage to qualify as a weather phenomenon.
+
+---
+
+Cacty
+A spiky ghost. Not recommended for consumption.
+
+Not even with a Power Pellet.
+
+Trust me.
+
+Seriously, what exactly was the plan there?
+
+Eating Cacty wasn't a particularly sharp idea to begin with. You'll need a real spine to pick a fight with him, knowing how prickly he is. There was no need-le to do it in the first place just to pin him down.
+
+...Fine, I'll stop.
+
+It was the last time the Almanac's editorial department allowed Cacty to contribute to his own entry.
