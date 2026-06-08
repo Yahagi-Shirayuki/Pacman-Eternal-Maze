@@ -26,6 +26,7 @@ public class Ghost {
     int laserDirectionY = 0;
     int restTimer = 0;
     int pelletsCollected = 0;
+    int iceExposureTimer = 0;
     boolean laserActive = false;
     boolean speedDashActive = false;
     ArrayList<int[]> path = new ArrayList<>();

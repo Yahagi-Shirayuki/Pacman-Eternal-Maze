@@ -34,7 +34,7 @@ public class SoundManager {
     private int masterVolume = 100;
     private int sfxVolume = 100;
     private int musicVolume = 100;
-    private static final double MUSIC_FADE_STEP = 1.0 / 180.0; // Lower denominator = faster; higher denominator = smoother/slower music fade.
+    private static final double MUSIC_FADE_STEP = 1.0 / 240.0; // Lower denominator = faster; higher denominator = smoother/slower music fade.
 
     public SoundManager() {
         load("bombaim", "bombaim.wav");

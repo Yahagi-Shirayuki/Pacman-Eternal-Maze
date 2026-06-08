@@ -1,0 +1,85 @@
+Pacman
+The main protagonist. Trapped within the Eternal Maze, he seeks a way back home. Unfortunately, every exit appears to lead to even more maze. Gone are the familiar blue walls and the four classic ghosts he once knew. In their place are laser ghosts, explosive ghosts, fire ghosts, and whatever else this nightmare can invent. At this point, escaping may be easier than understanding what's going on.
+
+---
+
+Inky
+Moves randomly. Whenever he reaches an intersection, he flips a coin to decide whether to continue straight or turn.
+
+Many have tried to predict his movements. Statisticians call him chaotic. Mathematicians call him fascinating. The coin insists everything is proceeding according to plan.
+
+---
+
+Clyde
+Always turns right.
+
+After enough right turns, however, even Clyde gets bored and may occasionally choose left instead. He claims this is part of a sophisticated navigation strategy. Nobody believes him.
+
+For reasons unknown, he absolutely despises Pinky.
+
+---
+
+Pinky
+Always turns left.
+
+Pinky considers himself a ghost of principle and consistency. Unfortunately, those principles mostly involve turning left and arguing with Clyde. Their feud has lasted so long that neither can remember what started it.
+
+---
+
+Blinky
+Actively chases Pacman.
+
+According to Blinky, he can smell Pacman from fifteen blocks away. Nobody knows what a ghost's nose looks like, and nobody is brave enough to ask.
+
+---
+
+Clony
+Is blind.
+
+How exactly a ghost becomes blind remains one of the Eternal Maze's greatest mysteries. Despite being unable to see anything, Clony somehow continues moving around with surprising confidence.
+
+His success rate is significantly lower.
+
+---
+
+Lazory
+Possesses a single eye and can fire deadly laser beams in a straight line.
+
+Rumor has it he once applied to a superhero academy. Unfortunately, being deceased complicated the admissions process. He now spends his time proving that rejection was a mistake.
+
+---
+
+Biggy
+A mysterious white ghost of unknown origin.
+
+Biggy claims he's white because he's "real," though nobody has managed to determine what that means. Worth an astonishing 3,200 points when eaten, making him either incredibly valuable or very bad at self-preservation.
+
+---
+
+Sprintee
+Charges forward at maximum speed until colliding with a wall.
+
+Winner of numerous Ghost Marathon championships. Following allegations of "excessive haunting-enhanced performance," he was permanently banned from all human athletic competitions.
+
+---
+
+Infernity
+Leaves a trail of fire wherever he travels.
+
+Claims the flames are merely a side effect of his haunting abilities. Local fire departments remain unconvinced. If Infernity is approaching, consider relocating to somewhere less flammable.
+
+---
+
+Bomby
+Runs directly toward Pacman and explodes on contact.
+
+Experts recommend maintaining a safe distance. Bomby insists he's simply expressing himself. Everyone else describes it as a severe anger-management problem.
+
+---
+
+Magnety
+Steals all pellets within a 5×5 area.
+
+A menace to snack enthusiasts everywhere. Magnety rarely attacks directly, preferring instead to remove your food and laugh from a safe distance.
+
+*"No more food for you! Hahahaha!"* Magnety, probably

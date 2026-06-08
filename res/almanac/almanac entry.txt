@@ -22,7 +22,7 @@ For reasons unknown, he absolutely despises Pinky.
 Pinky
 Always turns left.
 
-Pinky considers himself a ghost of principle and consistency. Unfortunately, those principles mostly involve turning left and arguing with Clyde. Their feud has lasted so long that neither can remember what started it.
+Pinky considers herself a ghost of principle and consistency. Unfortunately, those principles mostly involve turning left and arguing with Clyde. Their feud has lasted so long that neither can remember what started it.
 
 ---
 
@@ -45,14 +45,18 @@ His success rate is significantly lower.
 Lazory
 Possesses a single eye and can fire deadly laser beams in a straight line.
 
-Rumor has it he once applied to a superhero academy. Unfortunately, being deceased complicated the admissions process. He now spends his time proving that rejection was a mistake.
+Rumor has it he once applied to a superhero academy. Unfortunately, being deceased complicated the admissions process.
+
+Most people, however, suspect the real reason for his rejection was that his lasers have a tendency to hit absolutely everyone, including Pacman, other ghosts, and occasionally Lazory himself.
 
 ---
 
 Biggy
-A mysterious white ghost of unknown origin.
+The mother of all ghosts. Spawns a new ghost every 50 pellets consumed (or stolen).
 
-Biggy claims he's white because he's "real," though nobody has managed to determine what that means. Worth an astonishing 3,200 points when eaten, making him either incredibly valuable or very bad at self-preservation.
+She is believed to be one of the very few female ghosts in the entire maze besides Pinky. How a ghost manages to create more ghosts remains a question best left to ghost scientists.
+
+Worth 3,200 points, largely because she insists she is "a big one."
 
 ---
 
@@ -82,4 +86,14 @@ Steals all pellets within a 5×5 area.
 
 A menace to snack enthusiasts everywhere. Magnety rarely attacks directly, preferring instead to remove your food and laugh from a safe distance.
 
-*"No more food for you! Hahahaha!"* Magnety, probably
+"No more food for you! Hahahaha!" Magnety, probably
+
+---
+
+Icy
+Slows anyone he touches and turns the ground into ice.
+
+He has always dreamed of opening his own ski resort. Winter is his favorite season, entirely unironically.
+
+He despises Infernity, who keeps melting all the ice he painstakingly puts down.
+
