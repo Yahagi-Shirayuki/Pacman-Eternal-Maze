@@ -5,12 +5,12 @@ public class Camera {
     double viewX;
     double viewY;
 
-    public void update(double focusX, double focusY, int worldWidth, int worldHeight, int viewportWidth, int viewportHeight) {
+    public void update(double focusX, double focusY, int worldWidth, int worldHeight, double viewportWidth, double viewportHeight) {
         viewX = getViewStart(focusX, worldWidth, viewportWidth);
         viewY = getViewStart(focusY, worldHeight, viewportHeight);
     }
 
-    private double getViewStart(double focus, int worldSize, int viewportSize) {
+    private double getViewStart(double focus, int worldSize, double viewportSize) {
         if (worldSize <= viewportSize) {
             return -(viewportSize - worldSize) / 2.0;
         }

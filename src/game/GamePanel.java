@@ -17,6 +17,7 @@ import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.AlphaComposite;
+import java.awt.RenderingHints;
 import java.awt.Stroke;
 import java.awt.Window;
 import java.awt.event.KeyEvent;
@@ -39,8 +40,13 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
     int screenWidth = tileSize * maxScreenCol;
     int boardHeight = tileSize * maxScreenRow;
-    final int hudHeight = 48;
+    final int hudHeight = 96;
     int screenHeight = boardHeight + hudHeight;
+    final double defaultCameraZoom = 1.0;
+    final double minCameraZoom = 0.5;
+    final double maxCameraZoom = 3.0;
+    final double cameraZoomStep = 0.25;
+    double cameraZoom = defaultCameraZoom;
     
     boolean[][] maze;
     boolean[][] dots;
@@ -410,7 +416,17 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         updateCamera();
 
         Graphics2D boardGraphics = (Graphics2D) g2.create();
-        boardGraphics.setClip(0, hudHeight, getWidth(), getViewportBoardHeight());
+        boardGraphics.setRenderingHint(
+                RenderingHints.KEY_INTERPOLATION,
+                RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+        boardGraphics.translate(0, hudHeight);
+        boardGraphics.scale(cameraZoom, cameraZoom);
+        boardGraphics.translate(0, -hudHeight);
+        boardGraphics.setClip(
+                0,
+                hudHeight,
+                (int) Math.ceil(getVisibleViewportWidth()),
+                (int) Math.ceil(getVisibleViewportBoardHeight()));
         drawOuterWall(boardGraphics);
         drawMaze(boardGraphics);
         drawDebris(boardGraphics);
@@ -452,7 +468,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         // Vertical lines
         for (int col = 0; col <= maxScreenCol; col++) {
             int x = worldToScreenX(col * tileSize);
-            g2.drawLine(x, hudHeight, x, hudHeight + getViewportBoardHeight());
+            g2.drawLine(x, hudHeight, x, hudHeight + (int) Math.round(getVisibleViewportBoardHeight()));
         }
 
         // Horizontal lines
@@ -535,12 +551,20 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 playerPixelY + tileSize / 2.0,
                 screenWidth,
                 boardHeight,
-                Math.max(tileSize, getWidth()),
-                getViewportBoardHeight());
+                getVisibleViewportWidth(),
+                getVisibleViewportBoardHeight());
     }
 
     public int getViewportBoardHeight() {
         return Math.max(tileSize, getHeight() - hudHeight);
+    }
+
+    public double getVisibleViewportWidth() {
+        return Math.max(tileSize, getWidth() / cameraZoom);
+    }
+
+    public double getVisibleViewportBoardHeight() {
+        return Math.max(tileSize, getViewportBoardHeight() / cameraZoom);
     }
 
     public int worldToScreenX(double worldX) {
@@ -548,11 +572,11 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     }
 
     public int worldToScreenY(double worldY) {
-        return hudHeight + (int) Math.round(getViewportBoardHeight() - tileSize - (worldY - camera.viewY));
+        return hudHeight + (int) Math.round(getVisibleViewportBoardHeight() - tileSize - (worldY - camera.viewY));
     }
 
     public int worldBoundaryToScreenY(double worldY) {
-        return hudHeight + (int) Math.round(getViewportBoardHeight() - (worldY - camera.viewY));
+        return hudHeight + (int) Math.round(getVisibleViewportBoardHeight() - (worldY - camera.viewY));
     }
     
     //maze gen algo
@@ -4091,6 +4115,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             deathAnimationCounter++;
             if (deathAnimationCounter >= framesPerSecond) {
                 deathAnimationDone = true;
+                handleFinalScore();
             }
             return;
         }
@@ -5312,7 +5337,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     }
 
     public void drawPlayer(Graphics2D g2) {
-        if (deathAnimationDone) {
+        if (deathAnimationDone && !playerFrozenDeath) {
             return;
         }
 
@@ -5321,6 +5346,11 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 : playerDead
                         ? pacSprites[deathFrame]
                         : getActivePlayerSprite();
+
+        drawPlayerSprite(g2, sprite);
+    }
+
+    public void drawPlayerSprite(Graphics2D g2, BufferedImage sprite) {
         int screenX = worldToScreenX(playerPixelX);
         int screenY = worldToScreenY(playerPixelY);
         double angle = getPlayerAngle();
@@ -5348,6 +5378,9 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     public void drawOverScreen(Graphics2D g2) {
         if (deathAnimationDone) {
             g2.drawImage(overScreen, 0, 0, getWidth(), getHeight(), null);
+            if (playerFrozenDeath) {
+                drawPlayerSprite(g2, pacFrozeSprite);
+            }
         }
     }
 
@@ -5391,22 +5424,11 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         g2.setColor(Color.WHITE);
         g2.setFont(new Font("Arial", Font.BOLD, 16));
         if (showHudScore) {
-            g2.drawString("SCORE " + score, 12, 20);
+            g2.drawString("SCORE " + score, 12, 18);
         }
-        g2.drawString("LEVEL " + level, getWidth() / 2 - 38, 20);
+        g2.drawString("LEVEL " + level, getWidth() / 2 - 38, 18);
         if (showHudTime) {
-            g2.drawString("TIME " + getElapsedTimeText(), getWidth() - 115, 20);
-        }
-
-        if (showHudBoardState && boardFullClearAwarded) {
-            g2.setColor(menuTextColor);
-            g2.drawString("BOARD CLEAR", getWidth() / 2 - 58, 42);
-            return;
-        }
-
-        if (showHudBoardState && boardClear) {
-            g2.setColor(menuTextColor);
-            g2.drawString("EXIT OPEN", getWidth() / 2 - 44, 42);
+            g2.drawString("TIME " + getElapsedTimeText(), getWidth() - 115, 18);
         }
 
         drawBoardStats(g2);
@@ -5416,13 +5438,38 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     }
 
     public void drawBoardStats(Graphics2D g2) {
+        int y = 38;
+
         g2.setColor(Color.WHITE);
         if (showHudPelletCount) {
-            g2.drawString("PELLETS " + getRemainingPelletCount(), 12, 42);
+            g2.drawString("PELLETS " + getRemainingPelletCount(), 12, y);
         }
+
+        if (showHudBoardState) {
+            String stateText = getBoardStateText();
+            if (!stateText.isEmpty()) {
+                g2.setColor(menuTextColor);
+                g2.drawString(stateText, getWidth() / 2 - g2.getFontMetrics().stringWidth(stateText) / 2, y);
+                g2.setColor(Color.WHITE);
+            }
+        }
+
         if (showHudGhostCount) {
-            g2.drawString("GHOSTS " + ghosts.size(), 122, 42);
+            String ghostText = "GHOSTS " + ghosts.size();
+            g2.drawString(ghostText, getWidth() - g2.getFontMetrics().stringWidth(ghostText) - 12, y);
         }
+    }
+
+    public String getBoardStateText() {
+        if (showHudBoardState && boardFullClearAwarded) {
+            return "BOARD CLEAR";
+        }
+
+        if (showHudBoardState && boardClear) {
+            return "EXIT OPEN";
+        }
+
+        return "";
     }
 
     public void drawMenu(Graphics2D g2) {
@@ -6062,7 +6109,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             return "SPEED";
         }
         if (powerUpType == 3) {
-            return "MULTI";
+            return "BONUS";
         }
         if (powerUpType == powerBombType) {
             return "BOMB";
@@ -6083,6 +6130,38 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         return "POWER";
     }
 
+    public Color getPowerUpHudColor(int powerUpType) {
+        if (powerUpType == 0) {
+            return Color.WHITE;
+        }
+        if (powerUpType == 1) {
+            return new Color(0x7f7f7f);
+        }
+        if (powerUpType == 2) {
+            return new Color(0x7fff7f);
+        }
+        if (powerUpType == 3) {
+            return new Color(0xffff00);
+        }
+        if (powerUpType == powerBombType) {
+            return new Color(0xff0000);
+        }
+        if (powerUpType == powerLaserType) {
+            return new Color(0xff7f00);
+        }
+        if (powerUpType == powerCloneType) {
+            return Color.BLACK;
+        }
+        if (powerUpType == powerFireType) {
+            return new Color(0xff7f7f);
+        }
+        if (powerUpType == powerIceType) {
+            return new Color(0x00ffff);
+        }
+
+        return Color.GREEN;
+    }
+
     public String getElapsedTimeText() {
         int totalSeconds = elapsedFrames / framesPerSecond;
         int minutes = totalSeconds / 60;
@@ -6092,17 +6171,20 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     }
 
     public void drawActiveEffectTimers(Graphics2D g2) {
-        int x = 220;
-        int y = 42;
+        int x = 12;
+        int y = 60;
+        int maxX = getWidth() - 12;
+        int rowHeight = 22;
+        int lastTimerRowY = 82;
 
         if (powerMode) {
-            g2.setColor(Color.CYAN);
-            String text = "POWER " + getTimerSeconds(powerModeTimer);
-            g2.drawString(text, x, y);
-            x += g2.getFontMetrics().stringWidth(text) + 18;
-        }
+            String text = "PELLET " + getTimerSeconds(powerModeTimer);
+            x = drawActiveTimerToken(g2, text, x, y, maxX, Color.CYAN, false);
 
-        g2.setColor(Color.GREEN);
+            if (x == 12) {
+                y += rowHeight;
+            }
+        }
 
         for (int i = 0; i < powerUpTimers.length; i++) {
             if (i == 4 || powerUpTimers[i] <= 0) {
@@ -6110,13 +6192,40 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             }
 
             String text = getPowerUpName(i) + " " + getTimerSeconds(powerUpTimers[i]);
-            g2.drawString(text, x, y);
-            x += g2.getFontMetrics().stringWidth(text) + 18;
+            Color color = getPowerUpHudColor(i);
+            boolean whiteOutline = i == powerCloneType;
 
-            if (x > getWidth() - 90) {
+            if (x + g2.getFontMetrics().stringWidth(text) > maxX && x > 12) {
+                x = 12;
+                y += rowHeight;
+            }
+
+            if (y > lastTimerRowY) {
                 return;
             }
+
+            x = drawActiveTimerToken(g2, text, x, y, maxX, color, whiteOutline);
         }
+    }
+
+    public int drawActiveTimerToken(Graphics2D g2, String text, int x, int y, int maxX, Color color, boolean whiteOutline) {
+        int tokenWidth = g2.getFontMetrics().stringWidth(text);
+
+        if (x + tokenWidth > maxX && x > 12) {
+            return 12;
+        }
+
+        if (whiteOutline) {
+            g2.setColor(Color.WHITE);
+            g2.drawString(text, x - 1, y);
+            g2.drawString(text, x + 1, y);
+            g2.drawString(text, x, y - 1);
+            g2.drawString(text, x, y + 1);
+        }
+
+        g2.setColor(color);
+        g2.drawString(text, x, y);
+        return x + tokenWidth + 18;
     }
 
     public int getTimerSeconds(int timer) {
@@ -6238,6 +6347,10 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             return;
         }
 
+        if (handleCameraZoomKey(keyCode)) {
+            return;
+        }
+
         if (keyCode == KeyEvent.VK_R) {
             soundManager.playMenuConfirm();
             resetGame();
@@ -6295,6 +6408,27 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             nextDirectionX = 1;
             nextDirectionY = 0;
         }
+    }
+
+    public boolean handleCameraZoomKey(int keyCode) {
+        if (keyCode == KeyEvent.VK_Z) {
+            adjustCameraZoom(-cameraZoomStep);
+            return true;
+        }
+        if (keyCode == KeyEvent.VK_C) {
+            adjustCameraZoom(cameraZoomStep);
+            return true;
+        }
+        if (keyCode == KeyEvent.VK_X) {
+            cameraZoom = defaultCameraZoom;
+            return true;
+        }
+
+        return false;
+    }
+
+    public void adjustCameraZoom(double amount) {
+        cameraZoom = clampDouble(cameraZoom + amount, minCameraZoom, maxCameraZoom);
     }
 
     public void handleGameEscape() {

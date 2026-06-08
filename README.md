@@ -29,6 +29,7 @@ Ghosts spawn over time and can enter powered forms naturally or by collecting po
 | Open pause/quit prompt | `Esc` |
 | Return to menu from a run | Press `Esc` while paused, then `Esc` again |
 | Restart current run | `R` |
+| Zoom camera | `Z` out, `C` in, `X` reset |
 | Almanac navigation | `WASD` or arrow keys |
 | Name entry | Arrow keys or `WASD`, then `Enter`/`Space` |
 
