@@ -27,9 +27,13 @@ public class Ghost {
     int restTimer = 0;
     int pelletsCollected = 0;
     int iceExposureTimer = 0;
+    int electrocutedTimer = 0;
+    int flashyTimer = 0;
     boolean laserActive = false;
     boolean speedDashActive = false;
     boolean electrocutedFuse = false;
+    boolean electrocutedLargeExplosion = false;
+    boolean flashyCharged = true;
     ArrayList<int[]> path = new ArrayList<>();
 
     Ghost(int type, int tileX, int tileY, int tileSize) {

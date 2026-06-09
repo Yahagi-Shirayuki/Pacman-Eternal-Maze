@@ -108,7 +108,7 @@ public class SoundManager {
     }
 
     public void playElectrocuted() {
-        play("electrocuted");
+        playExclusive("electrocuted");
     }
 
     public void playExplosion() {
