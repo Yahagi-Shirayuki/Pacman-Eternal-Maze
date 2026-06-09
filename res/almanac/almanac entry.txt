@@ -6,9 +6,9 @@ In the maze are laser ghosts, explosive ghosts, fire ghosts, and whatever else t
 ---
 
 Inky
-Moves randomly. Whenever he reaches an intersection, he flips a coin to decide whether to continue straight or turn.
+Moves randomly. Whenever he reaches an intersection, he flips a coin to decide whether to continue straight or turn. Made many friends in the maze thanks to the coin guilding him or so he believes.
 
-Many have tried to predict his movements. Statisticians call him chaotic. Mathematicians call him fascinating. The coin insists everything is proceeding according to plan.
+Many have tried to predict his movements. Statisticians call him chaotic. Mathematicians call him fascinating. The coin insists everything is proceeding according to plan. hopes this guy stay happy like that when pacman come charging with a power pellet
 
 ---
 
@@ -40,7 +40,7 @@ This guy is blind... somehow
 
 Why? Well, when a ghost loves another ghost very much...
 
-Just kidding. Ghosts clone themselves using strange magic left behind in the maze.
+I'm just kidding. Ghosts clone themselves using strange magic left behind in the maze.
 
 Unfortunately, the cloning process appears to copy everything except eyesight and personality, despite every Clony insisting they're a completely unique individual.
 
@@ -55,11 +55,11 @@ This explanation raises several questions.
 ---
 
 Lazory
-Possesses a single eye and can fire deadly laser beams in a straight line.
+Possesses a single eye and can fire deadly laser beams in a straight line. suspected to comes from another planet because no other ghost has 1 eyes
 
 Rumor has it he once applied to a superhero academy. Unfortunately, being deceased complicated the admissions process.
 
-Most people, however, suspect the real reason for his rejection was that his lasers have a tendency to hit absolutely everyone, including Pacman, other ghosts, and occasionally Lazory himself and not because he's a ghost.
+Most people, however, suspect the real reason for his rejection was that his lasers have a tendency to hit absolutely everyone, including Pacman, other ghosts, and occasionally Lazory himself and has nothing to do with him being a ghost or comes from outer space.
 
 ---
 
@@ -70,7 +70,7 @@ She is believed to be one of the very few female ghosts in the entire maze besid
 
 She does insist other ghost to go "try eating the pellet, it's good" but so far no one listen 
 
-Worth 3,200 points, largely because she insists she is "a big one."... pretty sure that's called "being fat" but no one has the heart to tell her (because they're all ghost lmao)
+Worth 3,200 points (self declared), largely because she insists she is "a big one."... pretty sure that's called "being fat" but no one has the heart to tell her (because they're all ghost lmao)
 
 ---
 
@@ -84,7 +84,7 @@ Winner of numerous Ghost Marathon championships. Following allegations of "haunt
 Infernity
 Leaves a trail of fire wherever he travels.
 
-Claims the flames are merely a harmless side effect of his haunting abilities. Local fire departments remain unconvinced.
+Claims the flames are merely a harmless side effect of his haunting abilities and not because he's a wanted arsonist before become a ghost. Local fire departments remain unconvinced.
 
 If Infernity is approaching, consider relocating to somewhere less flammable.
 
@@ -95,20 +95,20 @@ It's possible that they do that to Icy just because it's hilarrious
 ---
 
 Bomby
-Runs directly toward Pacman and explodes on contact. totally not relate to any green monster from a famous block game
+Runs directly toward Pacman and explodes on contact. totally not relate to any hissing green monster from a different blocky universe
 
-Experts recommend maintaining a safe distance.
+Experts recommend maintaining a safe distance since this guy is a "hot head" that's hotter than Infernity, no kidding.
 
 Bomby insists he's simply expressing himself. Everyone else describes it as a severe anger-management problem.
 
-"Infernity pissed me off... oh yea, and Pacman too, screw that guy" quote Bomby
+"Infernity pissed me off... oh yea, and Pacman too, but mostly Infernity" quote Bomby
 
 ---
 
 Magnety
 Steals all pellets within a 5×5 area.
 
-He also somehow steals your lunch from five meters away, despite his powers supposedly working only on metal.
+He can also somehow steals your lunch from five meters away, despite his powers supposedly working only on metal.
 
 This raises several important questions.
 
@@ -120,13 +120,10 @@ Is your lunch made of metal?
 
 Nobody knows.
 
-Magnety certainly isn't helping. Every time someone asks, he steals another sandwich and leaves.
-
+Magnety certainly isn't helping. Every time someone asks about it, he steal your stuffs and leave without you knowing.
 This guy is an absolute menace to snacks, rivaling even Biggy. What's so tasty about pellets, anyway?
 
-Magnety rarely attacks directly, preferring instead to remove all available food and laugh from a safe distance.
-
-"No more pellets for you, Pac-guy! Hahahaha!" Magnety, probably
+everyone agreed that this guys should've been called "Snacky" or "Thiefy" instead 
 
 ---
 
@@ -137,7 +134,7 @@ He has always dreamed of opening a ski resort somewhere inside the Eternal Maze.
 
 According to Icy, Pacman's inability to turn corners while sliding is simply a "skill issue."
 
-According to Pacman, ice physics were a mistake.
+According to Pacman, ice physics were a mistake and that dev should nerf this guy to the ground.
 
 He absolutely despises Infernity, who somehow manages to melt every carefully constructed ice path within minutes of its completion.
 
@@ -164,5 +161,18 @@ It was the last time the Almanac's editorial department allowed Cacty to contrib
 
 PROJECT GH-05T
 Is immune to everything except of course, explosion damage. 
-it came all the way form the years 20xx to try and kill Pacman (just like any other ghost) because of some butterfly effect or something. "that doesn't change anything, he's still a ghost and he still chasing me"- pacman.
+some ghost guy in the future made it. the thing came all the way from the years 20xx to the maze. has no gender or emotion to begin with, it's here to try and kill Pacman (just like any other ghost) because of some butterfly effect pacman did in the maze or something. "that doesn't change anything, he's still a ghost, still chasing me and I still dies in 1 hit"- pacman.
 It also claim to not relate to any guy whose name also has a T and numbers in it or perhaps made from the same material. yea, these ghost can time travel and put metal on themselves now, who the heck approved this??? 
+
+---
+
+Wavey
+Wavey loves to creates waves across the maze (bars), making navigation harder for everyone nearby.
+
+How water slows down ghosts remains unclear, since ghosts are generally expected to float. Current theories include spectral drag, haunted surface tension, or everyone stopping to admire Wavey’s hair.
+
+Wavey insists his magnificent wave-shaped hair existed before he became a ghost and has nothing to do with his water powers.
+
+The Almanac didn't buy it one bit and suspected that this guy is bald just like other ghosts.
+
+Wavey’s water can extinguish Infernity’s flames and cause PROJECT GH-05T to explode on contact, which raises serious questions about how some scientist ghost in the future made a machine that can time travel and is immune to almost everything, loses to water.

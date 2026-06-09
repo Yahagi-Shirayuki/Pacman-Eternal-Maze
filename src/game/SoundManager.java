@@ -58,6 +58,7 @@ public class SoundManager {
         load("freeze", "freeze.wav");
         load("firedie", "firedie.wav");
         load("eatice", "eatice.wav");
+        load("electrocuted", "electrocuted.wav");
     }
 
     public void playEatDot() {
@@ -104,6 +105,10 @@ public class SoundManager {
 
     public void playBombAim() {
         play("bombaim");
+    }
+
+    public void playElectrocuted() {
+        play("electrocuted");
     }
 
     public void playExplosion() {

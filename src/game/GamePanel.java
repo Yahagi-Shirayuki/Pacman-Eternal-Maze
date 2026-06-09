@@ -89,7 +89,8 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     final int powerFireType = 8;
     final int powerIceType = 9;
     final int powerMetalType = 10;
-    final int powerUpTypeCount = 11;
+    final int powerWaterType = 11;
+    final int powerUpTypeCount = 12;
     final int ghostCloneType = 8;
     final int ghostLaserType = 9;
     final int ghostBonusType = 10;
@@ -101,6 +102,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     final int ghostIceType = 16;
     final int ghostCactusType = 17;
     final int ghostMetalType = 18;
+    final int ghostWaveType = 19;
     final int bombRadiusTiles = 3;
     final int bombExplosionFrameTime = 18;
     final int ghostSpeedRecoverTime = framesPerSecond * 2; // ghost_11 pause after it dashes into a wall.
@@ -125,6 +127,8 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     final double iceAuraSpeedPenalty = 1.5; // Flat speed loss for ice aura slow and Icy eat penalty.
     final int waterEffectHoldDuration = framesPerSecond;
     final int waterEffectDuration = framesPerSecond / 2; // Water shrink duration after its one-second hold.
+    final double waterTileSpeedPenalty = 1.5;
+    final int waterFreezeChainTime = framesPerSecond / 3; // Water-to-ice chain delay after an ice aura touches water.
     final double cactusSpikeSpeed = 4.0; // Cacty projectile speed. Try 4.0 here for faster cactus spikes.
     final int decalAshType = 0;
     final int decalBloodType = 1;
@@ -148,6 +152,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     BufferedImage[] pacPowerSprites = new BufferedImage[2];
     BufferedImage[] pacMetalSprites = new BufferedImage[2];
     BufferedImage[] pacMetalHurtSprites = new BufferedImage[2];
+    BufferedImage[] pacElectrocutedSprites = new BufferedImage[2];
     BufferedImage[] pacCloneSprites = new BufferedImage[2];
     BufferedImage[] pacCloneBombSprites = new BufferedImage[2];
     BufferedImage[] ghostSprites = new BufferedImage[6];
@@ -163,6 +168,8 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     BufferedImage[] ghostIceSprites = new BufferedImage[2];
     BufferedImage[] ghostCactusSprites = new BufferedImage[2];
     BufferedImage[] ghostMetalSprites = new BufferedImage[4];
+    BufferedImage[] ghostElectrocutedSprites = new BufferedImage[2];
+    BufferedImage[] ghostWaveSprites = new BufferedImage[2];
     BufferedImage ghostDeathSprite;
     BufferedImage ghostEyesSprite;
     BufferedImage[] outSprites = new BufferedImage[4];
@@ -176,6 +183,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     BufferedImage iceCubeSprite;
     BufferedImage iceTileSprite;
     BufferedImage waterSprite;
+    BufferedImage[][] waterTileSprites = new BufferedImage[2][4];
     BufferedImage cactusSpikeSprite;
     BufferedImage pacFrozeSprite;
     BufferedImage[] blockTextureSprites = new BufferedImage[blockTextureFileCount];
@@ -266,6 +274,8 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     boolean playerDead = false;
     boolean deathAnimationDone = false;
     boolean playerFrozenDeath = false;
+    boolean playerElectrocutedDeath = false;
+    boolean playerElectrocutedAshVisible = false;
     boolean pacMetalDamaged = false;
     boolean powerMode = false;
     boolean paused = false;
@@ -318,6 +328,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     ArrayList<FrozenGhost> frozenGhosts = new ArrayList<>();
     ArrayList<IceTile> iceTiles = new ArrayList<>();
     ArrayList<WaterEffect> waterEffects = new ArrayList<>();
+    ArrayList<WaterTile> waterTiles = new ArrayList<>();
     ArrayList<CactusSpikeProjectile> cactusSpikeProjectiles = new ArrayList<>();
     ArrayList<GhostDeathEffect> ghostDeathEffects = new ArrayList<>();
     ArrayList<VisualDecal> visualDecals = new ArrayList<>();
@@ -451,6 +462,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         drawDebris(boardGraphics);
         drawVisualDecals(boardGraphics);
         drawIceTiles(boardGraphics);
+        drawWaterTiles(boardGraphics);
         drawWaterEffects(boardGraphics);
         drawDots(boardGraphics);
         drawFruits(boardGraphics);
@@ -468,6 +480,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         drawLaser(boardGraphics);
         drawPacCloneLasers(boardGraphics);
         drawBombExplosion(boardGraphics);
+        drawMagnetAuras(boardGraphics);
         drawIceAuras(boardGraphics);
         drawFrozenGhosts(boardGraphics);
         drawPacClones(boardGraphics);
@@ -812,6 +825,8 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             pacMetalSprites[1] = loadOptionalSprite("res/sprite/pacmetal_1.png", pacSprites[1]);
             pacMetalHurtSprites[0] = loadOptionalSprite("res/sprite/pacmetalhurt_0.png", pacMetalSprites[0]);
             pacMetalHurtSprites[1] = loadOptionalSprite("res/sprite/pacmetalhurt_1.png", pacMetalSprites[1]);
+            pacElectrocutedSprites[0] = loadOptionalSprite("res/sprite/pacelectrocuted_0.png", pacMetalHurtSprites[0]);
+            pacElectrocutedSprites[1] = loadOptionalSprite("res/sprite/pacelectrocuted_1.png", pacElectrocutedSprites[0]);
             pacCloneSprites[0] = ImageIO.read(new File("res/sprite/pacclone_0.png"));
             pacCloneSprites[1] = ImageIO.read(new File("res/sprite/pacclone_1.png"));
             pacCloneBombSprites[0] = loadOptionalSprite("res/sprite/clonebomb_0.png", pacCloneSprites[0]);
@@ -844,6 +859,10 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             ghostMetalSprites[1] = loadOptionalSprite("res/sprite/ghostmetal_1.png", ghostMetalSprites[0]);
             ghostMetalSprites[2] = loadOptionalSprite("res/sprite/ghostmetal_2.png", ghostMetalSprites[0]);
             ghostMetalSprites[3] = loadOptionalSprite("res/sprite/ghostmetal_3.png", ghostMetalSprites[1]);
+            ghostElectrocutedSprites[0] = loadOptionalSprite("res/sprite/ghostelectrocuted_0.png", ghostMetalSprites[0]);
+            ghostElectrocutedSprites[1] = loadOptionalSprite("res/sprite/ghostelectrocuted_1.png", ghostElectrocutedSprites[0]);
+            ghostWaveSprites[0] = loadOptionalSprite("res/sprite/ghostwave_0.png", ghostSprites[0]);
+            ghostWaveSprites[1] = loadOptionalSprite("res/sprite/ghostwave_1.png", ghostWaveSprites[0]);
             ghostDeathSprite = loadOptionalSprite("res/sprite/ghost_7.png", ghostSprites[4]);
             ghostEyesSprite = loadOptionalSprite("res/sprite/eyes.png", ghostDeathSprite);
             outSprites[0] = ImageIO.read(new File("res/sprite/out_0.png"));
@@ -869,6 +888,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             powerUpSprites[8] = ImageIO.read(new File("res/sprite/pow_8.png"));
             powerUpSprites[9] = ImageIO.read(new File("res/sprite/pow_9.png"));
             powerUpSprites[10] = ImageIO.read(new File("res/sprite/pow_10.png"));
+            powerUpSprites[11] = ImageIO.read(new File("res/sprite/pow_11.png"));
             spikeSprites[0] = ImageIO.read(new File("res/sprite/spike_0.png"));
             spikeSprites[1] = ImageIO.read(new File("res/sprite/spike_1.png"));
             decalSprites[decalAshType] = ImageIO.read(new File("res/sprite/ash.png"));
@@ -876,6 +896,10 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             iceCubeSprite = ImageIO.read(new File("res/sprite/icecube.png"));
             iceTileSprite = ImageIO.read(new File("res/sprite/icetile.png"));
             waterSprite = ImageIO.read(new File("res/sprite/water.png"));
+            for (int frame = 0; frame < waterTileSprites[0].length; frame++) {
+                waterTileSprites[0][frame] = ImageIO.read(new File("res/sprite/water0_" + frame + ".png"));
+                waterTileSprites[1][frame] = ImageIO.read(new File("res/sprite/water1_" + frame + ".png"));
+            }
             cactusSpikeSprite = loadOptionalSprite(
                     "res/sprite/cactusspike.png",
                     loadOptionalSprite("res/sprite/castusspike.png", spikeSprites[0]));
@@ -1155,6 +1179,8 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         playerDead = false;
         deathAnimationDone = false;
         playerFrozenDeath = false;
+        playerElectrocutedDeath = false;
+        playerElectrocutedAshVisible = false;
         pacMetalDamaged = false;
         deathAnimationCounter = 0;
         deathFrame = 0;
@@ -1216,6 +1242,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         frozenGhosts.clear();
         iceTiles.clear();
         waterEffects.clear();
+        waterTiles.clear();
         cactusSpikeProjectiles.clear();
         pacClones.clear();
         fireTrails.clear();
@@ -1355,7 +1382,8 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             ghostFireType,
             ghostIceType,
             ghostCactusType,
-            ghostMetalType
+            ghostMetalType,
+            ghostWaveType
         };
 
         return specialGhostTypes[random.nextInt(specialGhostTypes.length)];
@@ -1507,6 +1535,8 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         if (isPlayerMoving()) {
             moveTowardTarget();
         }
+
+        checkPacmetalWaterElectrocution();
     }
 
     public void updateGameTimers() {
@@ -1657,6 +1687,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
             if (clone.pixelX == clone.targetPixelX && clone.pixelY == clone.targetPixelY) {
                 dropPacCloneFireTrail(clone);
+                dropPacCloneWaterTile(clone);
                 eatPelletAtPacClone(clone);
             }
         }
@@ -1912,6 +1943,37 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         return bestTiles.isEmpty() ? null : bestTiles.get(random.nextInt(bestTiles.size()));
     }
 
+    public int[] findNearestUnwateredFloorTile(int startX, int startY) {
+        int bestDistance = Integer.MAX_VALUE;
+        ArrayList<int[]> bestTiles = new ArrayList<>();
+
+        for (int x = 1; x < maxScreenCol - 1; x++) {
+            for (int y = 1; y < maxScreenRow - 1; y++) {
+                if ((x == startX && y == startY) || !canMove(x, y) || hasWaterTileAt(x, y) || hasIceTileAt(x, y)) {
+                    continue;
+                }
+
+                ArrayList<int[]> path = findAStarPath(startX, startY, x, y);
+
+                if (path.isEmpty()) {
+                    continue;
+                }
+
+                int distance = path.size();
+
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    bestTiles.clear();
+                    bestTiles.add(new int[] { x, y });
+                } else if (distance == bestDistance) {
+                    bestTiles.add(new int[] { x, y });
+                }
+            }
+        }
+
+        return bestTiles.isEmpty() ? null : bestTiles.get(random.nextInt(bestTiles.size()));
+    }
+
 
     public void updateBoardGhostSpawns() {
         if (boardGhostDelayTimer > 0) {
@@ -1987,6 +2049,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             handlePortalWrap();
             updateLastPlayerTile();
             dropPlayerFireTrail();
+            dropPlayerWaterTile();
             eatDotAtPlayer();
         }
     }
@@ -2057,8 +2120,15 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         if (ghost.type != ghostMetalType && isGhostInFriendlyIceAura(ghost)) {
             adjustedSpeed -= iceAuraSpeedPenalty;
         }
+        if (ghost.type != ghostWaveType && isGhostOnWaterTile(ghost)) {
+            adjustedSpeed -= waterTileSpeedPenalty;
+        }
         adjustedSpeed = Math.max(0.1, adjustedSpeed);
         return isPowerUpActive(2) ? Math.max(0.1, adjustedSpeed * 0.35) : adjustedSpeed;
+    }
+
+    public boolean isGhostOnWaterTile(Ghost ghost) {
+        return hasWaterTileAt(getGhostCenterTileX(ghost), getGhostCenterTileY(ghost));
     }
 
     public boolean canMove(int x, int y) {
@@ -2144,6 +2214,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         frozenGhosts.clear();
         iceTiles.clear();
         waterEffects.clear();
+        waterTiles.clear();
         cactusSpikeProjectiles.clear();
         pacClones.clear();
         fireTrails.clear();
@@ -2468,7 +2539,8 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             ghostFireType,
             ghostIceType,
             ghostCactusType,
-            ghostMetalType
+            ghostMetalType,
+            ghostWaveType
         };
 
         return powerGhostTypes[random.nextInt(powerGhostTypes.length)];
@@ -2786,6 +2858,8 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             transformGhost(ghost, ghostIceType);
         } else if (powerUpType == powerMetalType) {
             transformGhost(ghost, ghostMetalType);
+        } else if (powerUpType == powerWaterType) {
+            transformGhost(ghost, ghostWaveType);
         }
     }
 
@@ -2841,6 +2915,9 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         if (powerUpType == powerMetalType) {
             return ghostMetalType;
         }
+        if (powerUpType == powerWaterType) {
+            return ghostWaveType;
+        }
 
         return -1;
     }
@@ -2856,6 +2933,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         ghost.warningTimer = 0;
         ghost.activeTimer = 0;
         ghost.fuseTimer = 0;
+        ghost.electrocutedFuse = false;
         ghost.speedRampTimer = 0;
         ghost.laserActive = type != ghostLaserType;
         ghost.pelletsCollected = 0;
@@ -2918,6 +2996,13 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 || (powerUpType == powerIceType && isPowerUpActive(powerFireType))) {
             powerUpTimers[powerFireType] = 0;
             powerUpTimers[powerIceType] = 0;
+            return;
+        }
+
+        if ((powerUpType == powerFireType && isPowerUpActive(powerWaterType))
+                || (powerUpType == powerWaterType && isPowerUpActive(powerFireType))) {
+            powerUpTimers[powerFireType] = 0;
+            powerUpTimers[powerWaterType] = 0;
             return;
         }
 
@@ -3061,8 +3146,86 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         addFireTrail(tileX, tileY, false);
     }
 
+    public void dropPlayerWaterTile() {
+        if (!isPowerUpActive(powerWaterType)) {
+            return;
+        }
+
+        addWaterTile(getPlayerTileX(), getPlayerTileY());
+    }
+
+    public void dropPacCloneWaterTile(PacClone clone) {
+        if (!isPowerUpActive(powerWaterType)) {
+            return;
+        }
+
+        int tileX = clampInt((int) (clone.pixelX / tileSize), 0, maxScreenCol - 1);
+        int tileY = clampInt((int) (clone.pixelY / tileSize), 0, maxScreenRow - 1);
+        addWaterTile(tileX, tileY);
+    }
+
+    public void addWaterTile(int tileX, int tileY) {
+        if (tileX <= 0 || tileX >= maxScreenCol - 1 || tileY <= 0 || tileY >= maxScreenRow - 1
+                || maze[tileX][tileY] || hasIceTileAt(tileX, tileY)) {
+            return;
+        }
+
+        removeFireTrailAt(tileX, tileY);
+        clearDecalsAt(tileX, tileY);
+        if (hasWaterTileAt(tileX, tileY)) {
+            return;
+        }
+
+        int variation = random.nextInt(100) < 25 ? 1 : 0;
+        waterTiles.add(new WaterTile(tileX, tileY, variation));
+    }
+
+    public boolean hasWaterTileAt(int tileX, int tileY) {
+        for (WaterTile waterTile : waterTiles) {
+            if (waterTile.tileX == tileX && waterTile.tileY == tileY) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public boolean removeWaterTileAt(int tileX, int tileY) {
+        for (int i = waterTiles.size() - 1; i >= 0; i--) {
+            WaterTile waterTile = waterTiles.get(i);
+            if (waterTile.tileX == tileX && waterTile.tileY == tileY) {
+                waterTiles.remove(i);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public void removeFireTrailAt(int tileX, int tileY) {
+        for (int i = fireTrails.size() - 1; i >= 0; i--) {
+            FireTrail fireTrail = fireTrails.get(i);
+            if (fireTrail.tileX == tileX && fireTrail.tileY == tileY) {
+                fireTrails.remove(i);
+            }
+        }
+    }
+
+    public void clearDecalsAt(int tileX, int tileY) {
+        for (int i = visualDecals.size() - 1; i >= 0; i--) {
+            VisualDecal decal = visualDecals.get(i);
+            if ((int) (decal.pixelX / tileSize) == tileX && (int) (decal.pixelY / tileSize) == tileY) {
+                visualDecals.remove(i);
+            }
+        }
+    }
+
     public void addFireTrail(int tileX, int tileY, boolean ghostFire) {
         if (tileX <= 0 || tileX >= maxScreenCol - 1 || tileY <= 0 || tileY >= maxScreenRow - 1 || maze[tileX][tileY]) {
+            return;
+        }
+
+        if (hasWaterTileAt(tileX, tileY)) {
             return;
         }
 
@@ -3083,7 +3246,22 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
         int tileX = clampInt((int) (ghost.pixelX / tileSize), 0, maxScreenCol - 1);
         int tileY = clampInt((int) (ghost.pixelY / tileSize), 0, maxScreenRow - 1);
+        if (hasWaterTileAt(tileX, tileY)) {
+            freezeWaterTile(tileX, tileY, ghost);
+            return;
+        }
+
         addIceTile(tileX, tileY);
+    }
+
+    public void dropGhostWaterTile(Ghost ghost) {
+        if (ghost.type != ghostWaveType || isGhostMoving(ghost)) {
+            return;
+        }
+
+        int tileX = clampInt((int) (ghost.pixelX / tileSize), 0, maxScreenCol - 1);
+        int tileY = clampInt((int) (ghost.pixelY / tileSize), 0, maxScreenRow - 1);
+        addWaterTile(tileX, tileY);
     }
 
     public void addIceTile(int tileX, int tileY) {
@@ -3144,9 +3322,91 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
     public void updateIceEffects() {
         removeFireTrailsInIceAuras();
+        updateWaterFreezeChain();
         killFireGhostsInIceAuras();
         updateFriendlyIceAuras();
         updateIceGhostAuras();
+    }
+
+    public void updateWaterFreezeChain() {
+        for (WaterTile waterTile : waterTiles) {
+            if (waterTile.freezeTimer < 0 && isTileInAnyIceAura(waterTile.tileX, waterTile.tileY)) {
+                waterTile.freezeTimer = waterFreezeChainTime;
+            }
+        }
+
+        ArrayList<int[]> frozenTiles = new ArrayList<>();
+        for (int i = waterTiles.size() - 1; i >= 0; i--) {
+            WaterTile waterTile = waterTiles.get(i);
+            if (waterTile.freezeTimer < 0) {
+                continue;
+            }
+
+            waterTile.freezeTimer--;
+            if (waterTile.freezeTimer <= 0) {
+                frozenTiles.add(new int[] { waterTile.tileX, waterTile.tileY });
+                waterTiles.remove(i);
+            }
+        }
+
+        for (int[] tile : frozenTiles) {
+            freezeWaterTile(tile[0], tile[1]);
+        }
+    }
+
+    public void freezeWaterTile(int tileX, int tileY) {
+        freezeWaterTile(tileX, tileY, null);
+    }
+
+    public void freezeWaterTile(int tileX, int tileY, Ghost ignoredGhost) {
+        removeWaterTileAt(tileX, tileY);
+        addIceTile(tileX, tileY);
+
+        if (getPlayerCenterTileX() == tileX && getPlayerCenterTileY() == tileY) {
+            startFrozenDeath();
+        }
+
+        for (int i = ghosts.size() - 1; i >= 0; i--) {
+            if (i >= ghosts.size()) {
+                continue;
+            }
+
+            Ghost ghost = ghosts.get(i);
+            if (ghost != ignoredGhost && getGhostCenterTileX(ghost) == tileX && getGhostCenterTileY(ghost) == tileY) {
+                freezeGhostAt(i);
+            }
+        }
+
+        for (int cloneIndex = pacClones.size() - 1; cloneIndex >= 0; cloneIndex--) {
+            PacClone clone = pacClones.get(cloneIndex);
+            if (getPacCloneCenterTileX(clone) == tileX && getPacCloneCenterTileY(clone) == tileY) {
+                destroyPacCloneAt(cloneIndex);
+            }
+        }
+
+        startAdjacentWaterFreeze(tileX, tileY);
+    }
+
+    public void startAdjacentWaterFreeze(int tileX, int tileY) {
+        int[][] directions = {
+            { 1, 0 },
+            { -1, 0 },
+            { 0, 1 },
+            { 0, -1 }
+        };
+
+        for (int[] direction : directions) {
+            startWaterFreezeAt(tileX + direction[0], tileY + direction[1]);
+        }
+    }
+
+    public void startWaterFreezeAt(int tileX, int tileY) {
+        for (WaterTile waterTile : waterTiles) {
+            if (waterTile.tileX == tileX && waterTile.tileY == tileY && waterTile.freezeTimer < 0) {
+                waterTile.freezeTimer = waterFreezeChainTime;
+                return;
+            }
+        }
     }
 
     public void removeFireTrailsInIceAuras() {
@@ -3296,6 +3556,30 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         return isTileInBombBlastShape(tileX - centerTileX, tileY - centerTileY);
     }
 
+    public boolean isEntityInMagnetAura(double pixelX, double pixelY, int centerTileX, int centerTileY) {
+        int tileX = clampInt((int) ((pixelX + tileSize / 2.0) / tileSize), 0, maxScreenCol - 1);
+        int tileY = clampInt((int) ((pixelY + tileSize / 2.0) / tileSize), 0, maxScreenRow - 1);
+        return isTileInMagnetAuraShape(tileX - centerTileX, tileY - centerTileY);
+    }
+
+    public boolean isGhostInFriendlyMagnetAura(Ghost ghost) {
+        if (!isPowerUpActive(0)) {
+            return false;
+        }
+
+        if (isEntityInMagnetAura(ghost.pixelX, ghost.pixelY, getPlayerCenterTileX(), getPlayerCenterTileY())) {
+            return true;
+        }
+
+        for (PacClone clone : pacClones) {
+            if (isEntityInMagnetAura(ghost.pixelX, ghost.pixelY, getPacCloneCenterTileX(clone), getPacCloneCenterTileY(clone))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public void freezeGhostAt(int ghostIndex) {
         if (ghostIndex < 0 || ghostIndex >= ghosts.size()) {
             return;
@@ -3324,6 +3608,8 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         soundManager.playFreeze();
         soundManager.fadeOutMusicAndStop();
         playerFrozenDeath = true;
+        playerElectrocutedDeath = false;
+        playerElectrocutedAshVisible = false;
         playerDead = true;
         gameStarted = false;
         directionX = 0;
@@ -3460,6 +3746,8 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         soundManager.playDeath();
         soundManager.fadeOutMusicAndStop();
         playerFrozenDeath = false;
+        playerElectrocutedDeath = false;
+        playerElectrocutedAshVisible = false;
         playerDead = true;
         gameStarted = false;
         directionX = 0;
@@ -3470,6 +3758,41 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         targetPixelY = playerPixelY;
         deathAnimationCounter = 0;
         deathFrame = 0;
+    }
+
+    public void checkPacmetalWaterElectrocution() {
+        if (!isMetalPacmanActive() || playerDead || deathAnimationDone) {
+            return;
+        }
+
+        if (hasWaterTileAt(getPlayerCenterTileX(), getPlayerCenterTileY())) {
+            startElectrocutedDeath();
+        }
+    }
+
+    public void startElectrocutedDeath() {
+        if (playerDead || deathAnimationDone) {
+            return;
+        }
+
+        soundManager.playElectrocuted();
+        soundManager.fadeOutMusicAndStop();
+        powerUpTimers[powerMetalType] = 0;
+        pacMetalDamaged = false;
+        playerFrozenDeath = false;
+        playerElectrocutedDeath = true;
+        playerElectrocutedAshVisible = false;
+        playerDead = true;
+        gameStarted = false;
+        directionX = 0;
+        directionY = 0;
+        nextDirectionX = 0;
+        nextDirectionY = 0;
+        targetPixelX = playerPixelX;
+        targetPixelY = playerPixelY;
+        deathAnimationCounter = 0;
+        deathFrame = 0;
+        deathAnimationDone = false;
     }
 
     public boolean isMetalPacmanActive() {
@@ -3629,6 +3952,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         }
 
         ghost.fuseTimer = ghostBombFuseTime;
+        ghost.electrocutedFuse = false;
         ghost.speedDashActive = false;
         ghost.directionX = 0;
         ghost.directionY = 0;
@@ -3637,6 +3961,24 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         ghost.path.clear();
         if (shouldPlayGameSound()) {
             soundManager.playBombAim();
+        }
+    }
+
+    public void armMetalGhostElectrocution(Ghost ghost) {
+        if (ghost.fuseTimer > 0) {
+            return;
+        }
+
+        ghost.fuseTimer = framesPerSecond;
+        ghost.electrocutedFuse = true;
+        ghost.speedDashActive = false;
+        ghost.directionX = 0;
+        ghost.directionY = 0;
+        ghost.targetPixelX = ghost.pixelX;
+        ghost.targetPixelY = ghost.pixelY;
+        ghost.path.clear();
+        if (shouldPlayGameSound()) {
+            soundManager.playElectrocuted();
         }
     }
 
@@ -3690,6 +4032,9 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         }
         if (ghostType == ghostMetalType) {
             return powerMetalType;
+        }
+        if (ghostType == ghostWaveType) {
+            return powerWaterType;
         }
 
         return -1;
@@ -3931,6 +4276,12 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     }
 
     public void addVisualDecal(int type, double pixelX, double pixelY) {
+        int tileX = clampInt((int) (pixelX / tileSize), 0, maxScreenCol - 1);
+        int tileY = clampInt((int) (pixelY / tileSize), 0, maxScreenRow - 1);
+        if (hasWaterTileAt(tileX, tileY)) {
+            return;
+        }
+
         visualDecals.add(new VisualDecal(type, pixelX, pixelY));
     }
 
@@ -4542,6 +4893,16 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             return;
         }
 
+        if (playerElectrocutedDeath) {
+            deathAnimationCounter++;
+            if (deathAnimationCounter >= framesPerSecond) {
+                playerElectrocutedAshVisible = true;
+                deathAnimationDone = true;
+                handleFinalScore();
+            }
+            return;
+        }
+
         if (playerFrozenDeath) {
             deathAnimationCounter++;
             if (deathAnimationCounter >= framesPerSecond) {
@@ -4628,12 +4989,37 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
             Ghost ghost = ghosts.get(i);
             updateGhost(ghost);
+
+            if (checkWaveGhostIceDeath(i)) {
+                continue;
+            }
+
+            if (!ghosts.contains(ghost)) {
+                continue;
+            }
+
             dropGhostFireTrail(ghost);
             dropGhostIceTile(ghost);
+            dropGhostWaterTile(ghost);
             eatPowerUpAtGhost(ghost);
             eatPelletsAtGhost(ghost);
 
             if (!ghosts.contains(ghost)) {
+                continue;
+            }
+
+            checkWaveGhostFireCollision(ghost);
+
+            if (!ghosts.contains(ghost)) {
+                continue;
+            }
+
+            if (ghost.type == ghostMetalType && isGhostOnWaterTile(ghost)) {
+                armMetalGhostElectrocution(ghost);
+            }
+
+            if (ghost.type == ghostFireType && isGhostOnWaterTile(ghost)) {
+                killGhostAt(i, 0, true, ghostKillSoundFire);
                 continue;
             }
 
@@ -4658,6 +5044,49 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         ghost.lastFireTileX = tileX;
         ghost.lastFireTileY = tileY;
         addFireTrail(tileX, tileY, true);
+    }
+
+    public boolean checkWaveGhostIceDeath(int ghostIndex) {
+        if (ghostIndex < 0 || ghostIndex >= ghosts.size()) {
+            return false;
+        }
+
+        Ghost ghost = ghosts.get(ghostIndex);
+        if (ghost.type != ghostWaveType) {
+            return false;
+        }
+
+        int tileX = getGhostCenterTileX(ghost);
+        int tileY = getGhostCenterTileY(ghost);
+        if (hasIceTileAt(tileX, tileY) || isGhostInAnyIceAura(ghost)) {
+            freezeGhostAt(ghostIndex);
+            return true;
+        }
+
+        return false;
+    }
+
+    public void checkWaveGhostFireCollision(Ghost waveGhost) {
+        if (waveGhost.type != ghostWaveType) {
+            return;
+        }
+
+        double minX = waveGhost.pixelX;
+        double minY = waveGhost.pixelY;
+        double maxX = minX + tileSize;
+        double maxY = minY + tileSize;
+
+        for (int i = ghosts.size() - 1; i >= 0; i--) {
+            if (i >= ghosts.size()) {
+                continue;
+            }
+
+            Ghost ghost = ghosts.get(i);
+            if (ghost != waveGhost && ghost.type == ghostFireType && ghostIntersectsRect(ghost, minX, minY, maxX, maxY)) {
+                killGhostAt(i, 0, true, ghostKillSoundFire);
+                return;
+            }
+        }
     }
 
     public void updateGhost(Ghost ghost) {
@@ -4746,6 +5175,11 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             return true;
         }
 
+        if (isGhostInFriendlyMagnetAura(ghost)) {
+            armMetalGhostExplosion(ghost);
+            return true;
+        }
+
         if (ghost.speedDashActive) {
             if (!isGhostMoving(ghost)) {
                 ghost.speedDashActive = false;
@@ -4769,16 +5203,26 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     }
 
     public boolean updateMagnetGhostState(Ghost ghost) {
-        if (!isMetalPacmanActive()) {
-            ghost.speedDashActive = false;
-            return false;
-        }
-
         if (ghost.speedDashActive) {
             if (!isGhostMoving(ghost)) {
                 ghost.speedDashActive = false;
                 return true;
             }
+            return false;
+        }
+
+        int[] metalGhostDirection = getLineOfSightDirectionToGhostType(
+                getGhostCenterTileX(ghost),
+                getGhostCenterTileY(ghost),
+                ghostMetalType,
+                ghost);
+
+        if (metalGhostDirection != null) {
+            startMetalOrMagnetDash(ghost, metalGhostDirection);
+            return false;
+        }
+
+        if (!isMetalPacmanActive()) {
             return false;
         }
 
@@ -4855,6 +5299,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         }
 
         addVisualDecal(decalAshType, ghost.pixelX, ghost.pixelY);
+        ghost.electrocutedFuse = false;
         ghosts.remove(index);
         triggerGhostBombExplosion(ghost.pixelX + tileSize / 2.0, ghost.pixelY + tileSize / 2.0);
     }
@@ -5003,6 +5448,10 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             return chooseIceGhostDirection(ghost, tileX, tileY);
         }
 
+        if (ghost.type == ghostWaveType) {
+            return chooseWaveGhostDirection(ghost, tileX, tileY);
+        }
+
         if (ghost.type == ghostSpeedType) {
             return chooseRandomWallBounceDirection(ghost, tileX, tileY);
         }
@@ -5068,6 +5517,32 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
         if (ghost.path.isEmpty()) {
             int[] floorTile = findNearestUnicedFloorTile(tileX, tileY);
+
+            if (floorTile == null) {
+                return chooseRandomWallBounceDirection(ghost, tileX, tileY);
+            }
+
+            ghost.path = findAStarPath(tileX, tileY, floorTile[0], floorTile[1]);
+        }
+
+        if (ghost.path.isEmpty()) {
+            return chooseRandomWallBounceDirection(ghost, tileX, tileY);
+        }
+
+        int[] nextTile = ghost.path.remove(0);
+        return new int[] { nextTile[0] - tileX, nextTile[1] - tileY };
+    }
+
+    public int[] chooseWaveGhostDirection(Ghost ghost, int tileX, int tileY) {
+        if (!ghost.path.isEmpty()) {
+            int[] targetTile = ghost.path.get(ghost.path.size() - 1);
+            if (hasWaterTileAt(targetTile[0], targetTile[1]) || hasIceTileAt(targetTile[0], targetTile[1])) {
+                ghost.path.clear();
+            }
+        }
+
+        if (ghost.path.isEmpty()) {
+            int[] floorTile = findNearestUnwateredFloorTile(tileX, tileY);
 
             if (floorTile == null) {
                 return chooseRandomWallBounceDirection(ghost, tileX, tileY);
@@ -5642,6 +6117,79 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         }
     }
 
+    public void drawWaterTiles(Graphics2D g2) {
+        int frame = (elapsedFrames / animationDelay) % waterTileSprites[0].length;
+
+        for (WaterTile waterTile : waterTiles) {
+            int variation = clampInt(waterTile.variation, 0, waterTileSprites.length - 1);
+            drawImageAtTile(g2, waterTileSprites[variation][frame], waterTile.tileX, waterTile.tileY);
+            if (waterTile.freezeTimer >= 0) {
+                drawFreezingWaterOverlay(g2, waterTile);
+            }
+        }
+    }
+
+    public void drawFreezingWaterOverlay(Graphics2D g2, WaterTile waterTile) {
+        Composite originalComposite = g2.getComposite();
+        Color originalColor = g2.getColor();
+        float progress = 1.0f - clampInt(waterTile.freezeTimer, 0, waterFreezeChainTime) / (float) waterFreezeChainTime;
+        float alpha = 0.15f + progress * 0.45f;
+
+        g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
+        g2.setColor(new Color(0x00ffff));
+        g2.fillRect(
+                worldToScreenX(waterTile.tileX * tileSize),
+                worldToScreenY(waterTile.tileY * tileSize),
+                tileSize,
+                tileSize);
+        g2.setComposite(originalComposite);
+        g2.setColor(originalColor);
+    }
+
+    public void drawMagnetAuras(Graphics2D g2) {
+        Composite originalComposite = g2.getComposite();
+        Color originalColor = g2.getColor();
+
+        g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.2f));
+        g2.setColor(new Color(0x7fff7f));
+
+        if (isPowerUpActive(0)) {
+            drawMagnetAuraAt(g2, getPlayerCenterTileX(), getPlayerCenterTileY());
+            for (PacClone clone : pacClones) {
+                drawMagnetAuraAt(g2, getPacCloneCenterTileX(clone), getPacCloneCenterTileY(clone));
+            }
+        }
+
+        for (Ghost ghost : ghosts) {
+            if (ghost.type == ghostMagnetType) {
+                drawMagnetAuraAt(g2, getGhostCenterTileX(ghost), getGhostCenterTileY(ghost));
+            }
+        }
+
+        g2.setComposite(originalComposite);
+        g2.setColor(originalColor);
+    }
+
+    public void drawMagnetAuraAt(Graphics2D g2, int centerTileX, int centerTileY) {
+        for (int offsetX = -2; offsetX <= 2; offsetX++) {
+            for (int offsetY = -2; offsetY <= 2; offsetY++) {
+                int tileX = centerTileX + offsetX;
+                int tileY = centerTileY + offsetY;
+
+                if (tileX >= 0 && tileX < maxScreenCol && tileY >= 0 && tileY < maxScreenRow
+                        && isTileInMagnetAuraShape(offsetX, offsetY)) {
+                    g2.fillRect(worldToScreenX(tileX * tileSize), worldToScreenY(tileY * tileSize), tileSize, tileSize);
+                }
+            }
+        }
+    }
+
+    public boolean isTileInMagnetAuraShape(int offsetX, int offsetY) {
+        return Math.abs(offsetX) <= 2
+                && Math.abs(offsetY) <= 2
+                && Math.abs(offsetX) + Math.abs(offsetY) <= 3;
+    }
+
     public void drawIceAuras(Graphics2D g2) {
         Composite originalComposite = g2.getComposite();
         Color originalColor = g2.getColor();
@@ -5911,17 +6459,30 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     }
 
     public void drawPlayer(Graphics2D g2) {
-        if (deathAnimationDone && !playerFrozenDeath) {
+        if (deathAnimationDone && !playerFrozenDeath && !playerElectrocutedAshVisible) {
+            return;
+        }
+
+        if (playerElectrocutedAshVisible) {
+            drawPlayerAshSprite(g2);
             return;
         }
 
         BufferedImage sprite = playerFrozenDeath
                 ? pacFrozeSprite
-                : playerDead
-                        ? pacSprites[deathFrame]
-                        : getActivePlayerSprite();
+                : playerElectrocutedDeath
+                        ? pacElectrocutedSprites[(deathAnimationCounter / 3) % pacElectrocutedSprites.length]
+                        : playerDead
+                                ? pacSprites[deathFrame]
+                                : getActivePlayerSprite();
 
         drawPlayerSprite(g2, sprite);
+    }
+
+    public void drawPlayerAshSprite(Graphics2D g2) {
+        int screenX = worldToScreenX(playerPixelX);
+        int screenY = worldToScreenY(playerPixelY);
+        g2.drawImage(decalSprites[decalAshType], screenX, screenY, tileSize, tileSize, null);
     }
 
     public void drawPlayerSprite(Graphics2D g2, BufferedImage sprite) {
@@ -5962,6 +6523,8 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             g2.drawImage(overScreen, 0, 0, getWidth(), getHeight(), null);
             if (playerFrozenDeath) {
                 drawPlayerSprite(g2, pacFrozeSprite);
+            } else if (playerElectrocutedAshVisible) {
+                drawPlayerAshSprite(g2);
             }
         }
     }
@@ -6247,6 +6810,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 && almanacIndex != 12
                 && almanacIndex != 13
                 && almanacIndex != 14
+                && almanacIndex != 15
                 && getMenuAnimationFrame(2) == 1;
 
         if (flipped) {
@@ -6294,6 +6858,9 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         }
         if (index == 14) {
             return ghostMetalSprites[frame];
+        }
+        if (index == 15) {
+            return ghostWaveSprites[frame];
         }
 
         return ghostSprites[0];
@@ -6733,6 +7300,9 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         if (powerUpType == powerMetalType) {
             return "METAL";
         }
+        if (powerUpType == powerWaterType) {
+            return "WATER";
+        }
 
         return "POWER";
     }
@@ -6767,6 +7337,9 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         }
         if (powerUpType == powerMetalType) {
             return new Color(0xbfbfbf);
+        }
+        if (powerUpType == powerWaterType) {
+            return new Color(0x007fff);
         }
 
         return Color.GREEN;
@@ -6867,7 +7440,8 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         if (ghost.type == ghostMagnetType
                 || ghost.type == ghostIceType
                 || ghost.type == ghostCactusType
-                || ghost.type == ghostMetalType) {
+                || ghost.type == ghostMetalType
+                || ghost.type == ghostWaveType) {
             g2.drawImage(sprite, screenX, screenY, tileSize, tileSize, null);
         } else if (flipped) {
             g2.drawImage(sprite, screenX + tileSize, screenY, -tileSize, tileSize, null);
@@ -6889,6 +7463,10 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         }
         if (ghost.type == ghostMetalType) {
             if (ghost.fuseTimer > 0) {
+                if (ghost.electrocutedFuse) {
+                    return ghostElectrocutedSprites[(ghostAnimationCounter / 3) % ghostElectrocutedSprites.length];
+                }
+
                 return ghostMetalSprites[2 + (ghostAnimationCounter / animationDelay) % 2];
             }
 
@@ -6925,6 +7503,9 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         }
         if (ghost.type == ghostCactusType) {
             return ghostCactusSprites[(ghostAnimationCounter / animationDelay) % ghostCactusSprites.length];
+        }
+        if (ghost.type == ghostWaveType) {
+            return ghostWaveSprites[(ghostAnimationCounter / animationDelay) % ghostWaveSprites.length];
         }
         if (!powerMode) {
             return ghostSprites[ghost.type];
