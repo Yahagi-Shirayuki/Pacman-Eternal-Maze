@@ -1,5 +1,7 @@
 Pacman
-The main protagonist. Trapped within the Eternal Maze, he seeks a way back home. Unfortunately, every exit appears to lead to even more maze. Gone are the familiar blue walls and the four classic ghosts he once knew. In their place are laser ghosts, explosive ghosts, fire ghosts, and whatever else this nightmare can invent. At this point, escaping may be easier than understanding what's going on.
+The main protagonist. Trapped within the Eternal Maze, he seeks a way back home. 
+Unfortunately, every exit appears to lead to even more maze. Gone are the familiar blue walls and the four classic ghosts he once knew (well technically, they're here with him but seem to made some new friends too). 
+In the maze are laser ghosts, explosive ghosts, fire ghosts, and whatever else this nightmare can invent. At this point, escaping may be easier than understanding what's going on... if there're any exist at all.
 
 ---
 
@@ -34,7 +36,7 @@ According to Blinky, he can smell Pacman from fifteen blocks away. Nobody knows 
 ---
 
 Clony
-This guy is blind.
+This guy is blind... somehow
 
 Why? Well, when a ghost loves another ghost very much...
 
@@ -57,16 +59,18 @@ Possesses a single eye and can fire deadly laser beams in a straight line.
 
 Rumor has it he once applied to a superhero academy. Unfortunately, being deceased complicated the admissions process.
 
-Most people, however, suspect the real reason for his rejection was that his lasers have a tendency to hit absolutely everyone, including Pacman, other ghosts, and occasionally Lazory himself.
+Most people, however, suspect the real reason for his rejection was that his lasers have a tendency to hit absolutely everyone, including Pacman, other ghosts, and occasionally Lazory himself and not because he's a ghost.
 
 ---
 
 Biggy
 The mother of all ghosts. Spawns a new ghost every 50 pellets consumed (or stolen).
 
-She is believed to be one of the very few female ghosts in the entire maze besides Pinky. How a ghost manages to create more ghosts remains a question best left to ghost scientists.
+She is believed to be one of the very few female ghosts in the entire maze besides Pinky. How a ghost manages to create more ghosts remains a question best left to ghost scientists. 
 
-Worth 3,200 points, largely because she insists she is "a big one."
+She does insist other ghost to go "try eating the pellet, it's good" but so far no one listen 
+
+Worth 3,200 points, largely because she insists she is "a big one."... pretty sure that's called "being fat" but no one has the heart to tell her (because they're all ghost lmao)
 
 ---
 
@@ -86,18 +90,18 @@ If Infernity is approaching, consider relocating to somewhere less flammable.
 
 He and Lazory appear to have formed an unofficial alliance dedicated entirely to ruining whatever Icy is currently working on. Whether this is a coordinated effort or merely a remarkable coincidence remains under investigation.
 
-It's possible that they do that just because it's funny
+It's possible that they do that to Icy just because it's hilarrious 
 
 ---
 
 Bomby
-Runs directly toward Pacman and explodes on contact.
+Runs directly toward Pacman and explodes on contact. totally not relate to any green monster from a famous block game
 
 Experts recommend maintaining a safe distance.
 
 Bomby insists he's simply expressing himself. Everyone else describes it as a severe anger-management problem.
 
-"Infernity pissed me off" quote Bomby
+"Infernity pissed me off... oh yea, and Pacman too, screw that guy" quote Bomby
 
 ---
 
@@ -155,3 +159,10 @@ Eating Cacty wasn't a particularly sharp idea to begin with. You'll need a real 
 ...Fine, I'll stop.
 
 It was the last time the Almanac's editorial department allowed Cacty to contribute to his own entry.
+
+---
+
+PROJECT GH-05T
+Is immune to everything except of course, explosion damage. 
+it came all the way form the years 20xx to try and kill Pacman (just like any other ghost) because of some butterfly effect or something. "that doesn't change anything, he's still a ghost and he still chasing me"- pacman.
+It also claim to not relate to any guy whose name also has a T and numbers in it or perhaps made from the same material. yea, these ghost can time travel and put metal on themselves now, who the heck approved this??? 
