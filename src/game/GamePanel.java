@@ -3759,7 +3759,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             }
 
             if (ghostIntersectsBombBlast(ghosts.get(i), blastTiles)) {
-                killGhostAt(i, 0, true);
+                killGhostAt(i, 0, true, ghostKillSoundEat, true);
             }
         }
     }
@@ -3923,13 +3923,11 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         int tileY = getPlayerCenterTileY();
         int beamDirectionX = lastDirectionX;
         int beamDirectionY = lastDirectionY;
+        int[] wallTile = getLaserTargetWallTile(tileX, tileY, beamDirectionX, beamDirectionY, null, true);
 
-        while (canMove(tileX + beamDirectionX, tileY + beamDirectionY)) {
-            tileX += beamDirectionX;
-            tileY += beamDirectionY;
+        if (wallTile != null) {
+            burnWallAt(wallTile[0], wallTile[1]);
         }
-
-        burnWallAt(tileX + beamDirectionX, tileY + beamDirectionY);
     }
 
     public void addVisualDecal(int type, double pixelX, double pixelY) {
@@ -3943,37 +3941,8 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         int tileY = getPlayerCenterTileY();
         int beamDirectionX = lastDirectionX;
         int beamDirectionY = lastDirectionY;
-        double halfWidth = laserWidth / 2.0;
 
-        if (beamDirectionX != 0) {
-            int endTileX = tileX;
-
-            while (canMove(endTileX + beamDirectionX, tileY)) {
-                endTileX += beamDirectionX;
-            }
-
-            double endX = beamDirectionX > 0 ? (endTileX + 1) * tileSize : endTileX * tileSize;
-            return new double[] {
-                Math.min(centerX, endX),
-                centerY - halfWidth,
-                Math.max(centerX, endX),
-                centerY + halfWidth
-            };
-        }
-
-        int endTileY = tileY;
-
-        while (canMove(tileX, endTileY + beamDirectionY)) {
-            endTileY += beamDirectionY;
-        }
-
-        double endY = beamDirectionY > 0 ? (endTileY + 1) * tileSize : endTileY * tileSize;
-        return new double[] {
-            centerX - halfWidth,
-            Math.min(centerY, endY),
-            centerX + halfWidth,
-            Math.max(centerY, endY)
-        };
+        return getDirectedLaserBeamWorldBounds(centerX, centerY, tileX, tileY, beamDirectionX, beamDirectionY, null, true);
     }
 
     public void checkGhostLaserHits() {
@@ -4131,7 +4100,9 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 (int) ((ghost.pixelX + tileSize / 2.0) / tileSize),
                 (int) ((ghost.pixelY + tileSize / 2.0) / tileSize),
                 ghost.laserDirectionX,
-                ghost.laserDirectionY);
+                ghost.laserDirectionY,
+                ghost,
+                true);
     }
 
     public double[] getPacCloneLaserBeamWorldBounds(PacClone clone) {
@@ -4148,21 +4119,22 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 (int) ((clone.pixelX + tileSize / 2.0) / tileSize),
                 (int) ((clone.pixelY + tileSize / 2.0) / tileSize),
                 beamDirectionX,
-                beamDirectionY);
+                beamDirectionY,
+                null,
+                true);
     }
 
     public double[] getDirectedLaserBeamWorldBounds(double centerX, double centerY, int tileX, int tileY,
             int beamDirectionX, int beamDirectionY) {
+        return getDirectedLaserBeamWorldBounds(centerX, centerY, tileX, tileY, beamDirectionX, beamDirectionY, null, true);
+    }
+
+    public double[] getDirectedLaserBeamWorldBounds(double centerX, double centerY, int tileX, int tileY,
+            int beamDirectionX, int beamDirectionY, Ghost ignoredGhost, boolean includePacmetalBlocker) {
         double halfWidth = laserWidth / 2.0;
 
         if (beamDirectionX != 0) {
-            int endTileX = tileX;
-
-            while (canMove(endTileX + beamDirectionX, tileY)) {
-                endTileX += beamDirectionX;
-            }
-
-            double endX = beamDirectionX > 0 ? (endTileX + 1) * tileSize : endTileX * tileSize;
+            double endX = getLaserEndCoordinate(tileX, tileY, beamDirectionX, 0, ignoredGhost, includePacmetalBlocker);
             return new double[] {
                 Math.min(centerX, endX),
                 centerY - halfWidth,
@@ -4171,19 +4143,83 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             };
         }
 
-        int endTileY = tileY;
-
-        while (canMove(tileX, endTileY + beamDirectionY)) {
-            endTileY += beamDirectionY;
-        }
-
-        double endY = beamDirectionY > 0 ? (endTileY + 1) * tileSize : endTileY * tileSize;
+        double endY = getLaserEndCoordinate(tileX, tileY, 0, beamDirectionY, ignoredGhost, includePacmetalBlocker);
         return new double[] {
             centerX - halfWidth,
             Math.min(centerY, endY),
             centerX + halfWidth,
             Math.max(centerY, endY)
         };
+    }
+
+    public double getLaserEndCoordinate(int tileX, int tileY, int beamDirectionX, int beamDirectionY,
+            Ghost ignoredGhost, boolean includePacmetalBlocker) {
+        int currentTileX = tileX;
+        int currentTileY = tileY;
+
+        while (true) {
+            int nextTileX = currentTileX + beamDirectionX;
+            int nextTileY = currentTileY + beamDirectionY;
+
+            if (!canMove(nextTileX, nextTileY)) {
+                if (beamDirectionX != 0) {
+                    return beamDirectionX > 0 ? (currentTileX + 1) * tileSize : currentTileX * tileSize;
+                }
+                return beamDirectionY > 0 ? (currentTileY + 1) * tileSize : currentTileY * tileSize;
+            }
+
+            if (isMetalLaserBlockerAt(nextTileX, nextTileY, ignoredGhost, includePacmetalBlocker)) {
+                if (beamDirectionX != 0) {
+                    return beamDirectionX > 0 ? nextTileX * tileSize : (nextTileX + 1) * tileSize;
+                }
+                return beamDirectionY > 0 ? nextTileY * tileSize : (nextTileY + 1) * tileSize;
+            }
+
+            currentTileX = nextTileX;
+            currentTileY = nextTileY;
+        }
+    }
+
+    public int[] getLaserTargetWallTile(int tileX, int tileY, int beamDirectionX, int beamDirectionY,
+            Ghost ignoredGhost, boolean includePacmetalBlocker) {
+        int currentTileX = tileX;
+        int currentTileY = tileY;
+
+        while (true) {
+            int nextTileX = currentTileX + beamDirectionX;
+            int nextTileY = currentTileY + beamDirectionY;
+
+            if (!canMove(nextTileX, nextTileY)) {
+                return new int[] { nextTileX, nextTileY };
+            }
+
+            if (isMetalLaserBlockerAt(nextTileX, nextTileY, ignoredGhost, includePacmetalBlocker)) {
+                return null;
+            }
+
+            currentTileX = nextTileX;
+            currentTileY = nextTileY;
+        }
+    }
+
+    public boolean isMetalLaserBlockerAt(int tileX, int tileY, Ghost ignoredGhost, boolean includePacmetalBlocker) {
+        if (includePacmetalBlocker
+                && isMetalPacmanActive()
+                && getPlayerCenterTileX() == tileX
+                && getPlayerCenterTileY() == tileY) {
+            return true;
+        }
+
+        for (Ghost ghost : ghosts) {
+            if (ghost != ignoredGhost
+                    && ghost.type == ghostMetalType
+                    && getGhostCenterTileX(ghost) == tileX
+                    && getGhostCenterTileY(ghost) == tileY) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public void burnGhostLaserTargetWall(Ghost ghost) {
@@ -4193,13 +4229,11 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         int tileY = (int) ((ghost.pixelY + tileSize / 2.0) / tileSize);
         int beamDirectionX = ghost.laserDirectionX;
         int beamDirectionY = ghost.laserDirectionY;
+        int[] wallTile = getLaserTargetWallTile(tileX, tileY, beamDirectionX, beamDirectionY, ghost, true);
 
-        while (canMove(tileX + beamDirectionX, tileY + beamDirectionY)) {
-            tileX += beamDirectionX;
-            tileY += beamDirectionY;
+        if (wallTile != null) {
+            burnWallAt(wallTile[0], wallTile[1]);
         }
-
-        burnWallAt(tileX + beamDirectionX, tileY + beamDirectionY);
     }
 
     public void burnPacCloneLaserTargetWall(PacClone clone) {
@@ -4211,13 +4245,11 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         if (beamDirectionX == 0 && beamDirectionY == 0) {
             beamDirectionX = 1;
         }
+        int[] wallTile = getLaserTargetWallTile(tileX, tileY, beamDirectionX, beamDirectionY, null, true);
 
-        while (canMove(tileX + beamDirectionX, tileY + beamDirectionY)) {
-            tileX += beamDirectionX;
-            tileY += beamDirectionY;
+        if (wallTile != null) {
+            burnWallAt(wallTile[0], wallTile[1]);
         }
-
-        burnWallAt(tileX + beamDirectionX, tileY + beamDirectionY);
     }
 
     public boolean ghostIntersectsRect(Ghost ghost, double minX, double minY, double maxX, double maxY) {
