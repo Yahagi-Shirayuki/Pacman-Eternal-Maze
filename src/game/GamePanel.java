@@ -1697,21 +1697,23 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
     public void rebuildElectricTiles() {
         ArrayList<int[]> wantedTiles = new ArrayList<>();
-        int centerTileX = getPlayerCenterTileX();
-        int centerTileY = getPlayerCenterTileY();
         boolean touchingWater = false;
 
-        for (int offsetX = -bombRadiusTiles; offsetX <= bombRadiusTiles; offsetX++) {
-            for (int offsetY = -bombRadiusTiles; offsetY <= bombRadiusTiles; offsetY++) {
-                int tileX = centerTileX + offsetX;
-                int tileY = centerTileY + offsetY;
+        touchingWater = addElectricAuraTiles(
+                wantedTiles,
+                getPlayerCenterTileX(),
+                getPlayerCenterTileY(),
+                bombRadiusTiles,
+                false) || touchingWater;
 
-                if (tileX >= 0 && tileX < maxScreenCol && tileY >= 0 && tileY < maxScreenRow
-                        && isTileInBombBlastShape(offsetX, offsetY)) {
-                    wantedTiles.add(new int[] { tileX, tileY });
-                    touchingWater = touchingWater || hasWaterTileAt(tileX, tileY);
-                }
-            }
+        
+        for (PacClone clone : pacClones) {
+            touchingWater = addElectricAuraTiles(
+                    wantedTiles,
+                    getPacCloneCenterTileX(clone),
+                    getPacCloneCenterTileY(clone),
+                    1,
+                    true) || touchingWater;
         }
 
         if (touchingWater) {
@@ -1721,6 +1723,30 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         }
 
         syncElectricTiles(wantedTiles);
+    }
+
+    public boolean addElectricAuraTiles(
+            ArrayList<int[]> wantedTiles,
+            int centerTileX,
+            int centerTileY,
+            int radiusTiles,
+            boolean squareShape) {
+        boolean touchingWater = false;
+
+        for (int offsetX = -radiusTiles; offsetX <= radiusTiles; offsetX++) {
+            for (int offsetY = -radiusTiles; offsetY <= radiusTiles; offsetY++) {
+                int tileX = centerTileX + offsetX;
+                int tileY = centerTileY + offsetY;
+
+                if (tileX >= 0 && tileX < maxScreenCol && tileY >= 0 && tileY < maxScreenRow
+                        && (squareShape || isTileInBombBlastShape(offsetX, offsetY))) {
+                    wantedTiles.add(new int[] { tileX, tileY });
+                    touchingWater = touchingWater || hasWaterTileAt(tileX, tileY);
+                }
+            }
+        }
+
+        return touchingWater;
     }
 
     public void syncElectricTiles(ArrayList<int[]> wantedTiles) {
