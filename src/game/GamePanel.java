@@ -36,7 +36,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     final int tileSize = 24;
     int maxScreenCol = 25; // width
     int maxScreenRow = 31; // height
-    
+    int screenArea = maxScreenCol * maxScreenRow;
 
     int screenWidth = tileSize * maxScreenCol;
     int boardHeight = tileSize * maxScreenRow;
@@ -69,20 +69,21 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     // Larger value = slower animation.
     final int animationDelay = 4;
     final int framesPerSecond = 60;
-    int powerPelletDuration = framesPerSecond * 5; //pellet timer
+    int powerPelletDuration = framesPerSecond * 5; // default pellet timer
     final int powerPelletWarningTime = framesPerSecond * 2;
-    int ghostSpawnInterval = framesPerSecond * 10; //ghost spawn per second
+    int ghostSpawnInterval = framesPerSecond * 10; //default ghost spawn per second
     int ghostPerWave = 1;
     final int boardGhostDelay = framesPerSecond * 2;
     final int carriedGhostSpawnInterval = framesPerSecond;
     final int ghostSpawnWarningTime = framesPerSecond;
-    final int fruitScoreInterval = 10000;
+    final int fruitScoreInterval = 10000; //score require to spawn a fruit
     final int maxFruitsPerLevel = 5;
-    final int powerUpDropSmallDots = 25;
+    int powerUpDropSmallDots = 25; // power up drops after this many seconds
     int powerUpDuration = framesPerSecond * 5; // power timer
-    final int spikeTrapCount = 20;
+    int spikeTrapCount = screenArea * 3 /100; // spike is 3% of le room
     final int ghostDeathFrameTime = 8;
     final double ghostEyesSpeed = 4.0;
+    //ghost array
     final int powerBombType = 5;
     final int powerLaserType = 6;
     final int powerCloneType = 7;
@@ -105,14 +106,15 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     final int ghostMetalType = 18;
     final int ghostWaveType = 19;
     final int ghostFlashType = 20;
+    
     final int bombRadiusTiles = 3;
     final int bombExplosionFrameTime = 18;
-    final int ghostSpeedRecoverTime = framesPerSecond * 2; // ghost_11 pause after it dashes into a wall.
-    final int ghostLaserChargeTime = framesPerSecond * 5; // ghost_9 still charge time before it starts warning.
-    final int ghostLaserWarningTime = framesPerSecond * 2; // ghost_9 flashing warning time before it fires.
-    final int ghostLaserFireTime = framesPerSecond * 5; // ghost_9 active laser duration before it recharges.
-    final int ghostBombFuseTime = framesPerSecond; // ghost_8 stops this long before exploding.
-    final int ghostBombTriggerRadiusTiles = 2; // 2 tiles around ghost = 5x5 danger zone.
+    final int ghostSpeedRecoverTime = framesPerSecond * 2; // how long it takes for Spritee to recover after slamming to a wall
+    final int ghostLaserChargeTime = framesPerSecond * 5; // lazory charge time
+    final int ghostLaserWarningTime = framesPerSecond * 2; 
+    final int ghostLaserFireTime = framesPerSecond * 5; // active lazer time
+    final int ghostBombFuseTime = framesPerSecond; // bomb aiming time
+    final int ghostBombTriggerRadiusTiles = 2; // bombas radias
     final double ghostBombStartSpeed = 0.5;
     final double ghostBombSpeedGainPerSecond = 0.1;
     final double ghostBombMaxSpeedOverPlayer = 0.5;
@@ -125,18 +127,18 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     final int bonusGhostPelletSpawnInterval = 50;
     final int iceFreezeTime = framesPerSecond / 2; // Pacman/clone ice aura: ghost freezes after this many frames.
     final int iceGhostFreezeTime = framesPerSecond; // Icy aura: Pacman freezes after this many frames.
-    final int iceGhostSlowDuration = framesPerSecond * 5; // Slow duration after Pacman eats Icy.
+    final int iceGhostSlowDuration = framesPerSecond * 5; // brainfreeze duration
     final double iceAuraSpeedPenalty = 1.5; // Flat speed loss for ice aura slow and Icy eat penalty.
     final int waterEffectHoldDuration = framesPerSecond;
-    final int waterEffectDuration = framesPerSecond / 2; // Water shrink duration after its one-second hold.
+    final int waterEffectDuration = framesPerSecond / 2; // Water (decal) shrink duration after its one-second hold.
     final double waterTileSpeedPenalty = 1.5;
     final int waterFreezeChainTime = framesPerSecond / 3; // Water-to-ice chain delay after an ice aura touches water.
     final int ghostFlashChargedTime = framesPerSecond * 5;
     final int ghostFlashExhaustedTime = framesPerSecond * 5;
-    final int ghostFlashRechargeWarningTime = framesPerSecond; // Flashy uses ghostpikaim_* this long before recharging.
-    final int ghostFlashElectricRadiusTiles = 1; // Flashy electric area: 2 means a 5x5 tile aura. Lower this to nerf the shock zone.
-    final double ghostFlashSpeedBehindPlayer = 1.0; // Flashy moving speed: getPlayerSpeed() - this value. Raise this to slow him down.
-    final double cactusSpikeSpeed = 4.0; // Cacty projectile speed. Try 4.0 here for faster cactus spikes.
+    final int ghostFlashRechargeWarningTime = framesPerSecond; 
+    final int ghostFlashElectricRadiusTiles = 1; // Flashy electric area from middle out
+    final double ghostFlashSpeedBehindPlayer = 1.0; // Flashy moving speed: getPlayerSpeed() - this value.
+    final double cactusSpikeSpeed = 4.0; // Cacty projectile speed. 
     final int decalAshType = 0;
     final int decalBloodType = 1;
     final int ghostKillSoundEat = 0;
@@ -3732,7 +3734,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     }
 
     public void updateFriendlyIceAuras() {
-        // Pacman/clone ice aura effect on ghosts. Tune iceFreezeTime and iceAuraSpeedPenalty above.
+        // Pacman/clone ice aura effect on ghosts.
         if (!isPowerUpActive(powerIceType)) {
             for (Ghost ghost : ghosts) {
                 ghost.iceExposureTimer = 0;
