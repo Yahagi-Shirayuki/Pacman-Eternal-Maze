@@ -6,16 +6,28 @@ public class Camera {
     double viewY;
 
     public void update(double focusX, double focusY, int worldWidth, int worldHeight, double viewportWidth, double viewportHeight) {
-        viewX = getViewStart(focusX, worldWidth, viewportWidth);
-        viewY = getViewStart(focusY, worldHeight, viewportHeight);
+        update(focusX, focusY, 0, 0, worldWidth, worldHeight, viewportWidth, viewportHeight);
     }
 
-    private double getViewStart(double focus, int worldSize, double viewportSize) {
+    public void update(
+            double focusX,
+            double focusY,
+            double worldMinX,
+            double worldMinY,
+            int worldWidth,
+            int worldHeight,
+            double viewportWidth,
+            double viewportHeight) {
+        viewX = getViewStart(focusX, worldMinX, worldWidth, viewportWidth);
+        viewY = getViewStart(focusY, worldMinY, worldHeight, viewportHeight);
+    }
+
+    private double getViewStart(double focus, double worldMin, int worldSize, double viewportSize) {
         if (worldSize <= viewportSize) {
-            return -(viewportSize - worldSize) / 2.0;
+            return worldMin - (viewportSize - worldSize) / 2.0;
         }
 
-        return clamp(focus - viewportSize / 2.0, 0, worldSize - viewportSize);
+        return clamp(focus - viewportSize / 2.0, worldMin, worldMin + worldSize - viewportSize);
     }
 
     private double clamp(double value, double min, double max) {

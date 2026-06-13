@@ -51,6 +51,52 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     double targetCameraZoom = defaultCameraZoom;
     double startCameraZoom = defaultCameraZoom;
     int cameraZoomAnimationFrame = cameraZoomAnimationDuration;
+    final int levelTransitionGapTiles = 4;
+    final int levelTransitionDuration = 120;
+    final int levelTransitionCameraSettleDuration = 30;
+    final int levelTransitionFireLeadTiles = 2;
+    boolean levelTransitionActive = false;
+    boolean levelTransitionCameraSettleActive = false;
+    int levelTransitionFrame = 0;
+    int levelTransitionFireDepth = -1;
+    int levelTransitionCameraSettleFrame = 0;
+    int levelTransitionExitTileX = 0;
+    int levelTransitionExitTileY = 0;
+    int levelTransitionOffsetTileX = 0;
+    int levelTransitionOffsetTileY = 0;
+    double levelTransitionStartPlayerX = 0.0;
+    double levelTransitionStartPlayerY = 0.0;
+    double levelTransitionEndPlayerX = 0.0;
+    double levelTransitionEndPlayerY = 0.0;
+    double levelTransitionStartFocusX = 0.0;
+    double levelTransitionStartFocusY = 0.0;
+    double levelTransitionEndFocusX = 0.0;
+    double levelTransitionEndFocusY = 0.0;
+    double levelTransitionCameraFocusX = 0.0;
+    double levelTransitionCameraFocusY = 0.0;
+    double levelTransitionStartCameraViewX = 0.0;
+    double levelTransitionStartCameraViewY = 0.0;
+    double levelTransitionEndCameraViewX = 0.0;
+    double levelTransitionEndCameraViewY = 0.0;
+    double levelTransitionCameraSettleStartViewX = 0.0;
+    double levelTransitionCameraSettleStartViewY = 0.0;
+    double levelTransitionCameraSettleEndViewX = 0.0;
+    double levelTransitionCameraSettleEndViewY = 0.0;
+    boolean[][] nextMaze;
+    boolean[][] nextDots;
+    boolean[][] nextBigDots;
+    boolean[][] nextBurnedWalls;
+    int[][] nextBlockTextureIndexes;
+    int[][] nextWallTextureIndexes;
+    int[][] nextDebrisIndexes;
+    int nextPlayerStartTileX = 1;
+    int nextPlayerStartTileY = 1;
+    ArrayList<GhostTransferData> levelTransitionCarriedGhosts = new ArrayList<>();
+    boolean levelTransitionLeftEarly = false;
+    boolean disableTransitionAnimation = false;
+    boolean draftDisableTransitionAnimation = disableTransitionAnimation;
+    double renderWorldOffsetX = 0.0;
+    double renderWorldOffsetY = 0.0;
     
     boolean[][] maze;
     boolean[][] dots;
@@ -243,6 +289,12 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     static final int STATE_HALL_OF_FAME = 3;
     static final int STATE_NAME_ENTRY = 4;
     static final int STATE_ALMANAC = 5;
+    static final int HUD_TIMER_SECONDS = 0;
+    static final int HUD_TIMER_MILLISECONDS = 1;
+    static final int HUD_TIMER_DISABLED = 2;
+    static final int HUD_PELLET_NUMBER = 0;
+    static final int HUD_PELLET_PERCENT = 1;
+    static final int HUD_PELLET_DISABLED = 2;
     int screenState = STATE_MENU;
     int menuChoice = 0;
     int optionCategory = -1;
@@ -254,7 +306,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     ArrayList<String> almanacBodies = new ArrayList<>();
     final File scoreFile = new File("playerscore.sav");
     final File optionFile = new File("option.sav");
-    final int optionSaveVersion = 5;
+    final int optionSaveVersion = 6;
     int loadedOptionVersion = 0;
     String[] highScoreNames = { "DEV", "PRO", "NUB" };
     int[] highScoreValues = { 999999, 50000, 1000 };
@@ -288,16 +340,16 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     int draftMusicVolume = musicVolume;
     int draftSfxVolume = sfxVolume;
     boolean showHudScore = true;
-    boolean showHudTime = true;
+    int hudTimeMode = HUD_TIMER_SECONDS;
     boolean showHudActivePower = true;
     boolean showHudBoardState = true;
-    boolean showHudPelletCount = true;
+    int hudPelletMode = HUD_PELLET_NUMBER;
     boolean showHudGhostCount = true;
     boolean draftShowHudScore = showHudScore;
-    boolean draftShowHudTime = showHudTime;
+    int draftHudTimeMode = hudTimeMode;
     boolean draftShowHudActivePower = showHudActivePower;
     boolean draftShowHudBoardState = showHudBoardState;
-    boolean draftShowHudPelletCount = showHudPelletCount;
+    int draftHudPelletMode = hudPelletMode;
     boolean draftShowHudGhostCount = showHudGhostCount;
     final Color menuTextColor = new Color(0xff7f00);
 
@@ -416,14 +468,16 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     public void run() {
         while (gameThread != null) {
             if (screenState == STATE_GAME && !paused) {
-                if (playerDead) {
+                if (levelTransitionActive) {
+                    updateLevelTransition();
+                } else if (playerDead) {
                     updateDeathAnimation();
                 } else {
                     updateGameTimers();
                     updatePlayer();
                 }
 
-                if (gameStarted && !playerDead) {
+                if (gameStarted && !playerDead && !levelTransitionActive) {
                     updatePacClones();
                     updateFireTrails();
                     updateSmokeTiles();
@@ -524,12 +578,14 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         drawWaterEffects(boardGraphics);
         drawElectricTiles(boardGraphics);
         drawDots(boardGraphics);
+        drawLevelTransitionPreview(boardGraphics);
         drawFruits(boardGraphics);
         drawPowerUps(boardGraphics);
         drawSpikeTraps(boardGraphics);
         drawFireTrails(boardGraphics);
         drawCactusSpikeProjectiles(boardGraphics);
         drawGhostSpikeTraps(boardGraphics);
+        drawLevelTransitionFire(boardGraphics);
         drawAfterImages(boardGraphics);
         drawExitMarkers(boardGraphics);
         drawSpawnWarning(boardGraphics);
@@ -580,8 +636,12 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 continue;
             }
 
-            drawTile(g2, x, 0);
-            drawTile(g2, x, maxScreenRow - 1);
+            if (!isOldBoardTileBurnedByTransition(x, 0)) {
+                drawTile(g2, x, 0);
+            }
+            if (!isOldBoardTileBurnedByTransition(x, maxScreenRow - 1)) {
+                drawTile(g2, x, maxScreenRow - 1);
+            }
         }
 
         // Left and right walls
@@ -592,9 +652,29 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 continue;
             }
 
-            drawTile(g2, 0, y);
-            drawTile(g2, maxScreenCol - 1, y);
+            if (!isOldBoardTileBurnedByTransition(0, y)) {
+                drawTile(g2, 0, y);
+            }
+            if (!isOldBoardTileBurnedByTransition(maxScreenCol - 1, y)) {
+                drawTile(g2, maxScreenCol - 1, y);
+            }
         }
+    }
+
+    public boolean isOldBoardTileBurnedByTransition(int tileX, int tileY) {
+        if (!levelTransitionActive || levelTransitionFireDepth < 0 || renderWorldOffsetX != 0.0 || renderWorldOffsetY != 0.0) {
+            return false;
+        }
+
+        if (levelTransitionOffsetTileX != 0) {
+            return getExitDirectionX(levelTransitionExitTileX) < 0
+                    ? tileX >= getLevelTransitionFireTileX(levelTransitionFireDepth)
+                    : tileX <= getLevelTransitionFireTileX(levelTransitionFireDepth);
+        }
+
+        return getExitDirectionY(levelTransitionExitTileY) < 0
+                ? tileY >= getLevelTransitionFireTileY(levelTransitionFireDepth)
+                : tileY <= getLevelTransitionFireTileY(levelTransitionFireDepth);
     }
     
     //draw tiles
@@ -638,6 +718,19 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     }
 
     public void updateCamera() {
+        if (levelTransitionActive) {
+            double progress = clampDouble(levelTransitionFrame / (double) levelTransitionDuration, 0.0, 1.0);
+            double easedProgress = Math.sin(progress * Math.PI / 2.0);
+            camera.viewX = lerp(levelTransitionStartCameraViewX, levelTransitionEndCameraViewX, easedProgress);
+            camera.viewY = lerp(levelTransitionStartCameraViewY, levelTransitionEndCameraViewY, easedProgress);
+            return;
+        }
+
+        if (levelTransitionCameraSettleActive) {
+            updateLevelTransitionCameraSettle();
+            return;
+        }
+
         camera.update(
                 playerPixelX + tileSize / 2.0,
                 playerPixelY + tileSize / 2.0,
@@ -645,6 +738,80 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 boardHeight,
                 getVisibleViewportWidth(),
                 getVisibleViewportBoardHeight());
+    }
+
+    public double lerp(double start, double end, double progress) {
+        return start + (end - start) * progress;
+    }
+
+    public void updateLevelTransitionCameraSettle() {
+        levelTransitionCameraSettleFrame++;
+        levelTransitionCameraSettleEndViewX = getCurrentBoardCameraViewXForFocus(playerPixelX + tileSize / 2.0);
+        levelTransitionCameraSettleEndViewY = getCurrentBoardCameraViewYForFocus(playerPixelY + tileSize / 2.0);
+        double progress = clampDouble(
+                levelTransitionCameraSettleFrame / (double) levelTransitionCameraSettleDuration,
+                0.0,
+                1.0);
+        double easedProgress = Math.sin(progress * Math.PI / 2.0);
+
+        camera.viewX = lerp(levelTransitionCameraSettleStartViewX, levelTransitionCameraSettleEndViewX, easedProgress);
+        camera.viewY = lerp(levelTransitionCameraSettleStartViewY, levelTransitionCameraSettleEndViewY, easedProgress);
+
+        if (levelTransitionCameraSettleFrame >= levelTransitionCameraSettleDuration) {
+            levelTransitionCameraSettleActive = false;
+        }
+    }
+
+    public double getCameraViewStartForFocus(double focus, double worldMin, int worldSize, double viewportSize) {
+        if (worldSize <= viewportSize) {
+            return worldMin - (viewportSize - worldSize) / 2.0;
+        }
+
+        return clampDouble(focus - viewportSize / 2.0, worldMin, worldMin + worldSize - viewportSize);
+    }
+
+    public double getCurrentBoardCameraViewXForFocus(double focusX) {
+        return getCameraViewStartForFocus(focusX, 0, screenWidth, getVisibleViewportWidth());
+    }
+
+    public double getCurrentBoardCameraViewYForFocus(double focusY) {
+        return getCameraViewStartForFocus(focusY, 0, boardHeight, getVisibleViewportBoardHeight());
+    }
+
+    public double getTransitionCameraViewXForFocus(double focusX) {
+        return getCameraViewStartForFocus(
+                focusX,
+                getLevelTransitionWorldMinX(),
+                getLevelTransitionWorldWidth(),
+                getVisibleViewportWidth());
+    }
+
+    public double getTransitionCameraViewYForFocus(double focusY) {
+        return getCameraViewStartForFocus(
+                focusY,
+                getLevelTransitionWorldMinY(),
+                getLevelTransitionWorldHeight(),
+                getVisibleViewportBoardHeight());
+    }
+
+    public double getLevelTransitionWorldMinX() {
+        return Math.min(0, levelTransitionOffsetTileX * tileSize);
+    }
+
+    public double getLevelTransitionWorldMinY() {
+        return Math.min(0, levelTransitionOffsetTileY * tileSize);
+    }
+
+    public int getLevelTransitionWorldWidth() {
+        double minX = getLevelTransitionWorldMinX();
+        double maxX = Math.max(screenWidth, levelTransitionOffsetTileX * tileSize + screenWidth);
+        return (int) Math.ceil(maxX - minX);
+    }
+
+    public int getLevelTransitionWorldHeight() {
+        double minY = getLevelTransitionWorldMinY();
+        double maxY = Math.max(boardHeight, levelTransitionOffsetTileY * tileSize + boardHeight);
+        return (int) Math.ceil(maxY - minY);
     }
 
     public int getViewportBoardHeight() {
@@ -660,15 +827,16 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     }
 
     public int worldToScreenX(double worldX) {
-        return (int) Math.round(worldX - camera.viewX);
+        return (int) Math.round(worldX + renderWorldOffsetX - camera.viewX);
     }
 
     public int worldToScreenY(double worldY) {
-        return hudHeight + (int) Math.round(getVisibleViewportBoardHeight() - tileSize - (worldY - camera.viewY));
+        return hudHeight + (int) Math.round(
+                getVisibleViewportBoardHeight() - tileSize - (worldY + renderWorldOffsetY - camera.viewY));
     }
 
     public int worldBoundaryToScreenY(double worldY) {
-        return hudHeight + (int) Math.round(getVisibleViewportBoardHeight() - (worldY - camera.viewY));
+        return hudHeight + (int) Math.round(getVisibleViewportBoardHeight() - (worldY + renderWorldOffsetY - camera.viewY));
     }
     
     //maze gen algo
@@ -1142,6 +1310,8 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             noPowerMode = Boolean.parseBoolean(value);
         } else if (key.equals("noSuperGhostMode")) {
             noSuperGhostMode = Boolean.parseBoolean(value);
+        } else if (key.equals("disableTransitionAnimation")) {
+            disableTransitionAnimation = Boolean.parseBoolean(value);
         } else if (key.equals("mazeWidth")) {
             maxScreenCol = Integer.parseInt(value);
         } else if (key.equals("mazeHeight")) {
@@ -1155,13 +1325,17 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         } else if (key.equals("showHudScore")) {
             showHudScore = Boolean.parseBoolean(value);
         } else if (key.equals("showHudTime")) {
-            showHudTime = Boolean.parseBoolean(value);
+            hudTimeMode = Boolean.parseBoolean(value) ? HUD_TIMER_SECONDS : HUD_TIMER_DISABLED;
+        } else if (key.equals("hudTimeMode")) {
+            hudTimeMode = Integer.parseInt(value);
         } else if (key.equals("showHudActivePower")) {
             showHudActivePower = Boolean.parseBoolean(value);
         } else if (key.equals("showHudBoardState")) {
             showHudBoardState = Boolean.parseBoolean(value);
         } else if (key.equals("showHudPelletCount")) {
-            showHudPelletCount = Boolean.parseBoolean(value);
+            hudPelletMode = Boolean.parseBoolean(value) ? HUD_PELLET_NUMBER : HUD_PELLET_DISABLED;
+        } else if (key.equals("hudPelletMode")) {
+            hudPelletMode = Integer.parseInt(value);
         } else if (key.equals("showHudGhostCount")) {
             showHudGhostCount = Boolean.parseBoolean(value);
         } else if (key.equals("enabledSpawnGhosts")) {
@@ -1183,7 +1357,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             }
         }
 
-        if (loadedOptionVersion < optionSaveVersion && areCustomizableGhostTypesEnabledBefore(ghostPhantomType)) {
+        if (loadedOptionVersion < 5 && areCustomizableGhostTypesEnabledBefore(ghostPhantomType)) {
             spawnGhostEnabled[ghostStoneType] = true;
             spawnGhostEnabled[ghostPhantomType] = true;
         }
@@ -1203,10 +1377,10 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             }
         }
 
-        if (loadedOptionVersion < optionSaveVersion && arePowerDropTypesEnabledThrough(powerStoneType)) {
+        if (loadedOptionVersion < 5 && arePowerDropTypesEnabledThrough(powerStoneType)) {
             droppedPowerEnabled[powerStoneType] = true;
         }
-        if (loadedOptionVersion < optionSaveVersion && arePowerDropTypesEnabledThrough(powerStealthType)) {
+        if (loadedOptionVersion < 5 && arePowerDropTypesEnabledThrough(powerStealthType)) {
             droppedPowerEnabled[powerStealthType] = true;
         }
     }
@@ -1249,6 +1423,8 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         masterVolume = clampInt(masterVolume, 0, 100);
         musicVolume = clampInt(musicVolume, 0, 100);
         sfxVolume = clampInt(sfxVolume, 0, 100);
+        hudTimeMode = clampInt(hudTimeMode, HUD_TIMER_SECONDS, HUD_TIMER_DISABLED);
+        hudPelletMode = clampInt(hudPelletMode, HUD_PELLET_NUMBER, HUD_PELLET_DISABLED);
     }
 
     public void writeOptions() {
@@ -1265,16 +1441,17 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         lines.add("specialGhostPowerDropChancePercent=" + specialGhostPowerDropChancePercent);
         lines.add("noPowerMode=" + noPowerMode);
         lines.add("noSuperGhostMode=" + noSuperGhostMode);
+        lines.add("disableTransitionAnimation=" + disableTransitionAnimation);
         lines.add("mazeWidth=" + maxScreenCol);
         lines.add("mazeHeight=" + maxScreenRow);
         lines.add("masterVolume=" + masterVolume);
         lines.add("musicVolume=" + musicVolume);
         lines.add("sfxVolume=" + sfxVolume);
         lines.add("showHudScore=" + showHudScore);
-        lines.add("showHudTime=" + showHudTime);
+        lines.add("hudTimeMode=" + hudTimeMode);
         lines.add("showHudActivePower=" + showHudActivePower);
         lines.add("showHudBoardState=" + showHudBoardState);
-        lines.add("showHudPelletCount=" + showHudPelletCount);
+        lines.add("hudPelletMode=" + hudPelletMode);
         lines.add("showHudGhostCount=" + showHudGhostCount);
         lines.add("enabledSpawnGhosts=" + getEnabledSpawnGhostSaveValue());
         lines.add("enabledDroppedPowers=" + getEnabledPowerDropSaveValue());
@@ -1599,6 +1776,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         initialPelletCount = 0;
         boardHalfSoundPlayed = false;
         boardFullClearAwarded = false;
+        resetLevelTransitionState(true);
         powerPelletWarningPlayed = false;
         consecutiveBoardClears = 0;
         Arrays.fill(powerUpTimers, 0);
@@ -2930,6 +3108,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
         destroyBurnedWall(tileX, tileY);
         addScore(stoneWallScore);
+        playWallBreakSound();
     }
 
     public void resetStoneMovement() {
@@ -3119,7 +3298,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         }
 
         if (boardClear) {
-            advanceToNextBoard(tileX, tileY);
+            startLevelTransition(tileX, tileY);
             return;
         }
 
@@ -3139,19 +3318,142 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     }
 
     public void advanceToNextBoard(int exitTileX, int exitTileY) {
-        ArrayList<GhostTransferData> carriedGhosts = getGhostTransferData();
-        boolean leftEarly = !boardFullClearAwarded;
+        startLevelTransition(exitTileX, exitTileY);
+    }
 
-        level++;
-        applyFruitBonuses();
-        if (leftEarly) {
-            consecutiveBoardClears = 0;
+    public void startLevelTransition(int exitTileX, int exitTileY) {
+        if (levelTransitionActive) {
+            return;
         }
-        roomInitialScore = score;
-        nextFruitScore = fruitScoreInterval;
-        fruitsSpawnedThisLevel = 0;
-        collectedFruits = new int[4];
+
+        int exitDirectionX = getExitDirectionX(exitTileX);
+        int exitDirectionY = getExitDirectionY(exitTileY);
+        if (exitDirectionX == 0 && exitDirectionY == 0) {
+            return;
+        }
+
+        levelTransitionExitTileX = exitTileX;
+        levelTransitionExitTileY = exitTileY;
+        levelTransitionOffsetTileX = exitDirectionX * (maxScreenCol + levelTransitionGapTiles);
+        levelTransitionOffsetTileY = exitDirectionY * (maxScreenRow + levelTransitionGapTiles);
+        nextPlayerStartTileX = getNextBoardStartTileX(exitDirectionX);
+        nextPlayerStartTileY = getNextBoardStartTileY(exitDirectionY);
+        levelTransitionStartPlayerX = playerPixelX;
+        levelTransitionStartPlayerY = playerPixelY;
+        levelTransitionEndPlayerX = (levelTransitionOffsetTileX + nextPlayerStartTileX) * tileSize;
+        levelTransitionEndPlayerY = (levelTransitionOffsetTileY + nextPlayerStartTileY) * tileSize;
+        levelTransitionStartFocusX = playerPixelX + tileSize / 2.0;
+        levelTransitionStartFocusY = playerPixelY + tileSize / 2.0;
+        levelTransitionEndFocusX = levelTransitionEndPlayerX + tileSize / 2.0;
+        levelTransitionEndFocusY = levelTransitionEndPlayerY + tileSize / 2.0;
+        levelTransitionCameraFocusX = levelTransitionStartFocusX;
+        levelTransitionCameraFocusY = levelTransitionStartFocusY;
+        levelTransitionStartCameraViewX = camera.viewX;
+        levelTransitionStartCameraViewY = camera.viewY;
+        levelTransitionEndCameraViewX = getTransitionCameraViewXForFocus(levelTransitionEndFocusX);
+        levelTransitionEndCameraViewY = getTransitionCameraViewYForFocus(levelTransitionEndFocusY);
+        levelTransitionFrame = 0;
+        levelTransitionCameraSettleActive = false;
+        levelTransitionCameraSettleFrame = 0;
+        levelTransitionCarriedGhosts.clear();
+        levelTransitionCarriedGhosts.addAll(getGhostTransferData());
+        levelTransitionLeftEarly = !boardFullClearAwarded;
+
+        buildNextTransitionBoardSnapshot();
+        if (disableTransitionAnimation) {
+            clearActiveBoardObjectsForLevelTransition();
+            completeLevelTransition();
+            return;
+        }
+
+        clearActiveBoardObjectsForLevelTransition();
+        directionX = exitDirectionX;
+        directionY = exitDirectionY;
+        nextDirectionX = 0;
+        nextDirectionY = 0;
+        targetPixelX = playerPixelX;
+        targetPixelY = playerPixelY;
         boardClear = false;
+        levelTransitionActive = true;
+    }
+
+    public int getExitDirectionX(int exitTileX) {
+        if (exitTileX == 0) {
+            return -1;
+        }
+        if (exitTileX == maxScreenCol - 1) {
+            return 1;
+        }
+
+        return 0;
+    }
+
+    public int getExitDirectionY(int exitTileY) {
+        if (exitTileY == 0) {
+            return -1;
+        }
+        if (exitTileY == maxScreenRow - 1) {
+            return 1;
+        }
+
+        return 0;
+    }
+
+    public int getNextBoardStartTileX(int exitDirectionX) {
+        if (exitDirectionX < 0) {
+            return maxScreenCol - 2;
+        }
+        if (exitDirectionX > 0) {
+            return 1;
+        }
+
+        return getTunnelX();
+    }
+
+    public int getNextBoardStartTileY(int exitDirectionY) {
+        if (exitDirectionY < 0) {
+            return maxScreenRow - 2;
+        }
+        if (exitDirectionY > 0) {
+            return 1;
+        }
+
+        return tunnelY;
+    }
+
+    public void buildNextTransitionBoardSnapshot() {
+        boolean[][] currentMaze = maze;
+        boolean[][] currentDots = dots;
+        boolean[][] currentBigDots = bigDots;
+        boolean[][] currentBurnedWalls = burnedWalls;
+        int[][] currentBlockTextureIndexes = blockTextureIndexes;
+        int[][] currentWallTextureIndexes = wallTextureIndexes;
+        int[][] currentDebrisIndexes = debrisIndexes;
+
+        generateMaze();
+        generateDots();
+        burnedWalls = new boolean[maxScreenCol][maxScreenRow];
+        randomizeWallTextures();
+        resetDebris();
+
+        nextMaze = maze;
+        nextDots = dots;
+        nextBigDots = bigDots;
+        nextBurnedWalls = burnedWalls;
+        nextBlockTextureIndexes = blockTextureIndexes;
+        nextWallTextureIndexes = wallTextureIndexes;
+        nextDebrisIndexes = debrisIndexes;
+
+        maze = currentMaze;
+        dots = currentDots;
+        bigDots = currentBigDots;
+        burnedWalls = currentBurnedWalls;
+        blockTextureIndexes = currentBlockTextureIndexes;
+        wallTextureIndexes = currentWallTextureIndexes;
+        debrisIndexes = currentDebrisIndexes;
+    }
+
+    public void clearActiveBoardObjectsForLevelTransition() {
         powerMode = false;
         Arrays.fill(powerUpTimers, 0);
         soundManager.stopLaser();
@@ -3163,18 +3465,241 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         ghostSpawnTimer = 0;
         clearBombExplosionEffect();
         pendingCarriedGhosts.clear();
-        pendingCarriedGhosts.addAll(carriedGhosts);
-        boardGhostDelayTimer = boardGhostDelay;
+        boardGhostDelayTimer = 0;
         carriedGhostSpawnTimer = 0;
         clearWarningPortal();
+        frozenGhosts.clear();
+        waterEffects.clear();
+        cactusSpikeProjectiles.clear();
+        pacClones.clear();
+        fireTrails.clear();
+        afterImages.clear();
+        ghostDeathEffects.clear();
+        ghosts.clear();
+        resetStoneMovement();
         animationCounter = 0;
         ghostAnimationCounter = 0;
+    }
 
-        generateMaze();
+    public void updateLevelTransition() {
+        levelTransitionFrame++;
+        double progress = clampDouble(levelTransitionFrame / (double) levelTransitionDuration, 0.0, 1.0);
+        double easedProgress = Math.sin(progress * Math.PI / 2.0);
+
+        updateLevelTransitionFireSweep(progress);
+        playerPixelX = levelTransitionStartPlayerX
+                + (levelTransitionEndPlayerX - levelTransitionStartPlayerX) * easedProgress;
+        playerPixelY = levelTransitionStartPlayerY
+                + (levelTransitionEndPlayerY - levelTransitionStartPlayerY) * easedProgress;
+        targetPixelX = playerPixelX;
+        targetPixelY = playerPixelY;
+        levelTransitionCameraFocusX = levelTransitionStartFocusX
+                + (levelTransitionEndFocusX - levelTransitionStartFocusX) * easedProgress;
+        levelTransitionCameraFocusY = levelTransitionStartFocusY
+                + (levelTransitionEndFocusY - levelTransitionStartFocusY) * easedProgress;
+        animationCounter++;
+
+        if (levelTransitionFrame >= levelTransitionDuration) {
+            completeLevelTransition();
+        }
+    }
+
+    public void updateLevelTransitionFireSweep(double progress) {
+        int sweepLength = (levelTransitionOffsetTileX != 0 ? maxScreenCol : maxScreenRow) + levelTransitionFireLeadTiles;
+        int targetDepth = clampInt((int) Math.floor(progress * sweepLength), 0, sweepLength);
+
+        for (int depth = levelTransitionFireDepth + 1; depth <= targetDepth; depth++) {
+            burnLevelTransitionFireDepth(depth);
+        }
+
+        levelTransitionFireDepth = Math.max(levelTransitionFireDepth, targetDepth);
+    }
+
+    public void burnLevelTransitionFireDepth(int depth) {
+        if (levelTransitionOffsetTileX != 0) {
+            int tileX = getLevelTransitionFireTileX(depth);
+            if (tileX < 0 || tileX >= maxScreenCol) {
+                return;
+            }
+
+            for (int y = 0; y < maxScreenRow; y++) {
+                burnOldBoardTile(tileX, y);
+            }
+            return;
+        }
+
+        int tileY = getLevelTransitionFireTileY(depth);
+        if (tileY < 0 || tileY >= maxScreenRow) {
+            return;
+        }
+
+        for (int x = 0; x < maxScreenCol; x++) {
+            burnOldBoardTile(x, tileY);
+        }
+    }
+
+    public int getLevelTransitionFireTileX(int depth) {
+        return getExitDirectionX(levelTransitionExitTileX) < 0
+                ? maxScreenCol - 1 - depth
+                : depth;
+    }
+
+    public int getLevelTransitionFireTileY(int depth) {
+        return getExitDirectionY(levelTransitionExitTileY) < 0
+                ? maxScreenRow - 1 - depth
+                : depth;
+    }
+
+    public void burnOldBoardTile(int tileX, int tileY) {
+        if (tileX < 0 || tileX >= maxScreenCol || tileY < 0 || tileY >= maxScreenRow) {
+            return;
+        }
+
+        if (maze != null) {
+            maze[tileX][tileY] = false;
+        }
+        if (dots != null) {
+            dots[tileX][tileY] = false;
+        }
+        if (bigDots != null) {
+            bigDots[tileX][tileY] = false;
+        }
+        if (burnedWalls != null) {
+            burnedWalls[tileX][tileY] = false;
+        }
+        if (debrisIndexes != null) {
+            debrisIndexes[tileX][tileY] = -1;
+        }
+
+        removeOldBoardObjectsAt(tileX, tileY);
+    }
+
+    public void removeOldBoardObjectsAt(int tileX, int tileY) {
+        for (int i = fruits.size() - 1; i >= 0; i--) {
+            Fruit fruit = fruits.get(i);
+            if (fruit.tileX == tileX && fruit.tileY == tileY) {
+                fruits.remove(i);
+            }
+        }
+
+        for (int i = powerUps.size() - 1; i >= 0; i--) {
+            PowerUp powerUp = powerUps.get(i);
+            if (powerUp.tileX == tileX && powerUp.tileY == tileY) {
+                powerUps.remove(i);
+            }
+        }
+
+        for (int i = spikeTraps.size() - 1; i >= 0; i--) {
+            SpikeTrap spikeTrap = spikeTraps.get(i);
+            if (spikeTrap.tileX == tileX && spikeTrap.tileY == tileY) {
+                spikeTraps.remove(i);
+            }
+        }
+
+        for (int i = ghostSpikeTraps.size() - 1; i >= 0; i--) {
+            GhostSpikeTrap spikeTrap = ghostSpikeTraps.get(i);
+            if (spikeTrap.tileX == tileX && spikeTrap.tileY == tileY) {
+                ghostSpikeTraps.remove(i);
+            }
+        }
+
+        for (int i = iceTiles.size() - 1; i >= 0; i--) {
+            IceTile iceTile = iceTiles.get(i);
+            if (iceTile.tileX == tileX && iceTile.tileY == tileY) {
+                iceTiles.remove(i);
+            }
+        }
+
+        for (int i = waterTiles.size() - 1; i >= 0; i--) {
+            WaterTile waterTile = waterTiles.get(i);
+            if (waterTile.tileX == tileX && waterTile.tileY == tileY) {
+                waterTiles.remove(i);
+            }
+        }
+
+        for (int i = electricTiles.size() - 1; i >= 0; i--) {
+            ElectricTile electricTile = electricTiles.get(i);
+            if (electricTile.tileX == tileX && electricTile.tileY == tileY) {
+                electricTiles.remove(i);
+            }
+        }
+
+        for (int i = smokeTiles.size() - 1; i >= 0; i--) {
+            SmokeTile smokeTile = smokeTiles.get(i);
+            if (smokeTile.tileX == tileX && smokeTile.tileY == tileY) {
+                smokeTiles.remove(i);
+            }
+        }
+
+        clearDecalsAt(tileX, tileY);
+    }
+
+    public void completeLevelTransition() {
+        if (nextMaze == null) {
+            resetLevelTransitionState(true);
+            return;
+        }
+
+        double carriedCameraViewX = camera.viewX - levelTransitionOffsetTileX * tileSize;
+        double carriedCameraViewY = camera.viewY - levelTransitionOffsetTileY * tileSize;
+
+        level++;
+        applyFruitBonuses();
+        if (levelTransitionLeftEarly) {
+            consecutiveBoardClears = 0;
+        }
+        roomInitialScore = score;
+        nextFruitScore = fruitScoreInterval;
+        fruitsSpawnedThisLevel = 0;
+        collectedFruits = new int[4];
+        boardClear = false;
+
+        maze = nextMaze;
+        dots = nextDots;
+        bigDots = nextBigDots;
+        burnedWalls = nextBurnedWalls;
+        blockTextureIndexes = nextBlockTextureIndexes;
+        wallTextureIndexes = nextWallTextureIndexes;
+        debrisIndexes = nextDebrisIndexes;
+
+        pendingCarriedGhosts.clear();
+        pendingCarriedGhosts.addAll(levelTransitionCarriedGhosts);
+        boardGhostDelayTimer = boardGhostDelay;
+        carriedGhostSpawnTimer = 0;
         resetStoneWallProgress();
-        generateDots();
         resetBoardPelletProgress();
-        resetBoardVisuals();
+        clearOldBoardTransitionVisuals();
+
+        playerPixelX = nextPlayerStartTileX * tileSize;
+        playerPixelY = nextPlayerStartTileY * tileSize;
+        targetPixelX = playerPixelX;
+        targetPixelY = playerPixelY;
+        lastDirectionX = getExitDirectionX(levelTransitionExitTileX);
+        lastDirectionY = getExitDirectionY(levelTransitionExitTileY);
+        directionX = lastDirectionX;
+        directionY = lastDirectionY;
+        nextDirectionX = 0;
+        nextDirectionY = 0;
+        updateLastPlayerTile();
+        eatDotAtPlayer();
+        directionX = 0;
+        directionY = 0;
+        if (disableTransitionAnimation) {
+            resetLevelTransitionState(true);
+            camera.update(
+                    playerPixelX + tileSize / 2.0,
+                    playerPixelY + tileSize / 2.0,
+                    screenWidth,
+                    boardHeight,
+                    getVisibleViewportWidth(),
+                    getVisibleViewportBoardHeight());
+        } else {
+            startLevelTransitionCameraSettle(carriedCameraViewX, carriedCameraViewY);
+            resetLevelTransitionState(false);
+        }
+    }
+
+    public void clearOldBoardTransitionVisuals() {
         fruits.clear();
         powerUps.clear();
         spikeTraps.clear();
@@ -3191,38 +3716,46 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         afterImages.clear();
         ghostDeathEffects.clear();
         ghosts.clear();
+        visualDecals.clear();
+        clearBombExplosionEffect();
+    }
 
-        if (exitTileX == 0) {
-            playerPixelX = (maxScreenCol - 2) * tileSize;
-            playerPixelY = tunnelY * tileSize;
-            lastDirectionX = -1;
-            lastDirectionY = 0;
-        } else if (exitTileX == maxScreenCol - 1) {
-            playerPixelX = tileSize;
-            playerPixelY = tunnelY * tileSize;
-            lastDirectionX = 1;
-            lastDirectionY = 0;
-        } else if (exitTileY == 0) {
-            playerPixelX = getTunnelX() * tileSize;
-            playerPixelY = (maxScreenRow - 2) * tileSize;
-            lastDirectionX = 0;
-            lastDirectionY = -1;
-        } else {
-            playerPixelX = getTunnelX() * tileSize;
-            playerPixelY = tileSize;
-            lastDirectionX = 0;
-            lastDirectionY = 1;
+    public void resetLevelTransitionState() {
+        resetLevelTransitionState(false);
+    }
+
+    public void resetLevelTransitionState(boolean clearCameraSettle) {
+        levelTransitionActive = false;
+        levelTransitionFrame = 0;
+        levelTransitionFireDepth = -1;
+        levelTransitionOffsetTileX = 0;
+        levelTransitionOffsetTileY = 0;
+        levelTransitionCarriedGhosts.clear();
+        nextMaze = null;
+        nextDots = null;
+        nextBigDots = null;
+        nextBurnedWalls = null;
+        nextBlockTextureIndexes = null;
+        nextWallTextureIndexes = null;
+        nextDebrisIndexes = null;
+        renderWorldOffsetX = 0.0;
+        renderWorldOffsetY = 0.0;
+
+        if (clearCameraSettle) {
+            levelTransitionCameraSettleActive = false;
+            levelTransitionCameraSettleFrame = 0;
         }
+    }
 
-        targetPixelX = playerPixelX;
-        targetPixelY = playerPixelY;
-        directionX = 0;
-        directionY = 0;
-        nextDirectionX = 0;
-        nextDirectionY = 0;
-        lastDirectionY = 0;
-        updateLastPlayerTile();
-        eatDotAtPlayer();
+    public void startLevelTransitionCameraSettle(double startViewX, double startViewY) {
+        levelTransitionCameraSettleStartViewX = startViewX;
+        levelTransitionCameraSettleStartViewY = startViewY;
+        levelTransitionCameraSettleEndViewX = getCurrentBoardCameraViewXForFocus(playerPixelX + tileSize / 2.0);
+        levelTransitionCameraSettleEndViewY = getCurrentBoardCameraViewYForFocus(playerPixelY + tileSize / 2.0);
+        levelTransitionCameraSettleFrame = 0;
+        levelTransitionCameraSettleActive = true;
+        camera.viewX = startViewX;
+        camera.viewY = startViewY;
     }
 
     public void resetBoardVisuals() {
@@ -5022,7 +5555,11 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         if (points != 0) {
             addScore(getAdjustedGhostKillScore(ghost, points));
         }
-        playGhostKillSound(killSound);
+        if (ghost.type == ghostStoneType) {
+            playWallBreakSound();
+        } else {
+            playGhostKillSound(killSound);
+        }
         spawnGhostDeathEffect(ghost);
         if (leaveAsh) {
             addVisualDecal(decalAshType, ghost.pixelX, ghost.pixelY);
@@ -5151,6 +5688,12 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             soundManager.playSpikeKill();
         } else {
             soundManager.playEatGhost();
+        }
+    }
+
+    public void playWallBreakSound() {
+        if (shouldPlayGameSound()) {
+            soundManager.playWallBreak();
         }
     }
 
@@ -6478,6 +7021,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         }
 
         destroyWallWithoutScore(ghost.goalX, ghost.goalY);
+        playWallBreakSound();
         ghost.goalX = -1;
         ghost.goalY = -1;
         return true;
@@ -7708,6 +8252,100 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         }
     }
 
+    public void drawLevelTransitionPreview(Graphics2D g2) {
+        if (!levelTransitionActive || nextMaze == null) {
+            return;
+        }
+
+        drawLevelTransitionBridgeWalls(g2);
+        drawNextTransitionBoard(g2);
+    }
+
+    public void drawLevelTransitionBridgeWalls(Graphics2D g2) {
+        if (levelTransitionOffsetTileX != 0) {
+            int startX = levelTransitionOffsetTileX > 0
+                    ? maxScreenCol
+                    : levelTransitionOffsetTileX + maxScreenCol;
+            int endX = levelTransitionOffsetTileX > 0 ? levelTransitionOffsetTileX - 1 : -1;
+
+            for (int x = startX; x <= endX; x++) {
+                for (int y = 0; y < maxScreenRow; y++) {
+                    if (y != tunnelY) {
+                        drawTransitionWallTile(g2, x, y);
+                    }
+                }
+            }
+            return;
+        }
+
+        if (levelTransitionOffsetTileY != 0) {
+            int startY = levelTransitionOffsetTileY > 0
+                    ? maxScreenRow
+                    : levelTransitionOffsetTileY + maxScreenRow;
+            int endY = levelTransitionOffsetTileY > 0 ? levelTransitionOffsetTileY - 1 : -1;
+
+            for (int y = startY; y <= endY; y++) {
+                for (int x = 0; x < maxScreenCol; x++) {
+                    if (x != getTunnelX()) {
+                        drawTransitionWallTile(g2, x, y);
+                    }
+                }
+            }
+        }
+    }
+
+    public void drawTransitionWallTile(Graphics2D g2, int tileX, int tileY) {
+        int screenX = worldToScreenX(tileX * tileSize);
+        int screenY = worldToScreenY(tileY * tileSize);
+        Color originalColor = g2.getColor();
+
+        g2.setColor(Color.RED.darker().darker().darker());
+        g2.fillRect(screenX, screenY, tileSize, tileSize);
+        if (wallTextureCount > 0) {
+            int textureIndex = Math.abs(tileX * 31 + tileY * 17) % wallTextureCount;
+            g2.drawImage(wallTextureSprites[textureIndex], screenX, screenY, tileSize, tileSize, null);
+        }
+        g2.setColor(originalColor);
+    }
+
+    public void drawNextTransitionBoard(Graphics2D g2) {
+        boolean[][] currentMaze = maze;
+        boolean[][] currentDots = dots;
+        boolean[][] currentBigDots = bigDots;
+        boolean[][] currentBurnedWalls = burnedWalls;
+        int[][] currentBlockTextureIndexes = blockTextureIndexes;
+        int[][] currentWallTextureIndexes = wallTextureIndexes;
+        int[][] currentDebrisIndexes = debrisIndexes;
+        double currentRenderWorldOffsetX = renderWorldOffsetX;
+        double currentRenderWorldOffsetY = renderWorldOffsetY;
+
+        try {
+            maze = nextMaze;
+            dots = nextDots;
+            bigDots = nextBigDots;
+            burnedWalls = nextBurnedWalls;
+            blockTextureIndexes = nextBlockTextureIndexes;
+            wallTextureIndexes = nextWallTextureIndexes;
+            debrisIndexes = nextDebrisIndexes;
+            renderWorldOffsetX = levelTransitionOffsetTileX * tileSize;
+            renderWorldOffsetY = levelTransitionOffsetTileY * tileSize;
+
+            drawOuterWall(g2);
+            drawMaze(g2);
+            drawDots(g2);
+        } finally {
+            maze = currentMaze;
+            dots = currentDots;
+            bigDots = currentBigDots;
+            burnedWalls = currentBurnedWalls;
+            blockTextureIndexes = currentBlockTextureIndexes;
+            wallTextureIndexes = currentWallTextureIndexes;
+            debrisIndexes = currentDebrisIndexes;
+            renderWorldOffsetX = currentRenderWorldOffsetX;
+            renderWorldOffsetY = currentRenderWorldOffsetY;
+        }
+    }
+
     public void drawFruits(Graphics2D g2) {
         for (Fruit fruit : fruits) {
             drawImageAtTile(g2, fruitSprites[fruit.type], fruit.tileX, fruit.tileY);
@@ -7731,6 +8369,42 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             BufferedImage[] sprites = fireTrail.ghostFire ? ghostFireSprites : fireSprites;
             BufferedImage sprite = sprites[getFireFrame(fireTrail)];
             drawImageAtTile(g2, sprite, fireTrail.tileX, fireTrail.tileY);
+        }
+    }
+
+    public void drawLevelTransitionFire(Graphics2D g2) {
+        if (!levelTransitionActive || levelTransitionFireDepth < 0) {
+            return;
+        }
+
+        int frame = getLoopingFireFrame(levelTransitionFrame);
+        BufferedImage sprite = fireSprites[frame];
+
+        for (int lead = 0; lead < levelTransitionFireLeadTiles; lead++) {
+            int depth = levelTransitionFireDepth - lead;
+            if (depth < 0) {
+                continue;
+            }
+
+            if (levelTransitionOffsetTileX != 0) {
+                int tileX = getLevelTransitionFireTileX(depth);
+                if (tileX < 0 || tileX >= maxScreenCol) {
+                    continue;
+                }
+
+                for (int y = 0; y < maxScreenRow; y++) {
+                    drawImageAtTile(g2, sprite, tileX, y);
+                }
+            } else {
+                int tileY = getLevelTransitionFireTileY(depth);
+                if (tileY < 0 || tileY >= maxScreenRow) {
+                    continue;
+                }
+
+                for (int x = 0; x < maxScreenCol; x++) {
+                    drawImageAtTile(g2, sprite, x, tileY);
+                }
+            }
         }
     }
 
@@ -7763,15 +8437,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     }
 
     public int getEvilFireFrame(SmokeTile smokeTile) {
-        if (smokeTile.age < 18) {
-            return Math.min(5, smokeTile.age / 3);
-        }
-
-        if (smokeTile.evilFireTimer <= 16) {
-            return 10 + Math.min(3, (16 - smokeTile.evilFireTimer) / 4);
-        }
-
-        return 6 + ((smokeTile.age / animationDelay) % 4);
+        return getFireFrame(smokeTile.age, smokeTile.evilFireTimer);
     }
 
     public void drawWaterEffects(Graphics2D g2) {
@@ -7929,15 +8595,27 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     }
 
     public int getFireFrame(FireTrail fireTrail) {
-        if (fireTrail.age < 18) {
-            return Math.min(5, fireTrail.age / 3);
+        return getFireFrame(fireTrail.age, fireTrail.timer);
+    }
+
+    public int getFireFrame(int age, int timer) {
+        if (age < 18) {
+            return Math.min(5, age / 3);
         }
 
-        if (fireTrail.timer <= 16) {
-            return 10 + Math.min(3, (16 - fireTrail.timer) / 4);
+        if (timer <= 16) {
+            return 10 + Math.min(3, (16 - timer) / 4);
         }
 
-        return 6 + ((fireTrail.age / animationDelay) % 4);
+        return getLoopingFireFrame(age);
+    }
+
+    public int getLoopingFireFrame(int age) {
+        if (age < 18) {
+            return Math.min(5, age / 3);
+        }
+
+        return 6 + ((age / animationDelay) % 4);
     }
 
     public void drawGhostSpikeTraps(Graphics2D g2) {
@@ -8296,9 +8974,26 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         if (showHudScore) {
             g2.drawString("SCORE " + score, 12, 18);
         }
-        g2.drawString("LEVEL " + level, getWidth() / 2 - 38, 18);
-        if (showHudTime) {
-            g2.drawString("TIME " + getElapsedTimeText(), getWidth() - 115, 18);
+
+        String levelText = "LEVEL " + level;
+        String inlineStateText = "";
+        if (shouldInlineBoardState()) {
+            inlineStateText = getBoardStateText();
+        }
+        int levelTextWidth = g2.getFontMetrics().stringWidth(levelText);
+        int inlineGapWidth = inlineStateText.isEmpty() ? 0 : g2.getFontMetrics().stringWidth("  ");
+        int inlineStateWidth = g2.getFontMetrics().stringWidth(inlineStateText);
+        int levelTextX = getWidth() / 2 - (levelTextWidth + inlineGapWidth + inlineStateWidth) / 2;
+        g2.drawString(levelText, levelTextX, 18);
+        if (!inlineStateText.isEmpty()) {
+            g2.setColor(menuTextColor);
+            g2.drawString(inlineStateText, levelTextX + levelTextWidth + inlineGapWidth, 18);
+            g2.setColor(Color.WHITE);
+        }
+
+        if (isHudTimeEnabled()) {
+            String timeText = "TIME " + getElapsedTimeText();
+            g2.drawString(timeText, getWidth() - g2.getFontMetrics().stringWidth(timeText) - 12, 18);
         }
 
         drawBoardStats(g2);
@@ -8311,11 +9006,11 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         int y = 38;
 
         g2.setColor(Color.WHITE);
-        if (showHudPelletCount) {
-            g2.drawString("PELLETS " + getRemainingPelletCount(), 12, y);
+        if (isHudPelletCountEnabled()) {
+            g2.drawString(getHudPelletText(), 12, y);
         }
 
-        if (showHudBoardState) {
+        if (showHudBoardState && !shouldInlineBoardState()) {
             String stateText = getBoardStateText();
             if (!stateText.isEmpty()) {
                 g2.setColor(menuTextColor);
@@ -8328,6 +9023,39 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             String ghostText = "GHOSTS " + ghosts.size();
             g2.drawString(ghostText, getWidth() - g2.getFontMetrics().stringWidth(ghostText) - 12, y);
         }
+    }
+
+    public boolean shouldInlineBoardState() {
+        return showHudBoardState && !isHudPelletCountEnabled() && !showHudGhostCount;
+    }
+
+    public boolean isHudTimeEnabled() {
+        return hudTimeMode != HUD_TIMER_DISABLED;
+    }
+
+    public boolean isHudPelletCountEnabled() {
+        return hudPelletMode != HUD_PELLET_DISABLED;
+    }
+
+    public boolean hasHudBoardStatsRow() {
+        return isHudPelletCountEnabled() || showHudGhostCount || (showHudBoardState && !shouldInlineBoardState());
+    }
+
+    public String getHudPelletText() {
+        if (hudPelletMode == HUD_PELLET_PERCENT) {
+            return "PELLETS " + getRemainingPelletPercent() + "%";
+        }
+
+        return "PELLETS " + getRemainingPelletCount();
+    }
+
+    public int getRemainingPelletPercent() {
+        if (initialPelletCount <= 0) {
+            return 0;
+        }
+
+        int remaining = getRemainingPelletCount();
+        return clampInt((int) Math.round(remaining * 100.0 / initialPelletCount), 0, 100);
     }
 
     public String getBoardStateText() {
@@ -8460,6 +9188,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             "SPECIAL POWER DROP: " + draftSpecialGhostPowerDropChancePercent + "%",
             "NO POWER MODE: " + draftNoPowerMode,
             "NO SUPER GHOST MODE: " + draftNoSuperGhostMode,
+            "DISABLE TRANSITION ANIMATION: " + draftDisableTransitionAnimation,
             "MAZE WIDTH: " + draftMazeWidth,
             "MAZE HEIGHT: " + draftMazeHeight,
             "CUSTOMIZE SUPER GHOST/POWER"
@@ -8509,30 +9238,52 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         return new String[] {
             areAnyDraftUiOptionsEnabled() ? "DISABLE ALL UI" : "ENABLE ALL UI",
             "SCORE: " + draftShowHudScore,
-            "TIME: " + draftShowHudTime,
+            "TIME: " + getHudTimeModeLabel(draftHudTimeMode),
             "ACTIVE POWER: " + draftShowHudActivePower,
             "BOARD STATE: " + draftShowHudBoardState,
-            "PELLET COUNT: " + draftShowHudPelletCount,
+            "PELLET COUNT: " + getHudPelletModeLabel(draftHudPelletMode),
             "GHOST COUNT: " + draftShowHudGhostCount
         };
     }
 
     public boolean areAnyDraftUiOptionsEnabled() {
         return draftShowHudScore
-                || draftShowHudTime
+                || draftHudTimeMode != HUD_TIMER_DISABLED
                 || draftShowHudActivePower
                 || draftShowHudBoardState
-                || draftShowHudPelletCount
+                || draftHudPelletMode != HUD_PELLET_DISABLED
                 || draftShowHudGhostCount;
     }
 
     public void setAllDraftUiOptions(boolean enabled) {
         draftShowHudScore = enabled;
-        draftShowHudTime = enabled;
+        draftHudTimeMode = enabled ? HUD_TIMER_SECONDS : HUD_TIMER_DISABLED;
         draftShowHudActivePower = enabled;
         draftShowHudBoardState = enabled;
-        draftShowHudPelletCount = enabled;
+        draftHudPelletMode = enabled ? HUD_PELLET_NUMBER : HUD_PELLET_DISABLED;
         draftShowHudGhostCount = enabled;
+    }
+
+    public String getHudTimeModeLabel(int mode) {
+        if (mode == HUD_TIMER_MILLISECONDS) {
+            return "MILLISECONDS";
+        }
+        if (mode == HUD_TIMER_DISABLED) {
+            return "DISABLED";
+        }
+
+        return "SECONDS";
+    }
+
+    public String getHudPelletModeLabel(int mode) {
+        if (mode == HUD_PELLET_PERCENT) {
+            return "PERCENT";
+        }
+        if (mode == HUD_PELLET_DISABLED) {
+            return "DISABLED";
+        }
+
+        return "NUMBER";
     }
 
     public void drawHallOfFame(Graphics2D g2) {
@@ -8775,6 +9526,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         draftSpecialGhostPowerDropChancePercent = specialGhostPowerDropChancePercent;
         draftNoPowerMode = noPowerMode;
         draftNoSuperGhostMode = noSuperGhostMode;
+        draftDisableTransitionAnimation = disableTransitionAnimation;
         copyBooleanArray(spawnGhostEnabled, draftSpawnGhostEnabled);
         copyBooleanArray(droppedPowerEnabled, draftDroppedPowerEnabled);
         draftMazeWidth = normalizeOddInt(maxScreenCol, 11, 51);
@@ -8783,10 +9535,10 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         draftMusicVolume = musicVolume;
         draftSfxVolume = sfxVolume;
         draftShowHudScore = showHudScore;
-        draftShowHudTime = showHudTime;
+        draftHudTimeMode = hudTimeMode;
         draftShowHudActivePower = showHudActivePower;
         draftShowHudBoardState = showHudBoardState;
-        draftShowHudPelletCount = showHudPelletCount;
+        draftHudPelletMode = hudPelletMode;
         draftShowHudGhostCount = showHudGhostCount;
         optionCategory = -1;
         optionSubCategory = -1;
@@ -8806,6 +9558,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         specialGhostPowerDropChancePercent = draftSpecialGhostPowerDropChancePercent;
         noPowerMode = draftNoPowerMode;
         noSuperGhostMode = draftNoSuperGhostMode;
+        disableTransitionAnimation = draftDisableTransitionAnimation;
         ensureAtLeastOneSpawnGhostEnabled(draftSpawnGhostEnabled);
         copyBooleanArray(draftSpawnGhostEnabled, spawnGhostEnabled);
         copyBooleanArray(draftDroppedPowerEnabled, droppedPowerEnabled);
@@ -8815,10 +9568,10 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         musicVolume = draftMusicVolume;
         sfxVolume = draftSfxVolume;
         showHudScore = draftShowHudScore;
-        showHudTime = draftShowHudTime;
+        hudTimeMode = draftHudTimeMode;
         showHudActivePower = draftShowHudActivePower;
         showHudBoardState = draftShowHudBoardState;
-        showHudPelletCount = draftShowHudPelletCount;
+        hudPelletMode = draftHudPelletMode;
         showHudGhostCount = draftShowHudGhostCount;
         applyAudioVolumes(masterVolume, musicVolume, sfxVolume);
         tunnelY = maxScreenRow / 2;
@@ -8832,11 +9585,12 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         draftMusicVolume = musicVolume;
         draftSfxVolume = sfxVolume;
         draftShowHudScore = showHudScore;
-        draftShowHudTime = showHudTime;
+        draftHudTimeMode = hudTimeMode;
         draftShowHudActivePower = showHudActivePower;
         draftShowHudBoardState = showHudBoardState;
-        draftShowHudPelletCount = showHudPelletCount;
+        draftHudPelletMode = hudPelletMode;
         draftShowHudGhostCount = showHudGhostCount;
+        draftDisableTransitionAnimation = disableTransitionAnimation;
         copyBooleanArray(spawnGhostEnabled, draftSpawnGhostEnabled);
         copyBooleanArray(droppedPowerEnabled, draftDroppedPowerEnabled);
         applyAudioVolumes(masterVolume, musicVolume, sfxVolume);
@@ -8955,7 +9709,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         } else if (optionCategory == 1) {
             changeAudioOption(direction);
         } else if (optionCategory == 2) {
-            changeUiOption();
+            changeUiOption(direction);
         }
     }
 
@@ -9005,10 +9759,12 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         } else if (optionChoice == 9) {
             draftNoSuperGhostMode = !draftNoSuperGhostMode;
         } else if (optionChoice == 10) {
-            draftMazeWidth = normalizeOddInt(draftMazeWidth + direction * 2, 11, 51);
+            draftDisableTransitionAnimation = !draftDisableTransitionAnimation;
         } else if (optionChoice == 11) {
-            draftMazeHeight = normalizeOddInt(draftMazeHeight + direction * 2, 11, 51);
+            draftMazeWidth = normalizeOddInt(draftMazeWidth + direction * 2, 11, 51);
         } else if (optionChoice == 12) {
+            draftMazeHeight = normalizeOddInt(draftMazeHeight + direction * 2, 11, 51);
+        } else if (optionChoice == 13) {
             optionSubCategory = 0;
             optionChoice = 0;
         }
@@ -9063,22 +9819,27 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         }
     }
 
-    public void changeUiOption() {
+    public void changeUiOption(int direction) {
         if (optionChoice == 0) {
             setAllDraftUiOptions(!areAnyDraftUiOptionsEnabled());
         } else if (optionChoice == 1) {
             draftShowHudScore = !draftShowHudScore;
         } else if (optionChoice == 2) {
-            draftShowHudTime = !draftShowHudTime;
+            draftHudTimeMode = cycleHudMode(draftHudTimeMode, HUD_TIMER_DISABLED, direction);
         } else if (optionChoice == 3) {
             draftShowHudActivePower = !draftShowHudActivePower;
         } else if (optionChoice == 4) {
             draftShowHudBoardState = !draftShowHudBoardState;
         } else if (optionChoice == 5) {
-            draftShowHudPelletCount = !draftShowHudPelletCount;
+            draftHudPelletMode = cycleHudMode(draftHudPelletMode, HUD_PELLET_DISABLED, direction);
         } else if (optionChoice == 6) {
             draftShowHudGhostCount = !draftShowHudGhostCount;
         }
+    }
+
+    public int cycleHudMode(int mode, int maxMode, int direction) {
+        int modeCount = maxMode + 1;
+        return (mode + direction + modeCount) % modeCount;
     }
 
     public void selectOption() {
@@ -9297,6 +10058,15 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     }
 
     public String getElapsedTimeText() {
+        if (hudTimeMode == HUD_TIMER_MILLISECONDS) {
+            int totalMilliseconds = elapsedFrames * 1000 / framesPerSecond;
+            int minutes = totalMilliseconds / 60000;
+            int seconds = (totalMilliseconds / 1000) % 60;
+            int milliseconds = totalMilliseconds % 1000;
+
+            return String.format("%02d:%02d.%03d", minutes, seconds, milliseconds);
+        }
+
         int totalSeconds = elapsedFrames / framesPerSecond;
         int minutes = totalSeconds / 60;
         int seconds = totalSeconds % 60;
@@ -9306,10 +10076,10 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
     public void drawActiveEffectTimers(Graphics2D g2) {
         int x = 12;
-        int y = 60;
+        int y = hasHudBoardStatsRow() ? 60 : 38;
         int maxX = getWidth() - 12;
         int rowHeight = 22;
-        int lastTimerRowY = 82;
+        int lastTimerRowY = hasHudBoardStatsRow() ? 82 : 60;
 
         if (powerMode) {
             String text = "PELLET " + getTimerSeconds(powerModeTimer);
@@ -9556,6 +10326,10 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         }
 
         if (paused) {
+            return;
+        }
+
+        if (levelTransitionActive) {
             return;
         }
 

@@ -59,6 +59,7 @@ public class SoundManager {
         load("firedie", "firedie.wav");
         load("eatice", "eatice.wav");
         load("electrocuted", "electrocuted.wav");
+        load("wallbreak", "wallbreak.wav");
     }
 
     public void playEatDot() {
@@ -117,6 +118,10 @@ public class SoundManager {
 
     public void playFire() {
         playExclusive("fire");
+    }
+
+    public void playWallBreak() {
+        playExclusive("wallbreak");
     }
 
     public void playDetection() {
