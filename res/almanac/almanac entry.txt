@@ -1,37 +1,47 @@
 Pacman
-The main protagonist. Trapped within the Eternal Maze, he seeks a way back home. 
-Unfortunately, every exit appears to lead to even more maze. Gone are the familiar blue walls and the four classic ghosts he once knew (well technically, they're here with him but seem to made some new friends too). 
-In the maze are laser ghosts, explosive ghosts, fire ghosts, and whatever else this nightmare can invent. At this point, escaping may be easier than understanding what's going on... if there're any exist at all.
+The main protagonist. Trapped within the Eternal Maze, he seeks a way back home.
+
+Unfortunately, every exit seems to lead to even more maze. Gone are the familiar blue walls and the four classic ghosts he once knew. (Well, technically they're here too, but they seem to have made some new friends.)
+
+The maze is filled with laser ghosts, explosive ghosts, fire ghosts, and whatever else this nightmare can invent. At this point, escaping may be easier than understanding what's going on... assuming an exit exists at all.
 
 ---
 
 Inky
 Moves randomly. Whenever he reaches an intersection, he flips a coin to decide whether to continue straight or turn. Made many friends in the maze thanks to the coin guilding him or so he believes.
 
-Many have tried to predict his movements. Statisticians call him chaotic. Mathematicians call him fascinating. The coin insists everything is proceeding according to plan. hopes this guy stay happy like that when pacman come charging with a power pellet
+Many have tried to predict his movements. Statisticians call him chaotic. Mathematicians call him fascinating. The coin insists everything is proceeding according to plan.
+
+He hopes the coin is right when Pacman comes charging with a Power Pellet.
 
 ---
 
 Clyde
 Always turns right.
 
-After enough right turns, however, even Clyde gets bored and may occasionally choose left instead. He claims this is part of a sophisticated navigation strategy. Nobody believes him.
+After enough right turns, however, even Clyde gets bored and may occasionally choose left instead. He claims this is part of a sophisticated navigation strategy. Nobody has seen evidence of this.
 
 For reasons unknown, he absolutely despises Pinky.
 
 ---
 
 Pinky
-Always turns left.
+Pinky considers herself a ghost of principle and consistency. 
 
-Pinky considers herself a ghost of principle and consistency. Unfortunately, those principles mostly involve turning left and arguing with Clyde. Their feud has lasted so long that neither can remember what started it.
+Unfortunately, those principles mostly involve turning left and arguing with Clyde. 
+
+Their feud has lasted so long that neither can remember what started it, though both insist the other was wrong.
 
 ---
 
 Blinky
 He actively chases Pacman around the maze.
 
-According to Blinky, he can smell Pacman from fifteen blocks away. Nobody knows what a ghost's nose looks like, and nobody is brave enough to ask.
+According to Blinky, he always knows where Pacman is thanks to a star he followed on the sky, which guides him unfailingly toward his target.
+
+Whether that is an actual star, a supernatural force, or simply a gadget Blinky refuses to explain remains a mystery.
+
+Whatever it is, Pacman wishes it would stop working.
 
 ---
 
@@ -147,11 +157,11 @@ A spiky ghost. Not recommended for consumption.
 
 Not even with a Power Pellet.
 
-Trust me.
+Trust me, you can't impale his defense with just that, you have to gets to the peak in order to see the way.
 
 Seriously, what exactly was the plan there?
 
-Eating Cacty wasn't a particularly sharp idea to begin with. You'll need a real spine to pick a fight with him, knowing how prickly he is. There was no need-le to do it in the first place just to pin him down.
+He's like, the spikiest spike guy with a pricky personality, it wouldn't be a sharp move to pick on him. maybe you need-le to pin this to your head so... 
 
 ...Fine, I'll stop.
 
@@ -175,7 +185,7 @@ How water slows down ghosts remains unclear, since ghosts are generally expected
 
 Wavey insists his magnificent wave-shaped hair existed before he became a ghost and has nothing to do with his water powers. 
 
-The Almanac didn't buy it one bit and suspected that this guy is bald just like other ghosts. He also had a dream of opening an aquarium but Icy kept ruining it by turning the place into a skating park (literally)
+The Almanac didn't buy it one bit and suspected that this guy is bald just like other ghosts. He also had a dream of opening an aquarium but Icy kept ruining it by turning the place into a skating park (literally). he don't hate the guy but doesn't necessarily like him either
 
 Wavey’s water can extinguish Infernity’s flames and cause PROJECT GH-05T to explode on contact, which raises serious questions about how some scientist ghost in the future made a machine that can time travel and is immune to almost everything, loses to water.
 
@@ -192,11 +202,7 @@ Flashy is extremely energetic, dangerously friendly, and should be kept far away
 
 Under no circumstances should Flashy and Wavey be allowed near each other.
 
-Nobody wants a flooded maze.
-
-Nobody wants an electrified maze.
-
-Nobody wants both.
+Nobody wants a flooded maze... or an electrified maze... or both.
 
 ---
 
@@ -208,3 +214,20 @@ His power? eats maze walls. which doesn't sound like much but is a problem.
 Normally, maze walls can only be destroyed by explosion. Boulder, however, simply chews through them because he is apparently above game balance.
 
 Attempts to stop him with fire, ice, water, and electricity have failed, mostly because Boulder is a rock and rocks are famously uninterested in weather. perhaps try paper? or yea, ask Bomby, bomb can defeat Boulder too.
+
+---
+
+Nycto
+Covers the maze in unnatural darkness wherever he travels.
+
+His smoke is so thick that Pacman and nearby ghosts can become completely lost inside it. Even the other ghosts claim they have no idea who Nycto is or how he got into the maze.
+
+He also has far too many eyes for an ordinary ghost.
+
+Thankfully, his smoke appears to be highly flammable.
+
+So current plan: send Infernity in and set the entire cloud on fire while we run away.
+
+“Wait, what?” — Infernity
+
+
