@@ -10,7 +10,7 @@ A Java/Swing take on Pac-Man where every board is a newly generated maze and the
 - Power-ups that can help Pacman or, if a ghost reaches them first, empower the ghost.
 - Pacman abilities such as magnet collection, spike traps, speed boost, score multiplier, bomb, laser, clone, and fire trail.
 - Fruit bonuses, board-clear bonuses, level scaling, and a local Hall of Fame (up to 3 players).
-- In-game options for speed, spawn timing, maze size, special ghost chance, no-power mode, and audio volume.
+- In-game options for speed, spawn timing, maze size, special ghost chance, custom ghost/power-up spawns, and audio volume.
 - Almanac entries for Pacman and the ghost cast.
 
 ## How to Play

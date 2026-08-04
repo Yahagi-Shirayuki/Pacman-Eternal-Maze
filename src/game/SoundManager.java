@@ -1,8 +1,9 @@
 package game;
 
+import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -18,8 +19,8 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 
 public class SoundManager {
 
-    private static final String SFX_DIR = "res/sfx/";
-    private static final String MUSIC_PATH = "res/music/Pac Terror.wav";
+    private static final String SFX_DIR = "/res/sfx/";
+    private static final String MUSIC_PATH = "/res/music/Pac Terror.wav";
 
     private final Map<String, SoundData> sounds = new HashMap<>();
     private final Map<String, Clip> exclusiveClips = new HashMap<>();
@@ -371,15 +372,7 @@ public class SoundManager {
             return;
         }
 
-        File musicFile = new File(MUSIC_PATH);
-
-        if (!musicFile.exists()) {
-            musicUnavailable = true;
-            System.err.println("Missing music file: " + musicFile.getPath());
-            return;
-        }
-
-        SoundData music = loadSoundData(musicFile);
+        SoundData music = loadSoundData(MUSIC_PATH);
 
         if (music == null) {
             musicUnavailable = true;
@@ -422,8 +415,7 @@ public class SoundManager {
     }
 
     private void load(String name, String fileName) {
-        File file = new File(SFX_DIR + fileName);
-        SoundData sound = loadSoundData(file);
+        SoundData sound = loadSoundData(SFX_DIR + fileName);
 
         if (sound == null) {
             return;
@@ -432,17 +424,20 @@ public class SoundManager {
         sounds.put(name, sound);
     }
 
-    private SoundData loadSoundData(File file) {
-        if (!file.exists()) {
-            System.err.println("Missing sound file: " + file.getPath());
-            return null;
-        }
+    private SoundData loadSoundData(String path) {
+        try (InputStream resourceStream = getClass().getResourceAsStream(path)) {
+            if (resourceStream == null) {
+                System.err.println("Missing sound resource: " + path);
+                return null;
+            }
 
-        try (AudioInputStream sourceStream = AudioSystem.getAudioInputStream(file);
-                AudioInputStream decodedStream = getDecodedStream(sourceStream)) {
-            return new SoundData(decodedStream.getFormat(), readAllBytes(decodedStream));
+            try (BufferedInputStream bufferedStream = new BufferedInputStream(resourceStream);
+                    AudioInputStream sourceStream = AudioSystem.getAudioInputStream(bufferedStream);
+                    AudioInputStream decodedStream = getDecodedStream(sourceStream)) {
+                return new SoundData(decodedStream.getFormat(), readAllBytes(decodedStream));
+            }
         } catch (IOException | UnsupportedAudioFileException e) {
-            System.err.println("Could not load sound " + file.getPath() + ": " + e.getMessage());
+            System.err.println("Could not load sound " + path + ": " + e.getMessage());
             return null;
         }
     }
