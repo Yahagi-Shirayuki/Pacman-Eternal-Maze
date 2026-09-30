@@ -2,6 +2,8 @@ package game;
 
 import javax.swing.JFrame;
 
+import game.ui.GamePanel;
+
 public class GameMain {
 
     public static void main(String[] args) {

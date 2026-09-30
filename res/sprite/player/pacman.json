@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "key": "pacman",
+  "name": "Pacman",
+
+  "sprites": {
+    "normal": {
+      "prefix": "pac",
+      "count": 2
+    },
+
+    "power_mode": {
+      "prefix": "pacpower_"
+    },
+
+    "bomb": {
+      "prefix": "pacbomb_"
+    },
+
+    "electric": {
+      "prefix": "pactricity_"
+    },
+
+    "metal": {
+      "prefix": "pacmetal_"
+    },
+
+    "metal_damaged": {
+      "prefix": "pacmetalhurt_"
+    },
+
+    "stone": {
+      "prefix": "pacstone_"
+    },
+
+    "stealth": {
+      "prefix": "pacstealth_"
+    },
+
+    "death": {
+      "prefix": "pac",
+      "count": 5
+    },
+
+    "electrocuted_death": {
+      "prefix": "pacelectrocuted_"
+    },
+
+    "frozen_death": {
+      "file": "pacfroze.png"
+    },
+
+    "ash": {
+      "file": "ash.png"
+    }
+  },
+
+  "spritePriority": [
+    "stone",
+    "electric",
+    "bomb",
+    "stealth",
+    "metal",
+    "power_mode",
+    "normal"
+  ]
+}

@@ -29,6 +29,9 @@ public class Ghost {
     int iceExposureTimer = 0;
     int electrocutedTimer = 0;
     int flashyTimer = 0;
+    int cloneDelayTiles = 12;
+    int clonyTilesWalked = 0;
+    int magnetAuraRadius = 2;
     boolean laserActive = false;
     boolean speedDashActive = false;
     boolean electrocutedFuse = false;

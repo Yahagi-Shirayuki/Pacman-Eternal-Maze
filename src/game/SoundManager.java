@@ -17,6 +17,8 @@ import javax.sound.sampled.LineEvent;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.UnsupportedAudioFileException;
 
+import game.resources.ResourceLoader;
+
 public class SoundManager {
 
     private static final String SFX_DIR = "/res/sfx/";
@@ -425,7 +427,7 @@ public class SoundManager {
     }
 
     private SoundData loadSoundData(String path) {
-        try (InputStream resourceStream = getClass().getResourceAsStream(path)) {
+        try (InputStream resourceStream = ResourceLoader.open(path)) {
             if (resourceStream == null) {
                 System.err.println("Missing sound resource: " + path);
                 return null;

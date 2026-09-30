@@ -1,0 +1,100 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "key": "pacman",
+      "display": "Pacman",
+      "desc": "The main protagonist. Trapped within the Eternal Maze, he seeks a way back home.\n\nUnfortunately, every exit seems to lead to even more maze. Gone are the familiar blue walls and the four classic ghosts he once knew. (Well, technically, they're here too, but they seem to have made some new friends.)\n\nThe maze is filled with laser ghosts, explosive ghosts, fire ghosts, and whatever else this nightmare can invent. At this point, escaping may be easier than understanding what's going on... assuming an exit exists at all."
+    },
+    {
+      "key": "inky",
+      "display": "Inky",
+      "desc": "Moves randomly. Whenever he reaches an intersection, he flips a coin to decide whether to continue straight or turn. He claims the coin has helped him make many friends in the maze.\n\nMany have tried to predict his movements. Statisticians call him chaotic. Mathematicians call him fascinating. The coin insists everything is proceeding according to plan.\n\nHe hopes the coin is right when Pacman comes charging with a Power Pellet."
+    },
+    {
+      "key": "clyde",
+      "display": "Clyde",
+      "desc": "Always turns right.\n\nAfter enough right turns, however, even Clyde gets bored and may occasionally choose left instead. He claims this is part of a sophisticated navigation strategy. Nobody has seen any evidence of this.\n\nFor reasons unknown, he absolutely despises Pinky."
+    },
+    {
+      "key": "pinky",
+      "display": "Pinky",
+      "desc": "Pinky considers herself a ghost of principle and consistency.\n\nUnfortunately, those principles mostly involve turning left and arguing with Clyde.\n\nTheir feud has lasted so long that neither can remember what started it, though both insist the other was in the wrong."
+    },
+    {
+      "key": "blinky",
+      "display": "Blinky",
+      "desc": "He actively chases Pacman around the maze.\n\nAccording to Blinky, he always knows where Pacman is thanks to a star he followed in the sky, which guides him unfailingly toward his target.\n\nWhether it's an actual star, a supernatural force, or simply a gadget Blinky refuses to explain remains a mystery.\n\nWhatever it is, Pacman wishes it would stop working."
+    },
+    {
+      "key": "clone",
+      "display": "The Ghoulonies",
+      "desc": "These guys (plural) are blind... somehow. And how do they clone themselves, you ask?\n\nHonestly, I don't even know. The most popular theory is that ghosts can clone themselves using strange magic left behind in the maze. Whenever they walk 32 tiles, they duplicate themselves... so you'd better clean them all up before the entire maze implodes by the power of 2.\n\nThankfully, a curse limits their population to 20. It would be a shame if someone were to find and disable it...\n\nThey're also strangely unaffected by the sight of Power Pelleted Pacman (but Pacman can still eat them, no problemo). As they themselves put it:\n\n\"You can't be scared of what you can't see. well mostly because we don't have any eyes to begin with\"\n\nThis explanation raises several questions."
+    },
+    {
+      "key": "alien",
+      "display": "Zeep Zorp",
+      "desc": "That's his name, but everyone in the maze just calls him \"Lazory\" instead. \"It's easier to pronounce,\" they say. He finds this highly offensive.\n\nHe has a single eye and can fire deadly laser beams in a straight line. He's suspected of being from another planet because no other ghost has only one eye.\n\nRumor has it he once applied to a superhero academy. Unfortunately, being deceased complicated the admissions process.\n\nMost people, however, suspect the real reason for his rejection was that his lasers have a tendency to hit absolutely everyone—including Pacman, other ghosts, and occasionally Lazory himself. His ghostly status and possible extraterrestrial origins have nothing to do with it. Probably."
+    },
+    {
+      "key": "mama",
+      "display": "Big Mama Ghost",
+      "desc": "Her name is Bobby, the mother of all ghosts. She spawns a new ghost every 50 pellets consumed (or stolen).\n\nShe's believed to be one of the very few female ghosts in the entire maze. How a ghost manages to create more ghosts remains a question best left to ghost scientists.\n\nShe does insist that other ghosts \"try eating the pellet, it's good,\" but so far, no one listens.\n\nWorth 3,200 points (self-declared), largely because she insists she's \"a big one to take on in battle.\" Pacman says he's pretty sure that's just called \"being fat.\""
+    },
+    {
+      "key": "fast",
+      "display": "Zoomie",
+      "desc": "When he spots Pacman, he charges forward at maximum speed until he collides with a wall. Then he calls Pacman a cheater for making a sharp turn.\n\nWinner of numerous Ghost Marathon championships. Following allegations of \"haunting-enhanced performance,\" he was permanently banned from all athletic competitions.\n\n\"Bro thought I'm Roadrunner and he's Wile E. Coyote.\" — Pacman"
+    },
+    {
+      "key": "hot",
+      "display": "Infernous",
+      "desc": "Leaves a trail of fire wherever he travels.\n\nHe has the coolest name in the maze and is the hottest ghost in it (literally).\n\nHe claims the flames are merely a harmless side effect of his haunting abilities—not a consequence of being a wanted arsonist before he became a ghost. Local fire departments remain unconvinced.\n\nIf Infernous is approaching, consider relocating somewhere less flammable.\n\nHe and Lazory appear to have formed an unofficial alliance dedicated entirely to ruining whatever Icy is currently working on (usually the skating park).\n\nIt's possible they do it to Icy just for shits and giggles."
+    },
+    {
+      "key": "bomby",
+      "display": "Bomby B. Bomber",
+      "desc": "Runs directly toward Pacman and explodes on contact. Totally unrelated to any hissing green monster from a different blocky universe.\n\nExperts recommend maintaining a safe distance, since this guy is a \"hothead\" who's even hotter than Infernous. No kidding.\n\nBomby insists he's simply expressing himself. Everyone else describes it as a severe anger-management problem.\n\n\"Infernous pissed me off... Oh, yeah, and Pacman too, but mostly Infernous.\" — Bomby"
+    },
+    {
+      "key": "twoface",
+      "display": "Magneto",
+      "desc": "Steals all pellets within a 5x5 area and then taxes your points for every pellet he steals.\n\nHe can also somehow steal your lunch from five meters away, despite his powers supposedly working only on metal.\n\nThis raises several important questions.\n\nAre pellets made of metal?\n\nDoes Pacman eat metal?\n\nIs your lunch made of metal?\n\nNobody knows.\n\nMagneto certainly isn't helping. Every time someone asks about it, he steals their stuff and leaves without them noticing.\n\nThis guy is an absolute menace to snacks, rivaling even Bobby. What's so tasty about pellets, anyway?\n\nEveryone agrees this guy should've been called \"Thievery\" instead."
+    },
+    {
+      "key": "cold",
+      "display": "Icy",
+      "desc": "Slows anyone she touches and turns the ground into ice... mostly so she can slide, skid, and dance around on it herself.\n\nShe's always dreamed of opening a skating park somewhere inside the Eternal Maze. Winter is her favorite season, entirely unironically.\n\nAccording to Icy, Pacman's inability to turn corners while sliding on ice is simply a \"skill issue.\"\n\nAccording to Pacman, ice physics were a mistake and the dev should remove this thing. The request was denied because me, the dev, said, \"it's for the plot.\"\n\nShe HATES Infernous, who somehow manages to melt every carefully constructed ice path within minutes of its completion.\n\nTheir rivalry has caused enough property damage to qualify as a weather phenomenon."
+    },
+    {
+      "key": "cactus",
+      "display": "Cacty",
+      "desc": "A spiky ghost. Not recommended for consumption.\n\nNot even with a Power Pellet.\n\nYou'll need to get creative if you want to remove him without getting impaled, because he WILL explode into a thousand (by thousand I mean 4) and you don't wanna stand near him when he does that.\n\nSeriously, what exactly was the plan there?\n\n\"I'm not blamming ya, I'm the spikiest spike guy with a prickly personality. It wouldn't be a sharp move to pick on me in the first place. Maybe you need-le to pin this to your head, so... Alright alright fine, I'll stop.\" — Cacty\n\nThat was the last time he was allowed to put quotes in the almanac."
+    },
+    {
+      "key": "robot",
+      "display": "Project GH-05T",
+      "desc": "Immune to everything except, of course, explosion damage... and electric shocks... and water... and magnetic auras... Okay, who the hell designed this guy? That's a lot of flaws.\n\n\"A great ghost scientist from the future, who's my father, made me.\" — It says so when asked.\n\nApparently, the thing came all the way from the year 20XX into the maze. And apparently, in the future, the maze got sci-fi'ed?? HOW?\n\nAccording to it, it's here to try to kill Pacman (just like any other ghost) because of some butterfly effect Pacman caused in the maze or something.\n\n\"Sound like some made up bs. if you like to cosplay as The T*rminator just said it.\" — Pacman\n\nThankfully, it has no idea what Pacman looks like, so as long as Pacman stays far away, he should be fine."
+    },
+    {
+      "key": "wave",
+      "display": "Wavey",
+      "desc": "Wavey loves creating waves across the maze, making navigation harder for everyone nearby.\n\nHow water slows down ghosts remains unclear, since ghosts are generally expected to float. Current theories include spectral drag, haunted surface tension or stop to look at him. Wavey insists his magnificent wave-shaped hair existed before he became a ghost\n\nThe Almanac doesn't buy it one bit and suspects this guy is just bald like any other ghosts.\n\nHe's dreamed of opening an aquarium in the maze, but Icy keeps ruining it by turning the place into a skating park (literally). He doesn't hate Icy because he's just chill like that.\n\n\"You can't hate someone because of something they don't have control over.\" — Wavey\n\n\"I swear this guy is just performative.\" — Pacman"
+    },
+    {
+      "key": "pika",
+      "display": "Flashy E. Shocket",
+      "desc": "An electric ghost surrounded by a large, shocking aura. How did she get this power? Pacman has long since stopped asking how any of the ghosts got theirs.\n\nAnything caught nearby will be electrocuted, including Pacman, other ghosts, and Flashy's remaining social life.\n\nAfter five seconds, Flashy runs out of battery and must stand still to recharge. She describes this as \"taking a power nap.\" Everyone else describes it as \"finally, some peace.\"\n\nFlashy is extremely energetic, dangerously friendly, and should be kept far away from Bomby and PROJECT GH-05T, because somehow her charge makes them explode even more violently.\n\nAnd especially Wavey. Under no circumstances should Flashy and Wavey be allowed near each other.\n\nNobody wants a flooded maze... or an electrified maze... or both."
+    },
+    {
+      "key": "golem",
+      "display": "Boulder",
+      "desc": "A stone-like entity currently classified as a ghost because nobody wants to create a new category for \"whatever this is.\" Boulder isn't even their name; everyone just calls them that because he looks like if maze walls were shaped like a ghost.\n\nTheir power? They eat maze walls. Which doesn't sound like much, but it's a problem. Maybe that's how they form in the first place, from walls...\n\nNormally, maze walls can only be destroyed by explosions. Boulder, however, simply chews through them because they're apparently above game balance.\n\nAttempts to stop 'em with fire, ice, water, and electricity have failed, mostly because Boulder is... well, a living pile of stone, and last time we checked, stone doesn't care about weather. Perhaps try paper?\n\nOr, yeah, ask Bomby. He's like, a professional demolitionist.\n\n\"No I'm not??? Who told y'all that?\" — Bomby"
+    },
+    {
+      "key": "horror",
+      "display": "Nyctophobia",
+      "desc": "Covers the maze in unnatural darkness wherever he travels.\n\nHis smoke is so thick that Pacman and nearby ghosts can become completely lost inside it. Even the other ghosts claim they have no idea who Nycto is or how he got into the maze. He just kinda appears one day and scares the crap out of everyone.\n\nHe also has far too many eyes for an ordinary ghost. (Seriously, who is this guy???)\n\nThankfully, his smoke appears to be highly flammable.\n\nSo, the current plan: send Infernous in, set the entire cloud on fire, and run away.\n\n\"Wait, what?\" — Infernous"
+    }
+  ]
+}

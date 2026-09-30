@@ -1,0 +1,162 @@
+{
+  "version": 1,
+  "ghosts": [
+    {
+      "key": "inky",
+      "name": "Inky",
+      "power": "none",
+      "sprite": "ghost_0.png",
+      "movement": "random",
+      "scared": true
+    },
+    {
+      "key": "clyde",
+      "name": "Clyde",
+      "power": "none",
+      "sprite": "ghost_1.png",
+      "movement": "right",
+      "scared": true
+    },
+    {
+      "key": "pinky",
+      "name": "Pinky",
+      "power": "none",
+      "sprite": "ghost_2.png",
+      "movement": "left",
+      "scared": true
+    },
+    {
+      "key": "blinky",
+      "name": "Blinky",
+      "power": "none",
+      "sprite": "ghost_3.png",
+      "movement": "astar",
+      "target": "pacman",
+      "scared": true
+    },
+    {
+      "key": "clone",
+      "name": "Clony",
+      "power": "clone",
+      "sprite": "ghost_8.png",
+      "movement": "random",
+      "scared": false
+    },
+    {
+      "key": "alien",
+      "name": "Lazory",
+      "power": "laser",
+      "sprite": "ghost_9.png",
+      "movement": "astar",
+      "target": "pacman",
+      "scared": false
+    },
+    {
+      "key": "mama",
+      "name": "Bobby",
+      "power": "bonus",
+      "sprite": "ghost_10.png",
+      "movement": "astar",
+      "target": "pellet",
+      "scared": true
+    },
+    {
+      "key": "fast",
+      "name": "Zoomie",
+      "power": "speed",
+      "sprite": "ghost_11.png",
+      "movement": "random",
+      "scared": false
+    },
+    {
+      "key": "hot",
+      "name": "Infernous",
+      "power": "fire",
+      "sprite": "ghost_12.png",
+      "movement": "random",
+      "scared": false
+    },
+    {
+      "key": "bomby",
+      "name": "Bomby",
+      "power": "bomb",
+      "sprite": "ghost_14.png",
+      "movement": "astar",
+      "target": "pacman",
+      "scared": false
+    },
+    {
+      "key": "twoface",
+      "name": "Magneto",
+      "power": "magnet",
+      "sprite": "ghostmag_",
+      "movement": "astar",
+      "target": "pellet",
+      "scared": true
+    },
+    {
+      "key": "cold",
+      "name": "Icy",
+      "power": "ice",
+      "sprite": "ghostice_",
+      "movement": "astar",
+      "target": "tiles",
+      "tileFilter": "uniced",
+      "scared": false
+    },
+    {
+      "key": "cactus",
+      "name": "Cacty",
+      "power": "spike",
+      "sprite": "ghostcactus_",
+      "movement": "astar",
+      "target": "pacman",
+      "scared": false
+    },
+    {
+      "key": "robot",
+      "name": "GH-05T",
+      "power": "metal",
+      "sprite": "ghostmetal_",
+      "movement": "random",
+      "scared": false
+    },
+    {
+      "key": "wave",
+      "name": "Wavey",
+      "power": "water",
+      "sprite": "ghostwave_",
+      "movement": "astar",
+      "target": "tiles",
+      "tileFilter": "unwatered",
+      "scared": false
+    },
+    {
+      "key": "pika",
+      "name": "Flashy",
+      "power": "electricity",
+      "sprite": "ghostpikacharged_",
+      "movement": "random",
+      "scared": false
+    },
+    {
+      "key": "golem",
+      "name": "Boulder",
+      "power": "stone",
+      "sprite": "ghoststone_",
+      "movement": "astar",
+      "target": "wall",
+      "scared": false
+    },
+    {
+      "key": "horror",
+      "name": "Nycto",
+      "power": "stealth",
+      "sprite": "ghostphantom_",
+      "movement": "astar",
+      "target": "tiles",
+      "tileFilter": "unsmoked",
+      "scared": false
+    }
+  ]
+}

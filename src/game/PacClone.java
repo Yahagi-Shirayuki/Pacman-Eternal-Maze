@@ -12,6 +12,9 @@ public class PacClone {
     int directionY;
     int lastFireTileX = -1;
     int lastFireTileY = -1;
+    int iceGhostSlowTimer = 0;
+    boolean iceGhostSlowUntilIcePower = false;
+    int iceExposureTimer = 0;
     ArrayList<int[]> path = new ArrayList<>();
 
     PacClone(double pixelX, double pixelY) {
