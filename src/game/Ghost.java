@@ -18,7 +18,9 @@ public class Ghost {
     int chargeTimer = 0;
     int warningTimer = 0;
     int activeTimer = 0;
+    int mortisTimer = 0;
     int fuseTimer = 0;
+    int bombTriggerGraceTimer = 0;
     int speedRampTimer = 0;
     int lastFireTileX = -1;
     int lastFireTileY = -1;
@@ -27,16 +29,24 @@ public class Ghost {
     int restTimer = 0;
     int pelletsCollected = 0;
     int iceExposureTimer = 0;
+    int icyAuraExposureTimer = 0;
     int electrocutedTimer = 0;
     int flashyTimer = 0;
     int cloneDelayTiles = 12;
     int clonyTilesWalked = 0;
+    int cactusLastDirectionX = 0;
+    int cactusLastDirectionY = 0;
     int magnetAuraRadius = 2;
+    int particleEmitTimer = 0;
+    int fleeCornerIndex = -1;
+    boolean fleeTargetingPower = false;
     boolean laserActive = false;
     boolean speedDashActive = false;
     boolean electrocutedFuse = false;
     boolean electrocutedLargeExplosion = false;
     boolean flashyCharged = true;
+    boolean mortisActive = false;
+    boolean mortisBuffed = false;
     ArrayList<int[]> path = new ArrayList<>();
 
     Ghost(int type, int tileX, int tileY, int tileSize) {

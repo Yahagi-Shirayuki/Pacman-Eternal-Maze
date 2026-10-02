@@ -79,6 +79,7 @@ public final class GameRenderer {
             game.drawAfterImages(boardGraphics);
             game.drawExitMarkers(boardGraphics);
             game.drawSpawnWarning(boardGraphics);
+            game.drawSpriteParticles(boardGraphics);
             game.drawGhosts(boardGraphics);
             game.drawGhostDeathEffects(boardGraphics);
             game.drawGhostLasers(boardGraphics);
@@ -88,6 +89,7 @@ public final class GameRenderer {
             game.drawMagnetAuras(boardGraphics);
             game.drawIceAuras(boardGraphics);
             game.drawFrozenGhosts(boardGraphics);
+            game.drawIceFragments(boardGraphics);
             game.drawPacClones(boardGraphics);
             game.drawPlayer(boardGraphics);
             game.drawSmokeTiles(boardGraphics);

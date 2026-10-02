@@ -15,6 +15,7 @@ public class PacClone {
     int iceGhostSlowTimer = 0;
     boolean iceGhostSlowUntilIcePower = false;
     int iceExposureTimer = 0;
+    int electrocutedTimer = 0;
     ArrayList<int[]> path = new ArrayList<>();
 
     PacClone(double pixelX, double pixelY) {

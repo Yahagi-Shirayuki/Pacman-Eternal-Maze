@@ -14,11 +14,13 @@ public final class EffectSystem {
 
     public void updateAfterGhosts(Game game) {
         game.updateCactusSpikeProjectiles();
+        game.updateFrozenGhosts();
         game.updateIceEffects();
     }
 
     public void updatePersistent(Game game) {
         game.updateGhostDeathEffects();
+        game.updateIceFragments();
         game.updateAfterImages();
     }
 }

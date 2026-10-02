@@ -10,9 +10,9 @@ public class GameMain {
 
         JFrame window = new JFrame("Pacman: Eternal Maze");
         window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        window.setResizable(true);
 
         GamePanel gamePanel = new GamePanel();
+        window.setResizable(gamePanel.isResizeAllowed());
         window.add(gamePanel);
 
         window.pack();

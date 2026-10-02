@@ -50,6 +50,7 @@ public class SoundManager {
         load("lazeend", "lazeend.wav");
         load("fire", "fire.wav");
         load("exploded", "exploded.wav");
+        load("icebomb", "icebomb.wav");
         load("eatpower", "eatpower.wav");
         load("eatghost", "eatghost.wav");
         load("eatfruit", "eatfruit.wav");
@@ -117,6 +118,10 @@ public class SoundManager {
 
     public void playExplosion() {
         playExclusive("exploded");
+    }
+
+    public void playIceBomb() {
+        playExclusive("icebomb");
     }
 
     public void playFire() {

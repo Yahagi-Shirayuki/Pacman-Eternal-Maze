@@ -157,6 +157,33 @@
       "target": "tiles",
       "tileFilter": "unsmoked",
       "scared": false
+    },
+    {
+      "key": "sun",
+      "name": "Helios",
+      "power": "firebomb",
+      "sprite": "ghostfire_bomb",
+      "movement": "random",
+      "scared": false
+    },
+    {
+      "key": "moon",
+      "name": "Selene",
+      "power": "icebomb",
+      "sprite": "ghostice_bomb",
+      "movement": "astar",
+      "target": "tiles",
+      "tileFilter": "uniced",
+      "scared": false
+    },
+    {
+      "key": "doctor",
+      "name": "Mortis",
+      "power": "serum",
+      "sprite": "ghostdoctor_",
+      "movement": "astar",
+      "target": "ghost",
+      "scared": false
     }
   ]
 }

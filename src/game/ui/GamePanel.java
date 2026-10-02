@@ -2,6 +2,7 @@ package game.ui;
 
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Frame;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Window;
@@ -57,6 +58,10 @@ public class GamePanel extends JPanel implements Runnable {
         game.stop();
     }
 
+    public boolean isResizeAllowed() {
+        return game.isResizeAllowed();
+    }
+
     @Override
     public void run() {
         game.start();
@@ -77,6 +82,11 @@ public class GamePanel extends JPanel implements Runnable {
         Dimension preferred = getPreferredSize();
         int expectedWidth = game.getPreferredWidth();
         int expectedHeight = game.getPreferredHeight();
+        Window window = SwingUtilities.getWindowAncestor(this);
+
+        if (window instanceof Frame frame) {
+            frame.setResizable(game.isResizeAllowed());
+        }
 
         if (preferred.width == expectedWidth && preferred.height == expectedHeight) {
             return;
@@ -85,7 +95,6 @@ public class GamePanel extends JPanel implements Runnable {
         setPreferredSize(new Dimension(expectedWidth, expectedHeight));
         revalidate();
 
-        Window window = SwingUtilities.getWindowAncestor(this);
         if (window != null) {
             window.pack();
         }

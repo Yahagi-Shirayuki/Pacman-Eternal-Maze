@@ -45,7 +45,14 @@ public final class Game implements Runnable {
     int screenWidth = tileSize * maxScreenCol;
     int boardHeight = tileSize * maxScreenRow;
     final int hudHeight = 96;
-    int screenHeight = boardHeight + hudHeight;
+    // Fixed content area. The maze may be larger than the viewport, but the window stays this size.
+    final int fixedScreenWidth = 600;
+    final int fixedScreenHeight = 744;
+    int screenHeight = fixedScreenHeight;
+    final int mainMenuTitleTopMargin = -16; 
+    final int optionScrollVisibleRows = 16;
+    final int optionScrollRowSpacing = 30;
+    final int almanacScrollLineHeight = 25;
     final double defaultCameraZoom = 1.0;
     final double minCameraZoom = 0.5;
     final double maxCameraZoom = 3.0;
@@ -95,6 +102,7 @@ public final class Game implements Runnable {
     boolean[][] nextDots;
     boolean[][] nextBigDots;
     boolean[][] nextBurnedWalls;
+    boolean[][] nextIceWalls;
     int[][] nextBlockTextureIndexes;
     int[][] nextWallTextureIndexes;
     int[][] nextDebrisIndexes;
@@ -104,6 +112,8 @@ public final class Game implements Runnable {
     boolean levelTransitionLeftEarly = false;
     boolean disableTransitionAnimation = false;
     boolean draftDisableTransitionAnimation = disableTransitionAnimation;
+    boolean allowResize = false;
+    boolean draftAllowResize = allowResize;
     double renderWorldOffsetX = 0.0;
     double renderWorldOffsetY = 0.0;
     
@@ -111,6 +121,7 @@ public final class Game implements Runnable {
     boolean[][] dots;
     boolean[][] bigDots;
     boolean[][] burnedWalls;
+    boolean[][] iceWalls;
     int[][] blockTextureIndexes;
     int[][] wallTextureIndexes;
     int[][] debrisIndexes;
@@ -154,7 +165,8 @@ public final class Game implements Runnable {
     final int powerElectricType = 12;
     final int powerStoneType = 13;
     final int powerStealthType = 14;
-    final int powerUpTypeCount = 15;
+    final int powerSerumType = 15;
+    final int powerUpTypeCount = 16;
     final int ghostCloneType = 8;
     final int ghostLaserType = 9;
     final int ghostBonusType = 10;
@@ -204,12 +216,18 @@ public final class Game implements Runnable {
     
     final int bombRadiusTiles = 3;
     final int bombExplosionFrameTime = 18;
+    final int bombExplosionNormalType = 0;
+    final int bombExplosionIceType = 1;
+    final int bombExplosionFireType = 2;
     final int ghostSpeedRecoverTime = framesPerSecond * 2; // how long it takes for Zoomie to recover after slamming to a wall
     final int ghostLaserChargeTime = framesPerSecond * 5; // lazory charge time
     final int ghostLaserWarningTime = framesPerSecond * 2; 
     final int ghostLaserFireTime = framesPerSecond * 5; // active lazer time
     final int ghostBombFuseTime = framesPerSecond; // bomb aiming time
     final int ghostBombTriggerRadiusTiles = 2; // bombas radius
+    final int mortisInactiveDuration = framesPerSecond * 10;
+    final double mortisInactiveSpeedPenalty = 1.0;
+    final double mortisActiveSpeedBonus = 2.0;
     final double ghostBombStartSpeed = 0.5;
     final double ghostBombSpeedGainPerSecond = 0.1;
     final double ghostBombMaxSpeedOverPlayer = 0.5;
@@ -250,6 +268,26 @@ public final class Game implements Runnable {
     final int smokeFrameStepTime = 4;
     final int smokeMinFrameHoldTime = framesPerSecond;
     final int smokeMaxFrameHoldTime = framesPerSecond * 4;
+    final int iceFragmentCount = 8;
+    final int iceFragmentSpriteCount = 13;
+    final int iceFragmentFlightDuration = framesPerSecond;
+    final int iceFragmentSettleDuration = framesPerSecond * 5;
+    final int iceFragmentFadeDuration = framesPerSecond;
+    final double frozenIceCubeSpeedBonus = 3.5;
+    final double iceFragmentMinSpeed = 1.0;
+    final double iceFragmentMaxSpeed = 4.0;
+    final double iceFragmentMinSpinSpeed = 0.0;
+    final double iceFragmentMaxSpinSpeed = 0.5;
+    final double iceFragmentWallBounceDamping = 0.75;
+    final double iceFragmentScale = 1.0;
+    final int ghostParticleEmitInterval = 4;
+    final int intoxicatedParticleEmitInterval = 4;
+    final int spriteParticleLifetime = framesPerSecond;
+    final double spriteParticleMinSpeed = 0.2;
+    final double spriteParticleMaxSpeed = 0.9;
+    final double spriteParticleMinScale = 0.45;
+    final double spriteParticleMaxScale = 0.75;
+    final double spriteParticleShrinkPerFrame = 0.009;
     final double stoneSpeedBoost = 2.0; // Stone starting boost while holding E. Nudge this to tune rolling speed.
     final double stoneSpeedSynergyMultiplier = 1.5; // Speed + Stone launches Pacman farther.
     final double stoneSlideFrictionPerFrame = 0.2; // Stone friction while holding E. Higher value = shorter slide.
@@ -264,6 +302,7 @@ public final class Game implements Runnable {
     final int laserWidth = 4;
     final int blockTextureFileCount = 7;
     final int wallTextureFileCount = 7;
+    final int iceWallTextureFileCount = 7;
     final int debrisFileCount = 4;
     final int iceTileVariantFileCount = 8;
     final int waterDecalVariantFileCount = 8;
@@ -290,6 +329,8 @@ public final class Game implements Runnable {
     BufferedImage[][] ghostDefinitionSprites = new BufferedImage[ghostPhantomType + 1][];
     BufferedImage ghostCloneSprite;
     BufferedImage[] ghostBombSprites = new BufferedImage[3];
+    BufferedImage[] ghostFireBombAimSprites = new BufferedImage[2];
+    BufferedImage[] ghostIceBombAimSprites = new BufferedImage[2];
     BufferedImage ghostLaserSprite;
     BufferedImage ghostBonusSprite;
     BufferedImage ghostSpeedSprite;
@@ -308,11 +349,15 @@ public final class Game implements Runnable {
     BufferedImage[] ghostPikaAimSprites = new BufferedImage[2];
     BufferedImage[] ghostStoneSprites = new BufferedImage[2];
     BufferedImage[] ghostPhantomSprites = new BufferedImage[2];
+    BufferedImage[] ghostMortisSlowSprites = new BufferedImage[2];
     BufferedImage ghostDeathSprite;
     BufferedImage ghostEyesSprite;
     BufferedImage[] outSprites = new BufferedImage[4];
     BufferedImage[] fruitSprites = new BufferedImage[4];
     BufferedImage[] powerUpSprites = new BufferedImage[powerUpTypeCount];
+    BufferedImage pillSprite;
+    BufferedImage particlePlusSprite;
+    BufferedImage particleMinusSprite;
     BufferedImage[] spikeSprites = new BufferedImage[2];
     BufferedImage[] decalSprites = new BufferedImage[2];
     BufferedImage[] warnSprites = new BufferedImage[2];
@@ -321,6 +366,9 @@ public final class Game implements Runnable {
     BufferedImage[][] smokeSprites = new BufferedImage[smokeVariantCount][smokeStartupFrameCount];
     BufferedImage[] evilFireSprites = new BufferedImage[14];
     BufferedImage iceCubeSprite;
+    BufferedImage[] iceFragmentSprites = new BufferedImage[iceFragmentSpriteCount];
+    final PaletteSpriteRenderer iceFragmentRenderer =
+            new PaletteSpriteRenderer(PaletteSpriteRenderer.ICE_FRAGMENT_PALETTE);
     BufferedImage iceTileSprite;
     BufferedImage[] iceTileSprites = new BufferedImage[iceTileVariantFileCount];
     int iceTileVariantCount = 0;
@@ -334,7 +382,9 @@ public final class Game implements Runnable {
     BufferedImage[] blockTextureSprites = new BufferedImage[blockTextureFileCount];
     int blockTextureCount = 0;
     BufferedImage[] wallTextureSprites = new BufferedImage[wallTextureFileCount];
+    BufferedImage[] iceWallSprites = new BufferedImage[iceWallTextureFileCount];
     int wallTextureCount = 0;
+    int iceWallTextureCount = 0;
     BufferedImage[] debrisSprites = new BufferedImage[debrisFileCount];
     int debrisCount = 0;
     BufferedImage dotSmall;
@@ -363,15 +413,17 @@ public final class Game implements Runnable {
     int optionSubCategory = -1;
     int optionChoice = 0;
     int optionActionChoice = 0;
+    int optionScrollOffset = 0;
     boolean resetOptionsConfirmVisible = false;
     int resetOptionsConfirmChoice = 0;
     int almanacIndex = 0;
+    int almanacScrollOffset = 0;
     ArrayList<String> almanacTitles = new ArrayList<>();
     ArrayList<String> almanacBodies = new ArrayList<>();
     ArrayList<String> almanacOptionNames = new ArrayList<>();
     final File scoreFile = new File("playerscore.sav");
     final File optionFile = new File("option.sav");
-    final int optionSaveVersion = 7;
+    final int optionSaveVersion = 8;
     int loadedOptionVersion = 0;
     String[] highScoreNames = { "DEV", "PRO", "NUB" };
     int[] highScoreValues = { 999999, 50000, 1000 };
@@ -456,11 +508,15 @@ public final class Game implements Runnable {
     int fruitsSpawnedThisLevel = 0;
     int elapsedFrames = 0;
     int powerModeTimer = 0;
+    int intoxicatedTimer = 0;
+    int intoxicatedParticleTimer = 0;
     int playerIceGhostExposureTimer = 0;
     int iceGhostSlowTimer = 0;
     boolean iceGhostSlowUntilIcePower = false;
     int ghostSpawnTimer = 0;
     int bombExplosionTimer = 0;
+    int bombExplosionEffectType = bombExplosionNormalType;
+    boolean ghostFireExplosionLifeBoosted = false;
     double bombExplosionMinX = 0;
     double bombExplosionMinY = 0;
     double bombExplosionMaxX = 0;
@@ -479,6 +535,7 @@ public final class Game implements Runnable {
     boolean powerPelletWarningPlayed = false;
     int consecutiveBoardClears = 0;
     int[] powerUpTimers = new int[powerUpTypeCount];
+    final BuffedEffects buffedEffects = new BuffedEffects();
     int[] collectedFruits = new int[4];
     // Larger value = slower death animation.
     final int deathFrameDelay = 8;
@@ -500,6 +557,8 @@ public final class Game implements Runnable {
     ArrayList<ElectricTile> electricTiles = new ArrayList<>();
     ArrayList<SmokeTile> smokeTiles = new ArrayList<>();
     ArrayList<CactusSpikeProjectile> cactusSpikeProjectiles = new ArrayList<>();
+    ArrayList<IceFragment> iceFragments = new ArrayList<>();
+    ArrayList<SpriteParticle> spriteParticles = new ArrayList<>();
     ArrayList<GhostDeathEffect> ghostDeathEffects = new ArrayList<>();
     ArrayList<VisualDecal> visualDecals = new ArrayList<>();
     Camera camera = new Camera();
@@ -631,11 +690,15 @@ public final class Game implements Runnable {
     }
 
     public int getPreferredWidth() {
-        return screenWidth;
+        return fixedScreenWidth;
     }
 
     public int getPreferredHeight() {
-        return screenHeight;
+        return fixedScreenHeight;
+    }
+
+    public boolean isResizeAllowed() {
+        return allowResize;
     }
 
     public void setViewportSize(int width, int height) {
@@ -832,13 +895,18 @@ public final class Game implements Runnable {
         int screenX = worldToScreenX(x * tileSize, worldOffsetX);
         int screenY = worldToScreenY(y * tileSize, worldOffsetY);
         Color originalColor = g2.getColor();
+        boolean iceWall = boardBlockTextureIndexes == blockTextureIndexes && isIceWallAt(x, y);
 
         if (useBombExplosionShade && isWallAffectedByBombExplosion(x, y)) {
             g2.setColor(originalColor.darker());
         }
 
+        if (iceWall) {
+            g2.setColor(new Color(0x7FFFFF));
+        }
+
         g2.fillRect(screenX, screenY, tileSize, tileSize);
-        drawWallTexture(g2, x, y, screenX, screenY, boardBlockTextureIndexes, boardWallTextureIndexes);
+        drawWallTexture(g2, x, y, screenX, screenY, boardBlockTextureIndexes, boardWallTextureIndexes, iceWall);
         g2.setColor(originalColor);
     }
 
@@ -848,6 +916,21 @@ public final class Game implements Runnable {
 
     public void drawWallTexture(Graphics2D g2, int tileX, int tileY, int screenX, int screenY,
             int[][] boardBlockTextureIndexes, int[][] boardWallTextureIndexes) {
+        drawWallTexture(g2, tileX, tileY, screenX, screenY,
+                boardBlockTextureIndexes, boardWallTextureIndexes,
+                boardBlockTextureIndexes == blockTextureIndexes && isIceWallAt(tileX, tileY));
+    }
+
+    public void drawWallTexture(Graphics2D g2, int tileX, int tileY, int screenX, int screenY,
+            int[][] boardBlockTextureIndexes, int[][] boardWallTextureIndexes, boolean iceWall) {
+        if (iceWall && !isOuterWallTile(tileX, tileY) && iceWallTextureCount > 0) {
+            int textureIndex = getWallTextureIndex(tileX, tileY, boardBlockTextureIndexes, boardWallTextureIndexes);
+            if (textureIndex >= 0 && textureIndex < iceWallTextureCount) {
+                g2.drawImage(iceWallSprites[textureIndex], screenX, screenY, tileSize, tileSize, null);
+            }
+            return;
+        }
+
         BufferedImage[] textureSprites = isOuterWallTile(tileX, tileY) ? wallTextureSprites : blockTextureSprites;
         int textureCount = isOuterWallTile(tileX, tileY) ? wallTextureCount : blockTextureCount;
         int[][] textureIndexes = isOuterWallTile(tileX, tileY) ? boardWallTextureIndexes : boardBlockTextureIndexes;
@@ -865,6 +948,17 @@ public final class Game implements Runnable {
         g2.drawImage(textureSprites[textureIndex], screenX, screenY, tileSize, tileSize, null);
     }
 
+    public int getWallTextureIndex(int tileX, int tileY,
+            int[][] boardBlockTextureIndexes, int[][] boardWallTextureIndexes) {
+        int[][] textureIndexes = isOuterWallTile(tileX, tileY) ? boardWallTextureIndexes : boardBlockTextureIndexes;
+        if (textureIndexes == null || tileX < 0 || tileX >= textureIndexes.length
+                || tileY < 0 || tileY >= textureIndexes[tileX].length) {
+            return -1;
+        }
+
+        return textureIndexes[tileX][tileY];
+    }
+
     public void drawImageAtTile(Graphics2D g2, BufferedImage image, int x, int y) {
         drawImageAtTile(g2, image, x, y, renderWorldOffsetX, renderWorldOffsetY);
     }
@@ -872,6 +966,13 @@ public final class Game implements Runnable {
     public void drawImageAtTile(Graphics2D g2, BufferedImage image, int x, int y, double worldOffsetX, double worldOffsetY) {
         int screenX = worldToScreenX(x * tileSize, worldOffsetX);
         int screenY = worldToScreenY(y * tileSize, worldOffsetY);
+
+        g2.drawImage(image, screenX, screenY, tileSize, tileSize, null);
+    }
+
+    public void drawImageAtPixel(Graphics2D g2, BufferedImage image, double pixelX, double pixelY) {
+        int screenX = worldToScreenX(pixelX);
+        int screenY = worldToScreenY(pixelY);
 
         g2.drawImage(image, screenX, screenY, tileSize, tileSize, null);
     }
@@ -1011,6 +1112,7 @@ public final class Game implements Runnable {
     //maze gen algo
     public void generateMaze() {
         maze = new boolean[maxScreenCol][maxScreenRow];
+        iceWalls = new boolean[maxScreenCol][maxScreenRow];
 
         for (int x = 1; x < maxScreenCol - 1; x++) {
             for (int y = 1; y < maxScreenRow - 1; y++) {
@@ -1277,6 +1379,8 @@ public final class Game implements Runnable {
             ghostStoneSprites[1] = loadOptionalSprite("res/sprite/ghoststone_1.png", ghostStoneSprites[0]);
             ghostPhantomSprites[0] = loadOptionalSprite("res/sprite/ghostphantom_0.png", ghostSprites[0]);
             ghostPhantomSprites[1] = loadOptionalSprite("res/sprite/ghostphantom_1.png", ghostPhantomSprites[0]);
+            ghostMortisSlowSprites[0] = loadOptionalSprite("res/sprite/ghostdoctor_slow_0.png", ghostSprites[0]);
+            ghostMortisSlowSprites[1] = loadOptionalSprite("res/sprite/ghostdoctor_slow_1.png", ghostMortisSlowSprites[0]);
             ghostDeathSprite = loadOptionalSprite("res/sprite/ghost_7.png", ghostSprites[4]);
             ghostEyesSprite = loadOptionalSprite("res/sprite/eyes.png", ghostDeathSprite);
             outSprites[0] = loadSprite("res/sprite/out_0.png");
@@ -1306,11 +1410,18 @@ public final class Game implements Runnable {
             powerUpSprites[12] = loadSprite("res/sprite/pow_12.png");
             powerUpSprites[13] = loadSprite("res/sprite/pow_13.png");
             powerUpSprites[14] = loadSprite("res/sprite/pow_14.png");
+            powerUpSprites[15] = loadSprite("res/sprite/pow_15.png");
+            pillSprite = loadOptionalSprite("res/sprite/tiles/pill.png", powerUpSprites[15]);
+            particlePlusSprite = loadOptionalSprite("res/sprite/other/particle_plus.png", null);
+            particleMinusSprite = loadOptionalSprite("res/sprite/other/particle_minus.png", null);
             spikeSprites[0] = loadSprite("res/sprite/spike_0.png");
             spikeSprites[1] = loadSprite("res/sprite/spike_1.png");
             decalSprites[decalAshType] = loadSprite("res/sprite/ash.png");
             decalSprites[decalBloodType] = loadSprite("res/sprite/blood.png");
             iceCubeSprite = loadSprite("res/sprite/icecube.png");
+            for (int fragment = 0; fragment < iceFragmentSprites.length; fragment++) {
+                iceFragmentSprites[fragment] = loadSprite("res/sprite/other/icefrag_" + fragment + ".png");
+            }
             iceTileSprite = loadOptionalSprite("res/sprite/icetile.png", null);
             iceTileVariantCount = loadTextureSprites("icetile_", iceTileSprites);
             waterSprite = loadOptionalSprite("res/sprite/water.png", null);
@@ -1399,6 +1510,29 @@ public final class Game implements Runnable {
                 ghostPikaChargedSprites.length, ghostPikaChargedSprites[0]);
         loadConfiguredGhostFrames("golem", ghostStoneSprites, ghostStoneSprites.length, ghostStoneSprites[0]);
         loadConfiguredGhostFrames("horror", ghostPhantomSprites, ghostPhantomSprites.length, ghostPhantomSprites[0]);
+
+        loadGhostAimSprites("ghostfire_bombaim_", ghostFireBombAimSprites,
+                getConfiguredGhostSprite(getGhostTypeForConfiguredPower("firebomb"), ghostSprites[0]));
+        loadGhostAimSprites("ghostice_bombaim_", ghostIceBombAimSprites,
+                getConfiguredGhostSprite(getGhostTypeForConfiguredPower("icebomb"), ghostSprites[0]));
+    }
+
+    public BufferedImage getConfiguredGhostSprite(int ghostType, BufferedImage fallback) {
+        if (ghostType >= 0 && ghostType < ghostDefinitionSprites.length
+                && ghostDefinitionSprites[ghostType] != null
+                && ghostDefinitionSprites[ghostType].length > 0) {
+            return ghostDefinitionSprites[ghostType][0];
+        }
+
+        return fallback;
+    }
+
+    public void loadGhostAimSprites(String prefix, BufferedImage[] target, BufferedImage fallback) throws IOException {
+        for (int frame = 0; frame < target.length; frame++) {
+            target[frame] = loadOptionalSprite(
+                    GameContent.GHOST_DIRECTORY + prefix + frame + ".png",
+                    frame == 0 ? fallback : target[frame - 1]);
+        }
     }
 
     public void loadGhostDefinitionBase(int type, BufferedImage fallback) throws IOException {
@@ -1446,6 +1580,13 @@ public final class Game implements Runnable {
 
     public BufferedImage[] loadGhostDefinitionSprites(GhostDefinition definition, int frameLimit,
             BufferedImage fallback) throws IOException {
+        if (!definition.sprite().endsWith(".png") && resourceExists(
+                GameContent.GHOST_DIRECTORY + definition.sprite() + ".png")) {
+            return new BufferedImage[] {
+                loadSprite(GameContent.GHOST_DIRECTORY + definition.sprite() + ".png")
+            };
+        }
+
         int targetSize;
         if (definition.sprite().endsWith(".png")) {
             targetSize = 1;
@@ -1538,6 +1679,7 @@ public final class Game implements Runnable {
     public void loadWallTextureSprites() throws IOException {
         blockTextureCount = loadTextureSprites("block_", blockTextureSprites);
         wallTextureCount = loadTextureSprites("wall_", wallTextureSprites);
+        iceWallTextureCount = loadTextureSprites("icewall_", iceWallSprites);
         debrisCount = loadTextureSprites("debris_", debrisSprites);
     }
 
@@ -1675,6 +1817,8 @@ public final class Game implements Runnable {
             clonyMaximumCount = parseClonyMaximumCount(value);
         } else if (key.equals("disableTransitionAnimation")) {
             disableTransitionAnimation = Boolean.parseBoolean(value);
+        } else if (key.equals("allowResize")) {
+            allowResize = Boolean.parseBoolean(value);
         } else if (key.equals("mazeWidth")) {
             maxScreenCol = Integer.parseInt(value);
         } else if (key.equals("mazeHeight")) {
@@ -1805,6 +1949,7 @@ public final class Game implements Runnable {
         lines.add("specialGhostPowerDropChancePercent=" + specialGhostPowerDropChancePercent);
         lines.add("clonyMaximumCount=" + getClonyMaximumCountSaveValue());
         lines.add("disableTransitionAnimation=" + disableTransitionAnimation);
+        lines.add("allowResize=" + allowResize);
         lines.add("mazeWidth=" + maxScreenCol);
         lines.add("mazeHeight=" + maxScreenRow);
         lines.add("masterVolume=" + masterVolume);
@@ -2011,7 +2156,7 @@ public final class Game implements Runnable {
         boolean[] options = draft ? draftDroppedPowerEnabled : droppedPowerEnabled;
 
         for (int powerType = 0; powerType < options.length; powerType++) {
-            if (options[powerType]) {
+            if (powerType != powerSerumType && options[powerType]) {
                 enabledTypes.add(powerType);
             }
         }
@@ -2146,6 +2291,8 @@ public final class Game implements Runnable {
         fruitsSpawnedThisLevel = 0;
         elapsedFrames = 0;
         powerModeTimer = 0;
+        intoxicatedTimer = 0;
+        intoxicatedParticleTimer = 0;
         playerIceGhostExposureTimer = 0;
         iceGhostSlowTimer = 0;
         iceGhostSlowUntilIcePower = false;
@@ -2164,6 +2311,7 @@ public final class Game implements Runnable {
         powerPelletWarningPlayed = false;
         consecutiveBoardClears = 0;
         Arrays.fill(powerUpTimers, 0);
+        buffedEffects.clear();
         collectedFruits = new int[4];
         finalScoreHandled = false;
         pendingFinalScore = 0;
@@ -2204,6 +2352,8 @@ public final class Game implements Runnable {
         electricTiles.clear();
         smokeTiles.clear();
         cactusSpikeProjectiles.clear();
+        iceFragments.clear();
+        spriteParticles.clear();
         pacClones.clear();
         fireTrails.clear();
         afterImages.clear();
@@ -2267,6 +2417,7 @@ public final class Game implements Runnable {
         ghost.speedOffset = getRandomGhostSpeedOffset();
         ghost.directionX = directionX;
         ghost.directionY = directionY;
+        ghost.mortisBuffed = transferData != null && transferData.mortisBuffed;
         ghost.targetPixelX = (tileX + directionX) * tileSize;
         ghost.targetPixelY = (tileY + directionY) * tileSize;
         initializeSpawnedGhostState(ghost);
@@ -2316,13 +2467,41 @@ public final class Game implements Runnable {
         } else if (ghost.type == ghostFlashType) {
             resetFlashGhostCycle(ghost);
         }
+
+        if (isFireBombGhostType(ghost.type) || isIceBombGhostType(ghost.type)) {
+            ghost.bombTriggerGraceTimer = framesPerSecond;
+        }
+
+        if (isMortisGhost(ghost)) {
+            startMortisInactiveState(ghost);
+        }
+    }
+
+    public void startMortisInactiveState(Ghost ghost) {
+        ghost.mortisActive = false;
+        ghost.mortisTimer = ghost.mortisBuffed ? mortisInactiveDuration / 2 : mortisInactiveDuration;
+        ghost.path.clear();
+        ghost.goalX = -1;
+        ghost.goalY = -1;
+        ghost.targetPixelX = ghost.pixelX;
+        ghost.targetPixelY = ghost.pixelY;
+    }
+
+    public void startMortisActiveState(Ghost ghost) {
+        ghost.mortisActive = true;
+        ghost.mortisTimer = 0;
+        ghost.path.clear();
+        ghost.goalX = -1;
+        ghost.goalY = -1;
+        ghost.targetPixelX = ghost.pixelX;
+        ghost.targetPixelY = ghost.pixelY;
     }
 
     public ArrayList<GhostTransferData> getGhostTransferData() {
         ArrayList<GhostTransferData> transferData = new ArrayList<>();
 
         for (Ghost ghost : ghosts) {
-            transferData.add(new GhostTransferData(ghost.type));
+            transferData.add(new GhostTransferData(ghost.type, ghost.mortisBuffed));
         }
 
         return transferData;
@@ -2511,7 +2690,25 @@ public final class Game implements Runnable {
             moveTowardTarget();
         }
 
+        curePacmanIntoxicationOnWater();
         checkPacmetalWaterElectrocution();
+    }
+
+    public void curePacmanIntoxicationOnWater() {
+        if (isPacmanIntoxicated()
+                && hasWaterTileAt(getPlayerCenterTileX(), getPlayerCenterTileY())) {
+            curePacmanIntoxication();
+        }
+    }
+
+    public void curePacmanIntoxication() {
+        intoxicatedTimer = 0;
+        intoxicatedParticleTimer = 0;
+        for (int i = spriteParticles.size() - 1; i >= 0; i--) {
+            if (spriteParticles.get(i).sprite == particleMinusSprite) {
+                spriteParticles.remove(i);
+            }
+        }
     }
 
     public void updateGameTimers() {
@@ -2521,6 +2718,7 @@ public final class Game implements Runnable {
 
         elapsedFrames++;
         updatePowerUpTimers();
+        updateSpriteParticles();
         updateElectricityChanneling();
         updateStoneRollingTimer();
         updateBombExplosionEffect();
@@ -2584,6 +2782,9 @@ public final class Game implements Runnable {
 
     public void updatePowerUpTimers() {
         for (int i = 0; i < powerUpTimers.length; i++) {
+            if (i == powerSerumType) {
+                continue;
+            }
             if (powerUpTimers[i] > 0) {
                 powerUpTimers[i]--;
 
@@ -2599,8 +2800,20 @@ public final class Game implements Runnable {
             }
         }
 
+        if (buffedEffects.serumTimer > 0) {
+            buffedEffects.serumTimer--;
+            if (buffedEffects.serumTimer == 0) {
+                buffedEffects.selectedSerumPowerType = -1;
+            }
+        }
+
         if (iceGhostSlowTimer > 0) {
             iceGhostSlowTimer--;
+        }
+
+        if (intoxicatedTimer > 0) {
+            intoxicatedTimer--;
+            emitIntoxicatedParticle();
         }
     }
 
@@ -2635,7 +2848,9 @@ public final class Game implements Runnable {
             return;
         }
 
-        stoneSlideSpeed = Math.max(0.0, stoneSlideSpeed - stoneSlideFrictionPerFrame);
+        if (!isSerumEffectActive(powerStoneType)) {
+            stoneSlideSpeed = Math.max(0.0, stoneSlideSpeed - stoneSlideFrictionPerFrame);
+        }
         powerUpTimers[powerStoneType] = Math.max(0, powerUpTimers[powerStoneType] - 4);
         if (powerUpTimers[powerStoneType] <= 0) {
             resetStoneMovement();
@@ -2650,7 +2865,7 @@ public final class Game implements Runnable {
                 wantedTiles,
                 getPlayerCenterTileX(),
                 getPlayerCenterTileY(),
-                bombRadiusTiles,
+                getPlayerElectricAuraRadius(),
                 false) || touchingWater;
 
         
@@ -2816,6 +3031,10 @@ public final class Game implements Runnable {
 
         for (int cloneIndex = pacClones.size() - 1; cloneIndex >= 0; cloneIndex--) {
             PacClone clone = pacClones.get(cloneIndex);
+            if (isPowerUpActive(powerElectricType)) {
+                continue;
+            }
+
             ElectricTile electricTile = getElectricTileAt(
                     getPacCloneCenterTileX(clone),
                     getPacCloneCenterTileY(clone));
@@ -2825,13 +3044,26 @@ public final class Game implements Runnable {
                 continue;
             }
 
+            if (clone.electrocutedTimer > 0) {
+                continue;
+            }
+
             if (!playedSound && shouldPlayGameSound()) {
                 soundManager.playElectrocuted();
                 playedSound = true;
             }
 
-            destroyPacCloneAt(cloneIndex);
+            startPacCloneElectrocution(clone);
         }
+    }
+
+    public void startPacCloneElectrocution(PacClone clone) {
+        clone.electrocutedTimer = framesPerSecond;
+        clone.targetPixelX = clone.pixelX;
+        clone.targetPixelY = clone.pixelY;
+        clone.directionX = 0;
+        clone.directionY = 0;
+        clone.path.clear();
     }
 
     public void startFlashGhostRechargeShock(Ghost ghost) {
@@ -2862,7 +3094,7 @@ public final class Game implements Runnable {
 
         Ghost ghost = ghosts.get(ghostIndex);
         ghost.electrocutedTimer = framesPerSecond;
-        ghost.electrocutedLargeExplosion = ghost.type == ghostBombType || ghost.type == ghostMetalType;
+        ghost.electrocutedLargeExplosion = isBombGhostType(ghost.type) || ghost.type == ghostMetalType;
         ghost.laserActive = false;
         ghost.chargeTimer = 0;
         ghost.warningTimer = 0;
@@ -2896,6 +3128,7 @@ public final class Game implements Runnable {
 
     public void clearBombExplosionEffect() {
         bombExplosionTimer = 0;
+        bombExplosionEffectType = bombExplosionNormalType;
         bombExplosionMinX = 0;
         bombExplosionMinY = 0;
         bombExplosionMaxX = 0;
@@ -2935,6 +3168,19 @@ public final class Game implements Runnable {
             }
 
             PacClone clone = pacClones.get(cloneIndex);
+            if (clone.electrocutedTimer > 0) {
+                clone.electrocutedTimer--;
+                clone.targetPixelX = clone.pixelX;
+                clone.targetPixelY = clone.pixelY;
+                clone.directionX = 0;
+                clone.directionY = 0;
+                if (clone.electrocutedTimer <= 0) {
+                    addVisualDecal(decalAshType, clone.pixelX, clone.pixelY);
+                    pacClones.remove(cloneIndex);
+                }
+                continue;
+            }
+
             if (clone.iceGhostSlowTimer > 0) {
                 clone.iceGhostSlowTimer--;
             }
@@ -2962,6 +3208,9 @@ public final class Game implements Runnable {
 
     public double getPacCloneSpeed(PacClone clone) {
         double speed = isPowerUpActive(powerSpeedType) ? cloneSpeed + 1.0 : cloneSpeed;
+        if (isSerumEffectActive(powerCloneType)) {
+            speed += 1.5;
+        }
 
         if (!isPowerUpActive(powerIceType)
                 && (clone.iceGhostSlowTimer > 0 || clone.iceGhostSlowUntilIcePower)) {
@@ -3127,12 +3376,20 @@ public final class Game implements Runnable {
                 continue;
             }
 
+            if (destroyFrozenGhostHitByCactusSpike(projectile)) {
+                cactusSpikeProjectiles.remove(i);
+                continue;
+            }
+
             if (playerIntersectsRect(
                     projectile.pixelX,
                     projectile.pixelY,
                     projectile.pixelX + tileSize,
                     projectile.pixelY + tileSize)) {
-                playGameSoundSpikeKill();
+                boolean cactusProtected = isMetalPacmanActive() || isStoneRollingActive();
+                if (!cactusProtected) {
+                    playGameSoundSpikeKill();
+                }
                 cactusSpikeProjectiles.remove(i);
                 damagePacmanWithCactusSpike();
                 continue;
@@ -3146,6 +3403,215 @@ public final class Game implements Runnable {
             if (killGhostHitByCactusSpike(projectile)) {
                 cactusSpikeProjectiles.remove(i);
             }
+        }
+    }
+
+    public void updateFrozenGhosts() {
+        for (int frozenIndex = frozenGhosts.size() - 1; frozenIndex >= 0; frozenIndex--) {
+            FrozenGhost frozenGhost = frozenGhosts.get(frozenIndex);
+            if (!frozenGhost.moving || (frozenGhost.directionX == 0 && frozenGhost.directionY == 0)) {
+                continue;
+            }
+
+            if (frozenGhost.playerSafetyTimer > 0) {
+                frozenGhost.playerSafetyTimer--;
+            }
+
+            double speed = Math.max(0.1, getPlayerSpeed() + frozenIceCubeSpeedBonus);
+            double nextPixelX = frozenGhost.pixelX + frozenGhost.directionX * speed;
+            double nextPixelY = frozenGhost.pixelY + frozenGhost.directionY * speed;
+            int nextTileX = getFrozenGhostCenterTileX(nextPixelX);
+            int nextTileY = getFrozenGhostCenterTileY(nextPixelY);
+
+            if (!canMove(nextTileX, nextTileY)) {
+                spawnIceFragments(frozenGhost.pixelX + tileSize / 2.0, frozenGhost.pixelY + tileSize / 2.0);
+                frozenGhosts.remove(frozenIndex);
+                continue;
+            }
+
+            frozenGhost.pixelX = nextPixelX;
+            frozenGhost.pixelY = nextPixelY;
+            handleFrozenGhostPortalWrap(frozenGhost);
+            updateFrozenGhostTile(frozenGhost);
+
+            if (hasWaterTileAt(frozenGhost.tileX, frozenGhost.tileY)) {
+                startWaterFreezeAt(frozenGhost.tileX, frozenGhost.tileY);
+            }
+        }
+    }
+
+    public void spawnIceFragments(double centerX, double centerY) {
+        for (int fragmentIndex = 0; fragmentIndex < iceFragmentCount; fragmentIndex++) {
+            double angle = random.nextDouble() * Math.PI * 2.0;
+            double speed = iceFragmentMinSpeed
+                    + random.nextDouble() * (iceFragmentMaxSpeed - iceFragmentMinSpeed);
+            double spinSpeed = iceFragmentMinSpinSpeed
+                    + random.nextDouble() * (iceFragmentMaxSpinSpeed - iceFragmentMinSpinSpeed);
+            if (random.nextBoolean()) {
+                spinSpeed = -spinSpeed;
+            }
+            iceFragments.add(new IceFragment(
+                    centerX,
+                    centerY,
+                    Math.cos(angle) * speed,
+                    Math.sin(angle) * speed,
+                    random.nextDouble() * Math.PI * 2.0,
+                    spinSpeed,
+                    iceFragmentScale,
+                    random.nextInt(iceFragmentSprites.length)));
+        }
+    }
+
+    public void updateIceFragments() {
+        int fadeStart = iceFragmentFlightDuration + iceFragmentSettleDuration;
+        int fragmentLifetime = fadeStart + iceFragmentFadeDuration;
+
+        for (int i = iceFragments.size() - 1; i >= 0; i--) {
+            IceFragment fragment = iceFragments.get(i);
+            fragment.age++;
+
+            if (fragment.age <= iceFragmentFlightDuration) {
+                double nextX = fragment.centerX + fragment.velocityX;
+                double nextY = fragment.centerY + fragment.velocityY;
+
+                if (!isIceFragmentPositionOpen(nextX, fragment.centerY)) {
+                    fragment.velocityX = -fragment.velocityX * iceFragmentWallBounceDamping;
+                    nextX = fragment.centerX + fragment.velocityX;
+                }
+                if (!isIceFragmentPositionOpen(fragment.centerX, nextY)) {
+                    fragment.velocityY = -fragment.velocityY * iceFragmentWallBounceDamping;
+                    nextY = fragment.centerY + fragment.velocityY;
+                }
+
+                if (isIceFragmentPositionOpen(nextX, fragment.centerY)) {
+                    fragment.centerX = nextX;
+                }
+                if (isIceFragmentPositionOpen(fragment.centerX, nextY)) {
+                    fragment.centerY = nextY;
+                }
+                fragment.angle += fragment.angularVelocity;
+            }
+
+            if (fragment.age > fadeStart) {
+                double progress = clampDouble(
+                        (fragment.age - fadeStart) / (double) iceFragmentFadeDuration,
+                        0.0,
+                        1.0);
+                fragment.opacity = 1.0 - progress;
+            } else {
+                fragment.opacity = 1.0;
+            }
+
+            if (fragment.age >= fragmentLifetime) {
+                iceFragments.remove(i);
+            }
+        }
+    }
+
+    public boolean isIceFragmentPositionOpen(double centerX, double centerY) {
+        int tileX = (int) (centerX / tileSize);
+        int tileY = (int) (centerY / tileSize);
+        if (tileX < 0 || tileX >= maxScreenCol || tileY < 0 || tileY >= maxScreenRow
+                || isPortalTile(tileX, tileY)) {
+            return false;
+        }
+        return canMove(tileX, tileY);
+    }
+
+    public void handleFrozenGhostPortalWrap(FrozenGhost frozenGhost) {
+        int tileX = getFrozenGhostCenterTileX(frozenGhost.pixelX);
+        int tileY = getFrozenGhostCenterTileY(frozenGhost.pixelY);
+
+        if (!isPortalTile(tileX, tileY)) {
+            return;
+        }
+
+        int[] oppositePortal = getOppositePortalTile(tileX, tileY);
+        int inwardX = frozenGhost.directionX != 0
+                ? frozenGhost.directionX
+                : getPortalInwardDirectionX(oppositePortal[0], oppositePortal[1]);
+        int inwardY = frozenGhost.directionY != 0
+                ? frozenGhost.directionY
+                : getPortalInwardDirectionY(oppositePortal[0], oppositePortal[1]);
+        frozenGhost.pixelX = (oppositePortal[0] + inwardX) * tileSize;
+        frozenGhost.pixelY = (oppositePortal[1] + inwardY) * tileSize;
+    }
+
+    public void updateFrozenGhostTile(FrozenGhost frozenGhost) {
+        frozenGhost.tileX = getFrozenGhostCenterTileX(frozenGhost.pixelX);
+        frozenGhost.tileY = getFrozenGhostCenterTileY(frozenGhost.pixelY);
+    }
+
+    public int getFrozenGhostCenterTileX(double pixelX) {
+        return clampInt((int) ((pixelX + tileSize / 2.0) / tileSize), 0, maxScreenCol - 1);
+    }
+
+    public int getFrozenGhostCenterTileY(double pixelY) {
+        return clampInt((int) ((pixelY + tileSize / 2.0) / tileSize), 0, maxScreenRow - 1);
+    }
+
+    public boolean frozenGhostIntersectsRect(FrozenGhost frozenGhost,
+            double minX, double minY, double maxX, double maxY) {
+        return rectsIntersect(
+                frozenGhost.pixelX,
+                frozenGhost.pixelY,
+                frozenGhost.pixelX + tileSize,
+                frozenGhost.pixelY + tileSize,
+                minX,
+                minY,
+                maxX,
+                maxY);
+    }
+
+    public int[] getFrozenGhostPushDirection(FrozenGhost frozenGhost,
+            double entityPixelX, double entityPixelY, int preferredDirectionX, int preferredDirectionY) {
+        double deltaX = frozenGhost.pixelX - entityPixelX;
+        double deltaY = frozenGhost.pixelY - entityPixelY;
+
+        if ((preferredDirectionX != 0 || preferredDirectionY != 0)
+                && ((preferredDirectionX == 0 || Math.signum(deltaX) == preferredDirectionX)
+                        && (preferredDirectionY == 0 || Math.signum(deltaY) == preferredDirectionY))) {
+            return new int[] { preferredDirectionX, preferredDirectionY };
+        }
+
+        if (Math.abs(deltaX) >= Math.abs(deltaY) && deltaX != 0) {
+            return new int[] { deltaX > 0 ? 1 : -1, 0 };
+        }
+        if (deltaY != 0) {
+            return new int[] { 0, deltaY > 0 ? 1 : -1 };
+        }
+        if (preferredDirectionX != 0 || preferredDirectionY != 0) {
+            return new int[] { preferredDirectionX, preferredDirectionY };
+        }
+
+        return new int[] { 1, 0 };
+    }
+
+    public void pushFrozenGhost(FrozenGhost frozenGhost,
+            double entityPixelX, double entityPixelY, int preferredDirectionX, int preferredDirectionY,
+            boolean awardBonus) {
+        int[] direction = getFrozenGhostPushDirection(
+                frozenGhost,
+                entityPixelX,
+                entityPixelY,
+                preferredDirectionX,
+                preferredDirectionY);
+        frozenGhost.directionX = direction[0];
+        frozenGhost.directionY = direction[1];
+        frozenGhost.moving = true;
+        if (awardBonus) {
+            frozenGhost.playerSafetyTimer = framesPerSecond / 2;
+        }
+
+        if (!frozenGhost.bonusAwarded) {
+            if (!frozenGhost.fromClone) {
+                tryDropSpecialGhostPower(frozenGhost.type, frozenGhost.tileX, frozenGhost.tileY);
+            }
+            if (awardBonus) {
+                addScore(500);
+            }
+            playGameSoundEatIce();
+            frozenGhost.bonusAwarded = true;
         }
     }
 
@@ -3180,6 +3646,10 @@ public final class Game implements Runnable {
                     projectile.pixelY,
                     projectile.pixelX + tileSize,
                     projectile.pixelY + tileSize)) {
+                if (ghost.type == ghostCactusType && ghost.mortisBuffed) {
+                    continue;
+                }
+
                 killGhostAt(ghostIndex, 0, true, ghostKillSoundSpike, true);
                 return true;
             }
@@ -3189,13 +3659,7 @@ public final class Game implements Runnable {
     }
 
     public void damagePacmanWithCactusSpike() {
-        if (!isMetalPacmanActive()) {
-            forceStartDeathAnimation();
-            return;
-        }
-
-        if (!pacMetalDamaged) {
-            pacMetalDamaged = true;
+        if (isMetalPacmanActive() || isStoneRollingActive()) {
             return;
         }
 
@@ -3578,7 +4042,7 @@ public final class Game implements Runnable {
 
         startingSpeed += stoneSpeedBoost;
 
-        if (hasWaterTileAt(getPlayerCenterTileX(), getPlayerCenterTileY())) {
+        if (!isPlayerWaterImmune() && hasWaterTileAt(getPlayerCenterTileX(), getPlayerCenterTileY())) {
             startingSpeed -= waterTileSpeedPenalty;
         }
 
@@ -3626,7 +4090,7 @@ public final class Game implements Runnable {
         if (isStoneRollingActive()) {
             double stoneSpeed = stoneSlideSpeed;
 
-            if (hasWaterTileAt(getPlayerCenterTileX(), getPlayerCenterTileY())) {
+            if (!isPlayerWaterImmune() && hasWaterTileAt(getPlayerCenterTileX(), getPlayerCenterTileY())) {
                 stoneSpeed -= waterTileSpeedPenalty;
             }
 
@@ -3679,7 +4143,15 @@ public final class Game implements Runnable {
             return Math.max(0.1, definition.speedOverride());
         }
 
+        if (isMortisGhost(ghost)) {
+            return Math.max(0.1, getLevelGhostSpeed()
+                    + (ghost.mortisActive ? mortisActiveSpeedBonus : -mortisInactiveSpeedPenalty));
+        }
+
         if (ghost.type == ghostStoneType) {
+            if (ghost.mortisBuffed) {
+                return Math.max(0.1, getLevelGhostSpeed());
+            }
             double stoneSpeed = ghostStoneSpeed;
             if (isGhostOnWaterTile(ghost)) {
                 stoneSpeed -= ghostStoneWaterSpeedPenalty;
@@ -3713,7 +4185,12 @@ public final class Game implements Runnable {
             return Math.max(0.1, getPlayerSpeedForGhostScaling() - ghostFlashSpeedBehindPlayer);
         }
 
-        double adjustedSpeed = Math.min(maxGhostSpeed, Math.max(0.1, getLevelGhostSpeed() + ghost.speedOffset));
+        double buffSpeed = ghost.mortisBuffed
+                && (isClassicGhost(ghost) || ghost.type == ghostCloneType || ghost.type == ghostPhantomType)
+                ? 1.5
+                : 0.0;
+        double adjustedSpeed = Math.min(maxGhostSpeed,
+                Math.max(0.1, getLevelGhostSpeed() + ghost.speedOffset + buffSpeed));
         if (ghost.type != ghostMetalType && ghost.type != ghostStoneType && isGhostInFriendlyIceAura(ghost)) {
             adjustedSpeed -= iceAuraSpeedPenalty;
         }
@@ -3728,7 +4205,18 @@ public final class Game implements Runnable {
         return ghostDefinitionsByType.get(ghostType);
     }
 
+    public boolean isMortisGhost(int ghostType) {
+        return getGhostPowerKey(ghostType).equals("serum");
+    }
+
+    public boolean isMortisGhost(Ghost ghost) {
+        return ghost != null && isMortisGhost(ghost.type);
+    }
+
     public boolean isGhostScared(Ghost ghost) {
+        if (isMortisGhost(ghost)) {
+            return !ghost.mortisActive;
+        }
         GhostDefinition definition = getGhostDefinition(ghost.type);
         return definition == null || definition.scared();
     }
@@ -3740,6 +4228,89 @@ public final class Game implements Runnable {
     public String getGhostPowerKey(int ghostType) {
         GhostDefinition definition = getGhostDefinition(ghostType);
         return definition == null ? "none" : definition.power().toLowerCase(Locale.ROOT);
+    }
+
+    public int getGhostTypeForConfiguredPower(String powerKey) {
+        for (Map.Entry<Integer, GhostDefinition> entry : ghostDefinitionsByType.entrySet()) {
+            if (powerKey.equalsIgnoreCase(entry.getValue().power())) {
+                return entry.getKey();
+            }
+        }
+
+        return -1;
+    }
+
+    public boolean isFireGhostType(int ghostType) {
+        String powerKey = getGhostPowerKey(ghostType);
+        return ghostType == ghostFireType || powerKey.equals("fire") || powerKey.equals("firebomb");
+    }
+
+    public boolean isIceGhostType(int ghostType) {
+        String powerKey = getGhostPowerKey(ghostType);
+        return ghostType == ghostIceType || powerKey.equals("ice") || powerKey.equals("icebomb");
+    }
+
+    public boolean isFireBombGhostType(int ghostType) {
+        return getGhostPowerKey(ghostType).equals("firebomb");
+    }
+
+    public boolean isIceBombGhostType(int ghostType) {
+        return getGhostPowerKey(ghostType).equals("icebomb");
+    }
+
+    public int getIceGhostAuraRadius(int ghostType) {
+        for (Ghost ghost : ghosts) {
+            if (ghost.type == ghostType && isIceBombGhostType(ghostType)) {
+                return ghost.mortisBuffed ? 3 : 2;
+            }
+        }
+        return isIceBombGhostType(ghostType) ? 2 : bombRadiusTiles;
+    }
+
+    public boolean isBombGhostType(int ghostType) {
+        return ghostType == ghostBombType || isFireBombGhostType(ghostType) || isIceBombGhostType(ghostType);
+    }
+
+    public int getGhostBombExplosionEffectType(int ghostType) {
+        if (isIceBombGhostType(ghostType)) {
+            return bombExplosionIceType;
+        }
+        if (isFireBombGhostType(ghostType)) {
+            return bombExplosionFireType;
+        }
+
+        return bombExplosionNormalType;
+    }
+
+    public int getGhostBombExplosionRadius(Ghost ghost) {
+        return bombRadiusTiles + (ghost != null && ghost.mortisBuffed && ghost.type == ghostBombType ? 1 : 0);
+    }
+
+    public int getActivePlayerBombExplosionEffectType() {
+        if (isPowerUpActive(powerIceType)) {
+            return bombExplosionIceType;
+        }
+        if (isPowerUpActive(powerFireType)) {
+            return bombExplosionFireType;
+        }
+
+        return bombExplosionNormalType;
+    }
+
+    public int getPlayerBombRadiusTiles() {
+        return bombRadiusTiles + (isSerumEffectActive(powerBombType) ? 1 : 0);
+    }
+
+    public int getPlayerIceAuraRadius() {
+        return bombRadiusTiles + (isSerumEffectActive(powerIceType) ? 1 : 0);
+    }
+
+    public int getPlayerMagnetAuraRadius() {
+        return isSerumEffectActive(powerMagnetType) ? 3 : 2;
+    }
+
+    public int getPlayerElectricAuraRadius() {
+        return bombRadiusTiles + (isSerumEffectActive(powerElectricType) ? 1 : 0);
     }
 
     public boolean isGhostOnWaterTile(Ghost ghost) {
@@ -3895,6 +4466,7 @@ public final class Game implements Runnable {
         boolean[][] currentDots = dots;
         boolean[][] currentBigDots = bigDots;
         boolean[][] currentBurnedWalls = burnedWalls;
+        boolean[][] currentIceWalls = iceWalls;
         int[][] currentBlockTextureIndexes = blockTextureIndexes;
         int[][] currentWallTextureIndexes = wallTextureIndexes;
         int[][] currentDebrisIndexes = debrisIndexes;
@@ -3902,6 +4474,7 @@ public final class Game implements Runnable {
         generateMaze();
         generateDots();
         burnedWalls = new boolean[maxScreenCol][maxScreenRow];
+        iceWalls = new boolean[maxScreenCol][maxScreenRow];
         randomizeWallTextures();
         resetDebris();
 
@@ -3909,6 +4482,7 @@ public final class Game implements Runnable {
         nextDots = dots;
         nextBigDots = bigDots;
         nextBurnedWalls = burnedWalls;
+        nextIceWalls = iceWalls;
         nextBlockTextureIndexes = blockTextureIndexes;
         nextWallTextureIndexes = wallTextureIndexes;
         nextDebrisIndexes = debrisIndexes;
@@ -3917,6 +4491,7 @@ public final class Game implements Runnable {
         dots = currentDots;
         bigDots = currentBigDots;
         burnedWalls = currentBurnedWalls;
+        iceWalls = currentIceWalls;
         blockTextureIndexes = currentBlockTextureIndexes;
         wallTextureIndexes = currentWallTextureIndexes;
         debrisIndexes = currentDebrisIndexes;
@@ -3925,6 +4500,9 @@ public final class Game implements Runnable {
     public void clearActiveBoardObjectsForLevelTransition() {
         powerMode = false;
         Arrays.fill(powerUpTimers, 0);
+        buffedEffects.clear();
+        intoxicatedTimer = 0;
+        intoxicatedParticleTimer = 0;
         soundManager.stopLaser();
         powerModeTimer = 0;
         powerPelletWarningPlayed = false;
@@ -3941,6 +4519,8 @@ public final class Game implements Runnable {
         frozenGhosts.clear();
         waterEffects.clear();
         cactusSpikeProjectiles.clear();
+        iceFragments.clear();
+        spriteParticles.clear();
         pacClones.clear();
         fireTrails.clear();
         afterImages.clear();
@@ -4145,6 +4725,7 @@ public final class Game implements Runnable {
         dots = nextDots;
         bigDots = nextBigDots;
         burnedWalls = nextBurnedWalls;
+        iceWalls = nextIceWalls;
         blockTextureIndexes = nextBlockTextureIndexes;
         wallTextureIndexes = nextWallTextureIndexes;
         debrisIndexes = nextDebrisIndexes;
@@ -4200,10 +4781,17 @@ public final class Game implements Runnable {
         ghostSpikeTraps.clear();
         frozenGhosts.clear();
         iceTiles.clear();
+        if (iceWalls != null) {
+            for (boolean[] column : iceWalls) {
+                Arrays.fill(column, false);
+            }
+        }
         waterEffects.clear();
         waterTiles.clear();
         electricTiles.clear();
         smokeTiles.clear();
+        iceFragments.clear();
+        spriteParticles.clear();
         cactusSpikeProjectiles.clear();
         pacClones.clear();
         fireTrails.clear();
@@ -4257,6 +4845,7 @@ public final class Game implements Runnable {
 
     public void resetBoardVisuals() {
         burnedWalls = new boolean[maxScreenCol][maxScreenRow];
+        iceWalls = new boolean[maxScreenCol][maxScreenRow];
         randomizeWallTextures();
         resetDebris();
         visualDecals.clear();
@@ -4358,7 +4947,7 @@ public final class Game implements Runnable {
 
     public int getSmallDotScore() {
         int score = getLevelSmallDotScore();
-        return isPowerUpActive(powerBonusType) ? score * 5 : score;
+        return isPowerUpActive(powerBonusType) ? score * (isSerumEffectActive(powerBonusType) ? 10 : 5) : score;
     }
 
     public int getBigDotScore() {
@@ -4377,8 +4966,9 @@ public final class Game implements Runnable {
     }
 
     public void collectMagnetPellets(int centerX, int centerY) {
-        for (int x = centerX - 2; x <= centerX + 2; x++) {
-            for (int y = centerY - 2; y <= centerY + 2; y++) {
+        int radius = getPlayerMagnetAuraRadius();
+        for (int x = centerX - radius; x <= centerX + radius; x++) {
+            for (int y = centerY - radius; y <= centerY + radius; y++) {
                 if (x > 0 && x < maxScreenCol - 1 && y > 0 && y < maxScreenRow - 1) {
                     collectSmallPelletAt(x, y);
                 }
@@ -4408,6 +4998,7 @@ public final class Game implements Runnable {
             clone.path.clear();
             addScore(getClonePelletScore());
             playGameSoundEatPower();
+            startPowerMode();
         }
 
         if (isPowerUpActive(powerMagnetType)) {
@@ -4418,8 +5009,9 @@ public final class Game implements Runnable {
     }
 
     public void collectPacCloneMagnetPellets(int centerX, int centerY) {
-        for (int x = centerX - 2; x <= centerX + 2; x++) {
-            for (int y = centerY - 2; y <= centerY + 2; y++) {
+        int radius = getPlayerMagnetAuraRadius();
+        for (int x = centerX - radius; x <= centerX + radius; x++) {
+            for (int y = centerY - radius; y <= centerY + radius; y++) {
                 if (x > 0 && x < maxScreenCol - 1 && y > 0 && y < maxScreenRow - 1 && dots[x][y]) {
                     dots[x][y] = false;
                     addScore(getClonePelletScore());
@@ -4430,7 +5022,9 @@ public final class Game implements Runnable {
     }
 
     public int getClonePelletScore() {
-        return isPowerUpActive(powerBonusType) ? clonePelletScore * 5 : clonePelletScore;
+        return isPowerUpActive(powerBonusType)
+                ? clonePelletScore * (isSerumEffectActive(powerBonusType) ? 10 : 5)
+                : clonePelletScore;
     }
 
     public void spawnPacClones() {
@@ -4514,17 +5108,21 @@ public final class Game implements Runnable {
             return 2;
         }
 
-        return clampInt(ghost.magnetAuraRadius, 2, 4);
+        int buffRadius = ghost.mortisBuffed ? 3 : 0;
+        return clampInt(Math.max(ghost.magnetAuraRadius, 2 + buffRadius), 2, 4);
     }
 
     public void spawnBonusGhostMilestoneGhostIfNeeded(Ghost ghost) {
         if (ghost.pelletsCollected > 0 && ghost.pelletsCollected % bonusGhostPelletSpawnInterval == 0) {
-            spawnBonusGhostAt(ghost, getRandomBonusGhostSpawnType());
+            int spawnCount = ghost.mortisBuffed ? 2 : 1;
+            for (int i = 0; i < spawnCount; i++) {
+                spawnBonusGhostAt(ghost, getRandomBonusGhostSpawnType());
+            }
         }
     }
 
     public void spawnBonusGhostPowerPelletGhosts(Ghost ghost) {
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < (ghost.mortisBuffed ? 4 : 2); i++) {
             spawnBonusGhostAt(ghost, getRandomPowerGhostType());
         }
     }
@@ -4808,17 +5406,23 @@ public final class Game implements Runnable {
 
             if (powerUp.tileX == tileX && powerUp.tileY == tileY) {
                 playGameSoundEatPower();
-                activatePowerUp(powerUp.type);
+                if (isPacmanIntoxicated()) {
+                    // Intoxication makes every later collectible inert, except serum,
+                    // which is allowed to cure it.
+                    if (!powerUp.pill && powerUp.type == powerSerumType) {
+                        activatePowerUp(powerUp.type);
+                    }
+                } else if (powerUp.pill) {
+                    activateIntoxication();
+                } else {
+                    activatePowerUp(powerUp.type);
+                }
                 powerUps.remove(i);
             }
         }
     }
 
     public void eatPowerUpAtGhost(Ghost ghost) {
-        if (isPoweredGhost(ghost) && ghost.type != ghostBonusType) {
-            return;
-        }
-
         int tileX = (int) Math.round(ghost.pixelX / tileSize);
         int tileY = (int) Math.round(ghost.pixelY / tileSize);
 
@@ -4826,6 +5430,24 @@ public final class Game implements Runnable {
             PowerUp powerUp = powerUps.get(i);
 
             if (powerUp.tileX == tileX && powerUp.tileY == tileY) {
+                if (powerUp.pill) {
+                    applyMortisBuff(ghost);
+                    powerUps.remove(i);
+                    return;
+                }
+
+                if (powerUp.type == powerSerumType) {
+                    return;
+                }
+
+                boolean elementalGhostCanCollectBomb = powerUp.type == powerBombType
+                        && (ghost.type == ghostFireType || ghost.type == ghostIceType);
+                if (powerUp.type != powerCloneType
+                        && !elementalGhostCanCollectBomb
+                        && isPoweredGhost(ghost) && ghost.type != ghostBonusType) {
+                    return;
+                }
+
                 if (ghost.type == ghostBonusType) {
                     activateBonusGhostPowerUp(ghost, powerUp.type);
                 } else {
@@ -4851,6 +5473,27 @@ public final class Game implements Runnable {
     }
 
     public void activateGhostPowerUp(Ghost ghost, int powerUpType) {
+        if (powerUpType == powerCloneType) {
+            activateGhostClonePowerUp(ghost);
+            return;
+        }
+
+        if (powerUpType == powerBombType && ghost.type == ghostFireType) {
+            int combinedType = getGhostTypeForConfiguredPower("firebomb");
+            if (combinedType >= 0) {
+                transformGhost(ghost, combinedType);
+            }
+            return;
+        }
+
+        if (powerUpType == powerBombType && ghost.type == ghostIceType) {
+            int combinedType = getGhostTypeForConfiguredPower("icebomb");
+            if (combinedType >= 0) {
+                transformGhost(ghost, combinedType);
+            }
+            return;
+        }
+
         int ghostType = getGhostTypeForPowerUp(powerUpType);
         if (ghostType == -1 || !isSpawnGhostEnabled(ghostType)) {
             return;
@@ -4870,8 +5513,6 @@ public final class Game implements Runnable {
         } else if (powerUpType == powerLaserType) {
             transformGhost(ghost, ghostLaserType);
             resetLaserGhostCycle(ghost);
-        } else if (powerUpType == powerCloneType) {
-            spawnCloneGhosts(ghost);
         } else if (powerUpType == powerFireType) {
             transformGhost(ghost, ghostFireType);
         } else if (powerUpType == powerIceType) {
@@ -4896,7 +5537,7 @@ public final class Game implements Runnable {
         }
 
         if (powerUpType == powerCloneType) {
-            spawnCloneGhosts(ghost);
+            activateGhostClonePowerUp(ghost);
             return;
         }
 
@@ -4915,7 +5556,12 @@ public final class Game implements Runnable {
 
     public int getGhostTypeForPowerUp(int powerUpType) {
         for (Map.Entry<Integer, GhostDefinition> entry : ghostDefinitionsByType.entrySet()) {
-            if (getPowerUpTypeForKey(entry.getValue().power()) == powerUpType) {
+            String powerKey = entry.getValue().power().toLowerCase(Locale.ROOT);
+            if ((powerUpType == powerFireType && powerKey.equals("firebomb"))
+                    || (powerUpType == powerIceType && powerKey.equals("icebomb"))) {
+                continue;
+            }
+            if (getPowerUpTypeForKey(powerKey) == powerUpType) {
                 return entry.getKey();
             }
         }
@@ -4983,8 +5629,16 @@ public final class Game implements Runnable {
         ghost.pelletsCollected = 0;
         ghost.flashyTimer = 0;
         ghost.flashyCharged = true;
+        ghost.mortisActive = false;
+        ghost.mortisTimer = 0;
+        ghost.bombTriggerGraceTimer = isFireBombGhostType(type) || isIceBombGhostType(type)
+                ? framesPerSecond
+                : 0;
         if (type == ghostFlashType) {
             resetFlashGhostCycle(ghost);
+        }
+        if (isMortisGhost(ghost)) {
+            startMortisInactiveState(ghost);
         }
     }
 
@@ -5002,6 +5656,42 @@ public final class Game implements Runnable {
                 : new int[] { ghostCloneType, ghostCloneType, ghostCloneType };
 
         for (int spawnedType : spawnedTypes) {
+            int[] spawnTile = findOpenTileNear(tileX, tileY);
+            addGhostAtTile(spawnedType, spawnTile[0], spawnTile[1]);
+        }
+    }
+
+    public void spawnClonyPowerGhosts(Ghost sourceClony) {
+        int tileX = clampInt(getGhostCenterTileX(sourceClony), 1, maxScreenCol - 2);
+        int tileY = clampInt(getGhostCenterTileY(sourceClony), 1, maxScreenRow - 2);
+
+        for (int i = 0; i < 4; i++) {
+            int[] spawnTile = findOpenTileNear(tileX, tileY);
+            addGhostAtTile(ghostCloneType, spawnTile[0], spawnTile[1]);
+        }
+    }
+
+    public void activateGhostClonePowerUp(Ghost sourceGhost) {
+        int spawnedType;
+        int spawnedCount;
+
+        if (sourceGhost.type == ghostCloneType) {
+            spawnedType = ghostCloneType;
+            spawnedCount = 4;
+        } else if (isPoweredGhost(sourceGhost)
+                && getPowerUpTypeForGhostType(sourceGhost.type) != powerCloneType) {
+            spawnedType = sourceGhost.type;
+            spawnedCount = 3;
+        } else {
+            spawnedType = ghostCloneType;
+            spawnedCount = 3;
+        }
+
+        int tileX = clampInt(getGhostCenterTileX(sourceGhost), 1, maxScreenCol - 2);
+        int tileY = clampInt(getGhostCenterTileY(sourceGhost), 1, maxScreenRow - 2);
+        ghosts.remove(sourceGhost);
+
+        for (int i = 0; i < spawnedCount; i++) {
             int[] spawnTile = findOpenTileNear(tileX, tileY);
             addGhostAtTile(spawnedType, spawnTile[0], spawnTile[1]);
         }
@@ -5046,6 +5736,15 @@ public final class Game implements Runnable {
             return;
         }
 
+        if (powerUpType == powerSerumType) {
+            if (isPacmanIntoxicated()) {
+                curePacmanIntoxication();
+                return;
+            }
+            activateSerumPower();
+            return;
+        }
+
         if (powerUpType < 0 || powerUpType >= powerUpTimers.length) {
             return;
         }
@@ -5086,8 +5785,78 @@ public final class Game implements Runnable {
         }
     }
 
+    public boolean isPacmanIntoxicated() {
+        return intoxicatedTimer > 0;
+    }
+
+    public void activateIntoxication() {
+        intoxicatedTimer = powerUpDuration;
+        intoxicatedParticleTimer = 0;
+
+        Arrays.fill(powerUpTimers, 0);
+        powerMode = false;
+        powerModeTimer = 0;
+        powerPelletWarningPlayed = false;
+        ghostEatScore = 200;
+        buffedEffects.clear();
+        pacMetalDamaged = false;
+        playerIceGhostExposureTimer = 0;
+        iceGhostSlowTimer = 0;
+        iceGhostSlowUntilIcePower = false;
+        electricKeyHeld = false;
+        electricityChanneling = false;
+        clearNonWaterElectricTiles();
+        clearBombExplosionEffect();
+        spikeTraps.clear();
+        turnPacClonesToAsh();
+        fireTrails.clear();
+        afterImages.clear();
+        resetStoneMovement();
+        soundManager.stopLaser();
+
+        for (Ghost ghost : ghosts) {
+            ghost.path.clear();
+            resetScaredGhostState(ghost);
+        }
+    }
+
+    public void activateSerumPower() {
+        buffedEffects.serumTimer += powerUpDuration;
+
+        ArrayList<Integer> activePowers = new ArrayList<>();
+        for (int powerType = 0; powerType < powerUpTypeCount; powerType++) {
+            if (powerType != powerSerumType && powerUpTimers[powerType] > 0) {
+                activePowers.add(powerType);
+            }
+        }
+        if (powerMode) {
+            activePowers.add(powerPelletType);
+        }
+
+        if (activePowers.isEmpty()) {
+            buffedEffects.selectedSerumPowerType = -1;
+            return;
+        }
+
+        buffedEffects.selectedSerumPowerType = activePowers.get(random.nextInt(activePowers.size()));
+        int selectedPower = buffedEffects.selectedSerumPowerType;
+        if (selectedPower == powerPelletType) {
+            powerModeTimer += powerUpDuration;
+        } else {
+            powerUpTimers[selectedPower] += powerUpDuration;
+        }
+
+        if (selectedPower == powerSpikeType) {
+            extendSpikeTraps(powerUpTimers[powerSpikeType]);
+        }
+    }
+
+    public boolean isSerumEffectActive(int powerType) {
+        return buffedEffects.selects(powerType);
+    }
+
     public void placeSpikeTraps(int timer) {
-        for (int i = 0; i < spikeTrapCount; i++) {
+        for (int i = 0; i < getPlayerSpikeTrapCount(); i++) {
             ArrayList<int[]> trapTiles = new ArrayList<>();
 
             for (int x = 1; x < maxScreenCol - 1; x++) {
@@ -5106,6 +5875,10 @@ public final class Game implements Runnable {
             int[] tile = trapTiles.get(random.nextInt(trapTiles.size()));
             spikeTraps.add(new SpikeTrap(tile[0], tile[1], timer));
         }
+    }
+
+    public int getPlayerSpikeTrapCount() {
+        return isSerumEffectActive(powerSpikeType) ? Math.max(1, screenArea * 10 / 100) : spikeTrapCount;
     }
 
     public void placeGhostSpikeTraps(int timer) {
@@ -5168,6 +5941,7 @@ public final class Game implements Runnable {
 
         for (Ghost ghost : ghosts) {
             ghost.path.clear();
+            resetScaredGhostState(ghost);
         }
     }
 
@@ -5179,7 +5953,13 @@ public final class Game implements Runnable {
 
         for (Ghost ghost : ghosts) {
             ghost.path.clear();
+            resetScaredGhostState(ghost);
         }
+    }
+
+    public void resetScaredGhostState(Ghost ghost) {
+        ghost.fleeCornerIndex = -1;
+        ghost.fleeTargetingPower = false;
     }
 
     public void updateLastPlayerTile() {
@@ -5241,7 +6021,8 @@ public final class Game implements Runnable {
             return;
         }
 
-        addFireTrail(getPlayerTileX(), getPlayerTileY(), false);
+        addFireTrail(getPlayerTileX(), getPlayerTileY(), false,
+                fireTrailDuration * (isSerumEffectActive(powerFireType) ? 2 : 1));
     }
 
     public void dropPacCloneFireTrail(PacClone clone) {
@@ -5258,7 +6039,8 @@ public final class Game implements Runnable {
 
         clone.lastFireTileX = tileX;
         clone.lastFireTileY = tileY;
-        addFireTrail(tileX, tileY, false);
+        addFireTrail(tileX, tileY, false,
+                fireTrailDuration * (isSerumEffectActive(powerFireType) ? 2 : 1));
     }
 
     public void dropPlayerWaterTile() {
@@ -5266,7 +6048,7 @@ public final class Game implements Runnable {
             return;
         }
 
-        addWaterTile(getPlayerTileX(), getPlayerTileY());
+        addWaterArea(getPlayerTileX(), getPlayerTileY(), isSerumEffectActive(powerWaterType) ? 1 : 0);
     }
 
     public void dropPacCloneWaterTile(PacClone clone) {
@@ -5276,7 +6058,15 @@ public final class Game implements Runnable {
 
         int tileX = clampInt((int) (clone.pixelX / tileSize), 0, maxScreenCol - 1);
         int tileY = clampInt((int) (clone.pixelY / tileSize), 0, maxScreenRow - 1);
-        addWaterTile(tileX, tileY);
+        addWaterArea(tileX, tileY, isSerumEffectActive(powerWaterType) ? 1 : 0);
+    }
+
+    public void addWaterArea(int centerTileX, int centerTileY, int radius) {
+        for (int offsetX = -radius; offsetX <= radius; offsetX++) {
+            for (int offsetY = -radius; offsetY <= radius; offsetY++) {
+                addWaterTile(centerTileX + offsetX, centerTileY + offsetY);
+            }
+        }
     }
 
     public void addWaterTile(int tileX, int tileY) {
@@ -5337,6 +6127,10 @@ public final class Game implements Runnable {
     }
 
     public void addFireTrail(int tileX, int tileY, boolean ghostFire) {
+        addFireTrail(tileX, tileY, ghostFire, fireTrailDuration);
+    }
+
+    public void addFireTrail(int tileX, int tileY, boolean ghostFire, int duration) {
         if (tileX <= 0 || tileX >= maxScreenCol - 1 || tileY <= 0 || tileY >= maxScreenRow - 1 || maze[tileX][tileY]) {
             return;
         }
@@ -5351,25 +6145,31 @@ public final class Game implements Runnable {
             return;
         }
 
-        fireTrails.add(new FireTrail(tileX, tileY, fireTrailDuration, ghostFire));
+        fireTrails.add(new FireTrail(tileX, tileY, duration, ghostFire));
         if (shouldPlayGameSound()) {
             soundManager.playFire();
         }
     }
 
     public void dropGhostIceTile(Ghost ghost) {
-        if (ghost.type != ghostIceType || isGhostMoving(ghost)) {
+        if (!isIceGhostType(ghost.type) || isGhostMoving(ghost)) {
             return;
         }
 
         int tileX = clampInt((int) (ghost.pixelX / tileSize), 0, maxScreenCol - 1);
         int tileY = clampInt((int) (ghost.pixelY / tileSize), 0, maxScreenRow - 1);
-        if (hasWaterTileAt(tileX, tileY)) {
-            freezeWaterTile(tileX, tileY, ghost);
-            return;
+        int radius = ghost.mortisBuffed ? 1 : 0;
+        for (int offsetX = -radius; offsetX <= radius; offsetX++) {
+            for (int offsetY = -radius; offsetY <= radius; offsetY++) {
+                int targetX = tileX + offsetX;
+                int targetY = tileY + offsetY;
+                if (hasWaterTileAt(targetX, targetY)) {
+                    freezeWaterTile(targetX, targetY, ghost);
+                } else {
+                    addIceTile(targetX, targetY);
+                }
+            }
         }
-
-        addIceTile(tileX, tileY);
     }
 
     public void dropGhostWaterTile(Ghost ghost) {
@@ -5379,7 +6179,12 @@ public final class Game implements Runnable {
 
         int tileX = clampInt((int) (ghost.pixelX / tileSize), 0, maxScreenCol - 1);
         int tileY = clampInt((int) (ghost.pixelY / tileSize), 0, maxScreenRow - 1);
-        addWaterTile(tileX, tileY);
+        int radius = ghost.mortisBuffed ? 1 : 0;
+        for (int offsetX = -radius; offsetX <= radius; offsetX++) {
+            for (int offsetY = -radius; offsetY <= radius; offsetY++) {
+                addWaterTile(tileX + offsetX, tileY + offsetY);
+            }
+        }
     }
 
     public void addIceTile(int tileX, int tileY) {
@@ -5529,7 +6334,7 @@ public final class Game implements Runnable {
         for (int cloneIndex = pacClones.size() - 1; cloneIndex >= 0; cloneIndex--) {
             PacClone clone = pacClones.get(cloneIndex);
             if (getPacCloneCenterTileX(clone) == tileX && getPacCloneCenterTileY(clone) == tileY) {
-                destroyPacCloneAt(cloneIndex);
+                freezePacCloneAt(cloneIndex);
             }
         }
 
@@ -5574,7 +6379,7 @@ public final class Game implements Runnable {
             }
 
             Ghost ghost = ghosts.get(i);
-            if (!isGhostElectrified(ghost) && ghost.type == ghostFireType && isGhostInAnyIceAura(ghost)) {
+            if (!isGhostElectrified(ghost) && isFireGhostType(ghost.type) && isGhostInAnyIceAura(ghost)) {
                 killGhostAt(i, 0, true);
             }
         }
@@ -5616,33 +6421,56 @@ public final class Game implements Runnable {
     }
 
     public void updateIceGhostAuras() {
-        // Icy aura effect on Pacman and clones. Tune iceGhostFreezeTime and iceAuraSpeedPenalty above.
-        if (isStoneRollingActive() || isPowerUpActive(powerIceType)) {
+        // Icy aura effect on Pacman, clones, and other ghosts.
+        boolean pacmanImmune = isStoneRollingActive() || isPowerUpActive(powerIceType);
+        if (pacmanImmune) {
             playerIceGhostExposureTimer = 0;
             for (PacClone clone : pacClones) {
                 clone.iceExposureTimer = 0;
             }
-            return;
-        }
-
-        if (isPlayerInIceGhostAura()) {
-            playerIceGhostExposureTimer++;
-            if (playerIceGhostExposureTimer >= iceGhostFreezeTime) {
-                startFrozenDeath();
-            }
         } else {
-            playerIceGhostExposureTimer = 0;
-        }
-
-        for (int cloneIndex = pacClones.size() - 1; cloneIndex >= 0; cloneIndex--) {
-            PacClone clone = pacClones.get(cloneIndex);
-            if (isPacCloneInIceGhostAura(clone)) {
-                clone.iceExposureTimer++;
-                if (clone.iceExposureTimer >= iceGhostFreezeTime) {
-                    destroyPacCloneAt(cloneIndex);
+            if (isPlayerInIceGhostAura()) {
+                playerIceGhostExposureTimer++;
+                if (playerIceGhostExposureTimer >= iceGhostFreezeTime) {
+                    startFrozenDeath();
                 }
             } else {
-                clone.iceExposureTimer = 0;
+                playerIceGhostExposureTimer = 0;
+            }
+
+            for (int cloneIndex = pacClones.size() - 1; cloneIndex >= 0; cloneIndex--) {
+                PacClone clone = pacClones.get(cloneIndex);
+                if (isPacCloneInIceGhostAura(clone)) {
+                    clone.iceExposureTimer++;
+                    if (clone.iceExposureTimer >= iceGhostFreezeTime) {
+                        freezePacCloneAt(cloneIndex);
+                    }
+                } else {
+                    clone.iceExposureTimer = 0;
+                }
+            }
+        }
+
+        for (int ghostIndex = ghosts.size() - 1; ghostIndex >= 0; ghostIndex--) {
+            if (ghostIndex >= ghosts.size()) {
+                continue;
+            }
+
+            Ghost ghost = ghosts.get(ghostIndex);
+            if (isGhostElectrified(ghost)
+                    || ghost.type == ghostMetalType
+                    || ghost.type == ghostStoneType) {
+                ghost.icyAuraExposureTimer = 0;
+                continue;
+            }
+
+            if (isGhostInIceGhostAura(ghost)) {
+                ghost.icyAuraExposureTimer++;
+                if (ghost.icyAuraExposureTimer >= iceFreezeTime) {
+                    freezeGhostAt(ghostIndex);
+                }
+            } else {
+                ghost.icyAuraExposureTimer = 0;
             }
         }
     }
@@ -5652,12 +6480,14 @@ public final class Game implements Runnable {
             return false;
         }
 
-        if (isEntityInBombShapeAura(ghost.pixelX, ghost.pixelY, getPlayerCenterTileX(), getPlayerCenterTileY())) {
+        if (isEntityInBombShapeAura(ghost.pixelX, ghost.pixelY, getPlayerCenterTileX(), getPlayerCenterTileY(),
+                getPlayerIceAuraRadius())) {
             return true;
         }
 
         for (PacClone clone : pacClones) {
-            if (isEntityInBombShapeAura(ghost.pixelX, ghost.pixelY, getPacCloneCenterTileX(clone), getPacCloneCenterTileY(clone))) {
+            if (isEntityInBombShapeAura(ghost.pixelX, ghost.pixelY, getPacCloneCenterTileX(clone), getPacCloneCenterTileY(clone),
+                    getPlayerIceAuraRadius())) {
                 return true;
             }
         }
@@ -5677,12 +6507,13 @@ public final class Game implements Runnable {
         for (Ghost ghost : ghosts) {
             if (ghost != targetGhost
                     && !isGhostElectrified(ghost)
-                    && ghost.type == ghostIceType
+                    && isIceGhostType(ghost.type)
                     && isEntityInBombShapeAura(
                             targetGhost.pixelX,
                             targetGhost.pixelY,
                             getGhostCenterTileX(ghost),
-                            getGhostCenterTileY(ghost))) {
+                            getGhostCenterTileY(ghost),
+                            getIceGhostAuraRadius(ghost.type))) {
                 return true;
             }
         }
@@ -5692,12 +6523,14 @@ public final class Game implements Runnable {
 
     public boolean isTileInAnyIceAura(int tileX, int tileY) {
         if (isPowerUpActive(powerIceType)) {
-            if (isTileInBombShapeAura(tileX, tileY, getPlayerCenterTileX(), getPlayerCenterTileY())) {
+            if (isTileInBombShapeAura(tileX, tileY, getPlayerCenterTileX(), getPlayerCenterTileY(),
+                    getPlayerIceAuraRadius())) {
                 return true;
             }
 
             for (PacClone clone : pacClones) {
-                if (isTileInBombShapeAura(tileX, tileY, getPacCloneCenterTileX(clone), getPacCloneCenterTileY(clone))) {
+                if (isTileInBombShapeAura(tileX, tileY, getPacCloneCenterTileX(clone), getPacCloneCenterTileY(clone),
+                        getPlayerIceAuraRadius())) {
                     return true;
                 }
             }
@@ -5705,8 +6538,13 @@ public final class Game implements Runnable {
 
         for (Ghost ghost : ghosts) {
             if (!isGhostElectrified(ghost)
-                    && ghost.type == ghostIceType
-                    && isTileInBombShapeAura(tileX, tileY, getGhostCenterTileX(ghost), getGhostCenterTileY(ghost))) {
+                    && isIceGhostType(ghost.type)
+                    && isTileInBombShapeAura(
+                            tileX,
+                            tileY,
+                            getGhostCenterTileX(ghost),
+                            getGhostCenterTileY(ghost),
+                            getIceGhostAuraRadius(ghost.type))) {
                 return true;
             }
         }
@@ -5715,14 +6553,23 @@ public final class Game implements Runnable {
     }
 
     public boolean isTileInBombShapeAura(int tileX, int tileY, int centerTileX, int centerTileY) {
-        return isTileInBombBlastShape(tileX - centerTileX, tileY - centerTileY);
+        return isTileInBombShapeAura(tileX, tileY, centerTileX, centerTileY, bombRadiusTiles);
+    }
+
+    public boolean isTileInBombShapeAura(int tileX, int tileY, int centerTileX, int centerTileY, int radius) {
+        return isTileInBombBlastShape(tileX - centerTileX, tileY - centerTileY, radius);
     }
 
     public boolean isPlayerInIceGhostAura() {
         for (Ghost ghost : ghosts) {
             if (!isGhostElectrified(ghost)
-                    && ghost.type == ghostIceType
-                    && isEntityInBombShapeAura(playerPixelX, playerPixelY, getGhostCenterTileX(ghost), getGhostCenterTileY(ghost))) {
+                    && isIceGhostType(ghost.type)
+                    && isEntityInBombShapeAura(
+                            playerPixelX,
+                            playerPixelY,
+                            getGhostCenterTileX(ghost),
+                            getGhostCenterTileY(ghost),
+                            getIceGhostAuraRadius(ghost.type))) {
                 return true;
             }
         }
@@ -5733,12 +6580,13 @@ public final class Game implements Runnable {
     public boolean isPacCloneInIceGhostAura(PacClone clone) {
         for (Ghost ghost : ghosts) {
             if (!isGhostElectrified(ghost)
-                    && ghost.type == ghostIceType
+                    && isIceGhostType(ghost.type)
                     && isEntityInBombShapeAura(
                             clone.pixelX,
                             clone.pixelY,
                             getGhostCenterTileX(ghost),
-                            getGhostCenterTileY(ghost))) {
+                            getGhostCenterTileY(ghost),
+                            getIceGhostAuraRadius(ghost.type))) {
                 return true;
             }
         }
@@ -5747,9 +6595,14 @@ public final class Game implements Runnable {
     }
 
     public boolean isEntityInBombShapeAura(double pixelX, double pixelY, int centerTileX, int centerTileY) {
+        return isEntityInBombShapeAura(pixelX, pixelY, centerTileX, centerTileY, bombRadiusTiles);
+    }
+
+    public boolean isEntityInBombShapeAura(double pixelX, double pixelY, int centerTileX, int centerTileY,
+            int radius) {
         int tileX = clampInt((int) ((pixelX + tileSize / 2.0) / tileSize), 0, maxScreenCol - 1);
         int tileY = clampInt((int) ((pixelY + tileSize / 2.0) / tileSize), 0, maxScreenRow - 1);
-        return isTileInBombBlastShape(tileX - centerTileX, tileY - centerTileY);
+        return isTileInBombBlastShape(tileX - centerTileX, tileY - centerTileY, radius);
     }
 
     public boolean isEntityInMagnetAura(double pixelX, double pixelY, int centerTileX, int centerTileY) {
@@ -5769,12 +6622,14 @@ public final class Game implements Runnable {
         }
 
         if (isPowerUpActive(powerMagnetType)) {
-            if (isEntityInMagnetAura(ghost.pixelX, ghost.pixelY, getPlayerCenterTileX(), getPlayerCenterTileY())) {
+            if (isEntityInMagnetAura(ghost.pixelX, ghost.pixelY, getPlayerCenterTileX(), getPlayerCenterTileY(),
+                    getPlayerMagnetAuraRadius())) {
                 return true;
             }
 
             for (PacClone clone : pacClones) {
-                if (isEntityInMagnetAura(ghost.pixelX, ghost.pixelY, getPacCloneCenterTileX(clone), getPacCloneCenterTileY(clone))) {
+                if (isEntityInMagnetAura(ghost.pixelX, ghost.pixelY, getPacCloneCenterTileX(clone), getPacCloneCenterTileY(clone),
+                        getPlayerMagnetAuraRadius())) {
                     return true;
                 }
             }
@@ -5809,16 +6664,40 @@ public final class Game implements Runnable {
 
         int tileX = getGhostCenterTileX(ghost);
         int tileY = getGhostCenterTileY(ghost);
-        frozenGhosts.add(new FrozenGhost(tileX, tileY, ghost.type));
+        FrozenGhost frozenGhost = new FrozenGhost(ghost.type, tileX * tileSize, tileY * tileSize, false);
+        frozenGhost.tileX = tileX;
+        frozenGhost.tileY = tileY;
+        frozenGhost.mortisBuffed = ghost.mortisBuffed;
+        frozenGhosts.add(frozenGhost);
         playGameSoundFreeze();
         ghosts.remove(ghostIndex);
     }
 
+    public void freezePacCloneAt(int cloneIndex) {
+        if (cloneIndex < 0 || cloneIndex >= pacClones.size()) {
+            return;
+        }
+
+        PacClone clone = pacClones.get(cloneIndex);
+        int tileX = getPacCloneCenterTileX(clone);
+        int tileY = getPacCloneCenterTileY(clone);
+        FrozenGhost frozenClone = new FrozenGhost(ghostCloneType, tileX * tileSize, tileY * tileSize, true);
+        frozenClone.tileX = tileX;
+        frozenClone.tileY = tileY;
+        frozenGhosts.add(frozenClone);
+        playGameSoundFreeze();
+        pacClones.remove(cloneIndex);
+    }
+
     public void startFrozenDeath() {
+        startFrozenDeath(false);
+    }
+
+    public void startFrozenDeath(boolean ignoreDefensivePowers) {
         if (playerDead || deathAnimationDone) {
             return;
         }
-        if (isMetalPacmanActive() || isStoneRollingActive()) {
+        if (!ignoreDefensivePowers && (isMetalPacmanActive() || isStoneRollingActive())) {
             return;
         }
 
@@ -5868,7 +6747,7 @@ public final class Game implements Runnable {
                     }
 
                     boolean droppedIcePower = killGhostAt(i, getGhostEatScore(), false, ghostKillSoundEat, true);
-                    if (ghost.type == ghostIceType) {
+                    if (isIceGhostType(ghost.type)) {
                         applyPlayerBrainFreeze(droppedIcePower);
                     }
                     ghostEatScore = Math.min(1600, ghostEatScore * 2);
@@ -5882,7 +6761,7 @@ public final class Game implements Runnable {
                     }
 
                     boolean droppedIcePower = killGhostAt(i, getGhostEatScore(), false, ghostKillSoundEat, true);
-                    if (ghost.type == ghostIceType) {
+                    if (isIceGhostType(ghost.type)) {
                         applyPlayerBrainFreeze(droppedIcePower);
                     }
                     ghostEatScore = Math.min(1600, ghostEatScore * 2);
@@ -5897,7 +6776,7 @@ public final class Game implements Runnable {
 
                     if (powerMode && ghost.type != ghostMetalType && ghost.type != ghostStoneType && ghost.type != ghostCactusType) {
                         boolean droppedIcePower = killGhostAt(i, getGhostEatScore());
-                        if (ghost.type == ghostIceType) {
+                        if (isIceGhostType(ghost.type)) {
                             applyPlayerBrainFreeze(droppedIcePower);
                         }
                         ghostEatScore = Math.min(1600, ghostEatScore * 2);
@@ -5927,7 +6806,7 @@ public final class Game implements Runnable {
                         return;
                     }
                     boolean droppedIcePower = killGhostAt(i, getGhostEatScore());
-                    if (ghost.type == ghostIceType) {
+                    if (isIceGhostType(ghost.type)) {
                         applyPlayerBrainFreeze(droppedIcePower);
                     }
                     ghostEatScore = Math.min(1600, ghostEatScore * 2);
@@ -5948,44 +6827,157 @@ public final class Game implements Runnable {
     public void checkFrozenGhostCollisions() {
         for (int i = frozenGhosts.size() - 1; i >= 0; i--) {
             FrozenGhost frozenGhost = frozenGhosts.get(i);
-            double minX = frozenGhost.tileX * tileSize;
-            double minY = frozenGhost.tileY * tileSize;
-            double maxX = minX + tileSize;
-            double maxY = minY + tileSize;
-
-            if (playerIntersectsRect(minX, minY, maxX, maxY)) {
-                tryDropSpecialGhostPower(frozenGhost.type, frozenGhost.tileX, frozenGhost.tileY);
-                frozenGhosts.remove(i);
-                addScore(500);
-                playGameSoundEatIce();
+            if (frozenGhost.moving) {
+                resolveMovingFrozenGhostCollision(i);
                 continue;
             }
 
-            boolean destroyed = false;
+            if (frozenGhostIntersectsRect(
+                    frozenGhost,
+                    playerPixelX,
+                    playerPixelY,
+                    playerPixelX + tileSize,
+                    playerPixelY + tileSize)) {
+                pushFrozenGhost(
+                        frozenGhost,
+                        playerPixelX,
+                        playerPixelY,
+                        directionX != 0 ? directionX : nextDirectionX,
+                        directionY != 0 ? directionY : nextDirectionY,
+                        true);
+                continue;
+            }
+
             for (int cloneIndex = pacClones.size() - 1; cloneIndex >= 0; cloneIndex--) {
-                if (pacCloneIntersectsRect(pacClones.get(cloneIndex), minX, minY, maxX, maxY)) {
-                    tryDropSpecialGhostPower(frozenGhost.type, frozenGhost.tileX, frozenGhost.tileY);
-                    frozenGhosts.remove(i);
-                    addScore(500);
-                    playGameSoundEatIce();
-                    destroyed = true;
+                PacClone clone = pacClones.get(cloneIndex);
+                if (frozenGhostIntersectsRect(
+                        frozenGhost,
+                        clone.pixelX,
+                        clone.pixelY,
+                        clone.pixelX + tileSize,
+                        clone.pixelY + tileSize)) {
+                    pushFrozenGhost(frozenGhost, clone.pixelX, clone.pixelY, clone.directionX, clone.directionY, true);
                     break;
                 }
             }
 
-            if (destroyed) {
+            if (frozenGhost.moving) {
                 continue;
             }
 
             for (Ghost ghost : ghosts) {
-                if (ghostIntersectsRect(ghost, minX, minY, maxX, maxY)) {
-                    tryDropSpecialGhostPower(frozenGhost.type, frozenGhost.tileX, frozenGhost.tileY);
-                    frozenGhosts.remove(i);
-                    playGameSoundEatIce();
+                if (frozenGhostIntersectsRect(
+                        frozenGhost,
+                        ghost.pixelX,
+                        ghost.pixelY,
+                        ghost.pixelX + tileSize,
+                        ghost.pixelY + tileSize)) {
+                    pushFrozenGhost(frozenGhost, ghost.pixelX, ghost.pixelY, ghost.directionX, ghost.directionY, false);
                     break;
                 }
             }
         }
+    }
+
+    public void resolveMovingFrozenGhostCollision(int frozenIndex) {
+        if (frozenIndex < 0 || frozenIndex >= frozenGhosts.size()) {
+            return;
+        }
+
+        FrozenGhost frozenGhost = frozenGhosts.get(frozenIndex);
+        if (frozenGhostIntersectsRect(
+                frozenGhost,
+                playerPixelX,
+                playerPixelY,
+                playerPixelX + tileSize,
+                playerPixelY + tileSize)) {
+            if (frozenGhost.playerSafetyTimer > 0) {
+                return;
+            }
+            frozenGhosts.remove(frozenIndex);
+            forceStartDeathAnimation();
+            return;
+        }
+
+        for (int ghostIndex = ghosts.size() - 1; ghostIndex >= 0; ghostIndex--) {
+            if (ghostIndex >= ghosts.size()) {
+                continue;
+            }
+
+            Ghost ghost = ghosts.get(ghostIndex);
+            if (!frozenGhostIntersectsRect(
+                    frozenGhost,
+                    ghost.pixelX,
+                    ghost.pixelY,
+                    ghost.pixelX + tileSize,
+                    ghost.pixelY + tileSize)) {
+                continue;
+            }
+
+            boolean heavyGhost = ghost.type == ghostStoneType || ghost.type == ghostMetalType;
+            killGhostAt(ghostIndex, 0, true, ghostKillSoundEat, heavyGhost);
+            if (heavyGhost) {
+                frozenGhosts.remove(frozenIndex);
+            }
+            return;
+        }
+
+        for (int cloneIndex = pacClones.size() - 1; cloneIndex >= 0; cloneIndex--) {
+            PacClone clone = pacClones.get(cloneIndex);
+            if (frozenGhostIntersectsRect(
+                    frozenGhost,
+                    clone.pixelX,
+                    clone.pixelY,
+                    clone.pixelX + tileSize,
+                    clone.pixelY + tileSize)) {
+                destroyPacCloneAt(cloneIndex);
+                return;
+            }
+        }
+    }
+
+    public boolean destroyFrozenGhostsInRect(double minX, double minY, double maxX, double maxY) {
+        boolean destroyed = false;
+        for (int i = frozenGhosts.size() - 1; i >= 0; i--) {
+            if (frozenGhostIntersectsRect(frozenGhosts.get(i), minX, minY, maxX, maxY)) {
+                frozenGhosts.remove(i);
+                destroyed = true;
+            }
+        }
+        return destroyed;
+    }
+
+    public boolean destroyFrozenGhostsInBombBlast(ArrayList<int[]> blastTiles) {
+        boolean destroyed = false;
+        for (int i = frozenGhosts.size() - 1; i >= 0; i--) {
+            FrozenGhost frozenGhost = frozenGhosts.get(i);
+            if (entityIntersectsBombBlast(frozenGhost.pixelX, frozenGhost.pixelY, blastTiles)) {
+                frozenGhosts.remove(i);
+                destroyed = true;
+            }
+        }
+        return destroyed;
+    }
+
+    public boolean destroyFrozenGhostHitByCactusSpike(CactusSpikeProjectile projectile) {
+        for (int i = frozenGhosts.size() - 1; i >= 0; i--) {
+            FrozenGhost frozenGhost = frozenGhosts.get(i);
+            if (frozenGhost.type == ghostCactusType && frozenGhost.mortisBuffed) {
+                continue;
+            }
+
+            if (frozenGhostIntersectsRect(
+                    frozenGhost,
+                    projectile.pixelX,
+                    projectile.pixelY,
+                    projectile.pixelX + tileSize,
+                    projectile.pixelY + tileSize)) {
+                frozenGhosts.remove(i);
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public void startDeathAnimation() {
@@ -6030,7 +7022,7 @@ public final class Game implements Runnable {
             return;
         }
 
-        if (hasWaterTileAt(getPlayerCenterTileX(), getPlayerCenterTileY())) {
+        if (!isPlayerWaterImmune() && hasWaterTileAt(getPlayerCenterTileX(), getPlayerCenterTileY())) {
             startElectrocutedDeath();
         }
     }
@@ -6062,6 +7054,10 @@ public final class Game implements Runnable {
 
     public boolean isMetalPacmanActive() {
         return isPowerUpActive(powerMetalType);
+    }
+
+    public boolean isPlayerWaterImmune() {
+        return isSerumEffectActive(powerMetalType);
     }
 
     public boolean isStonePacmanActive() {
@@ -6225,7 +7221,9 @@ public final class Game implements Runnable {
     }
 
     public int getGhostEatScore() {
-        return isPowerUpActive(powerBonusType) ? ghostEatScore * 5 : ghostEatScore;
+        return isPowerUpActive(powerBonusType)
+                ? ghostEatScore * (isSerumEffectActive(powerBonusType) ? 10 : 5)
+                : ghostEatScore;
     }
 
     public boolean killGhostAt(int index, int points) {
@@ -6264,14 +7262,28 @@ public final class Game implements Runnable {
         if (leaveAsh) {
             addVisualDecal(decalAshType, ghost.pixelX, ghost.pixelY);
         }
-        boolean droppedIcePower = ghost.type == ghostIceType
+        boolean dropsSpecialPower = isIceGhostType(ghost.type)
+                || isFireBombGhostType(ghost.type)
+                || isMortisGhost(ghost);
+        boolean droppedIcePower = dropsSpecialPower
                 && tryDropSpecialGhostPower(ghost.type, getGhostCenterTileX(ghost), getGhostCenterTileY(ghost));
+        boolean isBombGhost = isBombGhostType(ghost.type);
+        int bombExplosionEffectType = getGhostBombExplosionEffectType(ghost.type);
         ghosts.remove(index);
         if (ghost.type == ghostCactusType) {
             spawnCactusSpikeProjectiles(ghost.pixelX, ghost.pixelY);
         }
-        if (ghost.type == ghostBombType) {
-            triggerGhostBombExplosion(ghost.pixelX + tileSize / 2.0, ghost.pixelY + tileSize / 2.0);
+        if (isBombGhost) {
+            boolean previousFireLifeBoost = ghostFireExplosionLifeBoosted;
+            ghostFireExplosionLifeBoosted = ghost.mortisBuffed;
+            triggerGhostBombExplosion(
+                    ghost.pixelX + tileSize / 2.0,
+                    ghost.pixelY + tileSize / 2.0,
+                    getGhostBombExplosionRadius(ghost),
+                    false,
+                    false,
+                    bombExplosionEffectType);
+            ghostFireExplosionLifeBoosted = previousFireLifeBoost;
         }
         return droppedIcePower;
     }
@@ -6313,11 +7325,22 @@ public final class Game implements Runnable {
     }
 
     public boolean tryDropSpecialGhostPower(int ghostType, int tileX, int tileY) {
-        int powerUpType = getPowerUpTypeForGhostType(ghostType);
+        int powerUpType;
+        boolean pill = false;
+        if (isFireBombGhostType(ghostType)) {
+            powerUpType = random.nextBoolean() ? powerFireType : powerBombType;
+        } else if (isIceBombGhostType(ghostType)) {
+            powerUpType = random.nextBoolean() ? powerIceType : powerBombType;
+        } else if (isMortisGhost(ghostType)) {
+            powerUpType = powerSerumType;
+            pill = random.nextInt(100) >= specialGhostPowerDropChancePercent;
+        } else {
+            powerUpType = getPowerUpTypeForGhostType(ghostType);
+        }
 
         if (powerUpType == -1
-                || specialGhostPowerDropChancePercent <= 0
-                || random.nextInt(100) >= specialGhostPowerDropChancePercent
+                || (!isMortisGhost(ghostType) && specialGhostPowerDropChancePercent <= 0)
+                || (!isMortisGhost(ghostType) && random.nextInt(100) >= specialGhostPowerDropChancePercent)
                 || tileX <= 0
                 || tileX >= maxScreenCol - 1
                 || tileY <= 0
@@ -6327,7 +7350,7 @@ public final class Game implements Runnable {
             return false;
         }
 
-        powerUps.add(new PowerUp(powerUpType, tileX, tileY));
+        powerUps.add(new PowerUp(powerUpType, tileX, tileY, pill));
         return powerUpType == powerIceType;
     }
 
@@ -6396,13 +7419,14 @@ public final class Game implements Runnable {
             case "bomb" -> powerBombType;
             case "laser", "lazer" -> powerLaserType;
             case "clone" -> powerCloneType;
-            case "fire" -> powerFireType;
-            case "ice" -> powerIceType;
+            case "fire", "firebomb" -> powerFireType;
+            case "ice", "icebomb" -> powerIceType;
             case "metal" -> powerMetalType;
             case "water" -> powerWaterType;
             case "electricity" -> powerElectricType;
             case "stone" -> powerStoneType;
             case "stealth" -> powerStealthType;
+            case "serum" -> powerSerumType;
             default -> -1;
         };
     }
@@ -6434,6 +7458,20 @@ public final class Game implements Runnable {
         cactusSpikeProjectiles.add(new CactusSpikeProjectile(pixelX, pixelY, 0, -1));
     }
 
+    public void updateBuffedCactusProjectiles(Ghost ghost) {
+        if (ghost.type != ghostCactusType || !ghost.mortisBuffed
+                || (ghost.directionX == 0 && ghost.directionY == 0)) {
+            return;
+        }
+
+        if (ghost.directionX != ghost.cactusLastDirectionX
+                || ghost.directionY != ghost.cactusLastDirectionY) {
+            spawnCactusSpikeProjectiles(ghost.pixelX, ghost.pixelY);
+            ghost.cactusLastDirectionX = ghost.directionX;
+            ghost.cactusLastDirectionY = ghost.directionY;
+        }
+    }
+
     public int getAdjustedGhostKillScore(Ghost ghost, int basePoints) {
         if (ghost.type == ghostBonusType) {
             return basePoints + 3200;
@@ -6448,17 +7486,15 @@ public final class Game implements Runnable {
     public void triggerBombExplosion() {
         powerUpTimers[powerBombType] = 0;
         endStealthPower();
-        ArrayList<int[]> blastTiles = getExplosionBlastTiles(playerPixelX + tileSize / 2.0, playerPixelY + tileSize / 2.0, bombRadiusTiles);
-        startBombExplosionEffect(blastTiles);
+        ArrayList<int[]> blastTiles = getExplosionBlastTiles(playerPixelX + tileSize / 2.0, playerPixelY + tileSize / 2.0,
+                getPlayerBombRadiusTiles());
+        boolean iceBomb = isPowerUpActive(powerIceType);
+        startBombExplosionEffect(blastTiles, false, true);
 
-        for (int i = ghosts.size() - 1; i >= 0; i--) {
-            if (i >= ghosts.size()) {
-                continue;
-            }
-
-            if (ghostIntersectsBombBlast(ghosts.get(i), blastTiles)) {
-                killGhostAt(i, getGhostEatScore(), true, ghostKillSoundEat, true);
-            }
+        if (iceBomb) {
+            applyInstantFreezeBlast(blastTiles, false);
+        } else {
+            killGhostsInBombBlast(blastTiles, getGhostEatScore());
         }
     }
 
@@ -6470,19 +7506,16 @@ public final class Game implements Runnable {
         electricityChanneling = false;
         electricTiles.clear();
 
-        ArrayList<int[]> blastTiles = getExplosionBlastTiles(playerPixelX + tileSize / 2.0, playerPixelY + tileSize / 2.0, bombRadiusTiles + 1);
-        startBombExplosionEffect(blastTiles, true);
+        ArrayList<int[]> blastTiles = getExplosionBlastTiles(playerPixelX + tileSize / 2.0, playerPixelY + tileSize / 2.0,
+                getPlayerBombRadiusTiles() + 1);
+        boolean iceBomb = isPowerUpActive(powerIceType);
+        startBombExplosionEffect(blastTiles, true, true);
 
-        destroyPacClonesInBombBlast(blastTiles);
-
-        for (int i = ghosts.size() - 1; i >= 0; i--) {
-            if (i >= ghosts.size()) {
-                continue;
-            }
-
-            if (ghostIntersectsBombBlast(ghosts.get(i), blastTiles)) {
-                killGhostAt(i, getGhostEatScore(), true, ghostKillSoundEat, true);
-            }
+        if (iceBomb) {
+            applyInstantFreezeBlast(blastTiles, false);
+        } else {
+            destroyPacClonesInBombBlast(blastTiles);
+            killGhostsInBombBlast(blastTiles, getGhostEatScore());
         }
     }
 
@@ -6499,11 +7532,28 @@ public final class Game implements Runnable {
     }
 
     public void triggerGhostBombExplosion(double centerX, double centerY, int radiusTiles, boolean destroyWallsImmediately, boolean squareShape) {
-        ArrayList<int[]> blastTiles = getExplosionBlastTiles(centerX, centerY, radiusTiles, squareShape);
-        startBombExplosionEffect(blastTiles, destroyWallsImmediately);
+        triggerGhostBombExplosion(
+                centerX,
+                centerY,
+                radiusTiles,
+                destroyWallsImmediately,
+                squareShape,
+                bombExplosionNormalType);
+    }
 
-        if (playerIntersectsBombBlast(blastTiles)) {
+    public void triggerGhostBombExplosion(double centerX, double centerY, int radiusTiles,
+            boolean destroyWallsImmediately, boolean squareShape, int effectType) {
+        ArrayList<int[]> blastTiles = getExplosionBlastTiles(centerX, centerY, radiusTiles, squareShape);
+        boolean iceExplosion = effectType == bombExplosionIceType;
+        startBombExplosionEffect(blastTiles, destroyWallsImmediately, false, effectType);
+
+        if (!iceExplosion && playerIntersectsBombBlast(blastTiles)) {
             damagePacmanWithExplosion();
+        }
+
+        if (iceExplosion) {
+            applyInstantFreezeBlast(blastTiles, true);
+            return;
         }
 
         destroyPacClonesInBombBlast(blastTiles);
@@ -6520,21 +7570,18 @@ public final class Game implements Runnable {
     }
 
     public void triggerPacCloneBombExplosion(PacClone clone) {
-        ArrayList<int[]> blastTiles = getExplosionBlastTiles(clone.pixelX + tileSize / 2.0, clone.pixelY + tileSize / 2.0, bombRadiusTiles);
-        startBombExplosionEffect(blastTiles);
+        ArrayList<int[]> blastTiles = getExplosionBlastTiles(clone.pixelX + tileSize / 2.0, clone.pixelY + tileSize / 2.0,
+                getPlayerBombRadiusTiles());
+        boolean iceBomb = isPowerUpActive(powerIceType);
+        startBombExplosionEffect(blastTiles, false, true);
 
-        if (playerIntersectsBombBlast(blastTiles)) {
-            damagePacmanWithExplosion();
-        }
-
-        for (int i = ghosts.size() - 1; i >= 0; i--) {
-            if (i >= ghosts.size()) {
-                continue;
+        if (iceBomb) {
+            applyInstantFreezeBlast(blastTiles, true);
+        } else {
+            if (playerIntersectsBombBlast(blastTiles)) {
+                damagePacmanWithExplosion();
             }
-
-            if (ghostIntersectsBombBlast(ghosts.get(i), blastTiles)) {
-                killGhostAt(i, 0, true, ghostKillSoundEat, true);
-            }
+            killGhostsInBombBlast(blastTiles, 0);
         }
     }
 
@@ -6554,22 +7601,159 @@ public final class Game implements Runnable {
     }
 
     public void startBombExplosionEffect(ArrayList<int[]> blastTiles, boolean destroyWallsImmediately) {
+        startBombExplosionEffect(blastTiles, destroyWallsImmediately, false);
+    }
+
+    public void startBombExplosionEffect(ArrayList<int[]> blastTiles,
+            boolean destroyWallsImmediately, boolean applyPlayerBombSynergy) {
+        int effectType = applyPlayerBombSynergy
+                ? getActivePlayerBombExplosionEffectType()
+                : bombExplosionNormalType;
+        startBombExplosionEffect(blastTiles, destroyWallsImmediately, applyPlayerBombSynergy, effectType);
+    }
+
+    public void startBombExplosionEffect(ArrayList<int[]> blastTiles,
+            boolean destroyWallsImmediately, boolean applyPlayerBombSynergy, int forcedEffectType) {
+        boolean iceBomb = forcedEffectType == bombExplosionIceType
+                || (applyPlayerBombSynergy && isPowerUpActive(powerIceType));
+        boolean fireBomb = forcedEffectType == bombExplosionFireType
+                || (applyPlayerBombSynergy && isPowerUpActive(powerFireType));
+        bombExplosionEffectType = iceBomb
+                ? bombExplosionIceType
+                : fireBomb ? bombExplosionFireType : bombExplosionNormalType;
+
         if (bombExplosionTimer <= 0) {
             bombExplosionTiles.clear();
         }
         addBombExplosionVisualTiles(blastTiles);
         updateBombExplosionBounds(bombExplosionTiles);
         bombExplosionTimer = bombExplosionFrameTime;
-        meltIceTilesInBombBlast(blastTiles);
-        if (shouldPlayGameSound()) {
-            soundManager.playExplosion();
-        }
-        if (destroyWallsImmediately) {
-            destroyWallsInBombBlast(blastTiles);
+        if (iceBomb) {
+            applyIceBombBlast(blastTiles);
         } else {
-            burnWallsInBombBlast(blastTiles);
+            meltIceTilesInBombBlast(blastTiles);
         }
-        startSmokeIgnitionInBlast(blastTiles);
+        destroyFrozenGhostsInBombBlast(blastTiles);
+        if (shouldPlayGameSound()) {
+            if (iceBomb) {
+                soundManager.playIceBomb();
+            } else {
+                soundManager.playExplosion();
+            }
+        }
+        if (!iceBomb) {
+            if (destroyWallsImmediately) {
+                destroyWallsInBombBlast(blastTiles);
+            } else {
+                burnWallsInBombBlast(blastTiles);
+            }
+        }
+        if (fireBomb) {
+            addFireTrailsInBombBlast(blastTiles,
+                    forcedEffectType == bombExplosionFireType && !applyPlayerBombSynergy);
+        }
+        if (!iceBomb) {
+            startSmokeIgnitionInBlast(blastTiles);
+        }
+    }
+
+    public void killGhostsInBombBlast(ArrayList<int[]> blastTiles, int score) {
+        for (int i = ghosts.size() - 1; i >= 0; i--) {
+            if (ghostIntersectsBombBlast(ghosts.get(i), blastTiles)) {
+                killGhostAt(i, score, true, ghostKillSoundEat, true);
+            }
+        }
+    }
+
+    public void freezeGhostsInBombBlast(ArrayList<int[]> blastTiles) {
+        for (int i = ghosts.size() - 1; i >= 0; i--) {
+            if (ghostIntersectsBombBlast(ghosts.get(i), blastTiles)) {
+                freezeGhostForIceBomb(i);
+            }
+        }
+    }
+
+    public void freezeGhostForIceBomb(int ghostIndex) {
+        if (ghostIndex < 0 || ghostIndex >= ghosts.size()) {
+            return;
+        }
+
+        Ghost ghost = ghosts.get(ghostIndex);
+        int tileX = getGhostCenterTileX(ghost);
+        int tileY = getGhostCenterTileY(ghost);
+        FrozenGhost frozenGhost = new FrozenGhost(ghost.type, tileX * tileSize, tileY * tileSize, false);
+        frozenGhost.tileX = tileX;
+        frozenGhost.tileY = tileY;
+        frozenGhost.mortisBuffed = ghost.mortisBuffed;
+        frozenGhosts.add(frozenGhost);
+        ghosts.remove(ghostIndex);
+    }
+
+    public void freezePacClonesInBombBlast(ArrayList<int[]> blastTiles) {
+        for (int i = pacClones.size() - 1; i >= 0; i--) {
+            PacClone clone = pacClones.get(i);
+            if (entityIntersectsBombBlast(clone.pixelX, clone.pixelY, blastTiles)) {
+                freezePacCloneAt(i);
+            }
+        }
+    }
+
+    public void applyInstantFreezeBlast(ArrayList<int[]> blastTiles, boolean freezePlayer) {
+        if (freezePlayer && playerIntersectsBombBlast(blastTiles)) {
+            startFrozenDeath(true);
+        }
+
+        freezePacClonesInBombBlast(blastTiles);
+        freezeGhostsInBombBlast(blastTiles);
+    }
+
+    public void applyIceBombBlast(ArrayList<int[]> blastTiles) {
+        for (int[] tile : blastTiles) {
+            int tileX = tile[0];
+            int tileY = tile[1];
+
+            if (isOuterWallTile(tileX, tileY)) {
+                continue;
+            }
+
+            if (isDestructibleMazeWallTile(tileX, tileY)) {
+                addIceWall(tileX, tileY);
+                continue;
+            }
+
+            if (hasWaterTileAt(tileX, tileY)) {
+                startWaterFreezeAt(tileX, tileY);
+                continue;
+            }
+
+            removeFireTrailAt(tileX, tileY);
+            removeWaterTileAt(tileX, tileY);
+            removeIceTileAt(tileX, tileY, false);
+            addIceTile(tileX, tileY);
+        }
+    }
+
+    public void addFireTrailsInBombBlast(ArrayList<int[]> blastTiles) {
+        addFireTrailsInBombBlast(blastTiles, false);
+    }
+
+    public void addFireTrailsInBombBlast(ArrayList<int[]> blastTiles, boolean ghostFire) {
+        for (int[] tile : blastTiles) {
+            int tileX = tile[0];
+            int tileY = tile[1];
+
+            if (isOuterWallTile(tileX, tileY) || isDrawnWallTile(tileX, tileY)) {
+                continue;
+            }
+
+            removeIceTileAt(tileX, tileY, false);
+            removeWaterTileAt(tileX, tileY);
+            removeFireTrailAt(tileX, tileY);
+            int duration = ghostFire
+                    ? powerUpDuration * (ghostFireExplosionLifeBoosted ? 2 : 1)
+                    : powerUpDuration * (isSerumEffectActive(powerFireType) ? 2 : 1);
+            fireTrails.add(new FireTrail(tileX, tileY, duration, ghostFire));
+        }
     }
 
     public void addBombExplosionVisualTiles(ArrayList<int[]> blastTiles) {
@@ -6666,12 +7850,14 @@ public final class Game implements Runnable {
     }
 
     public boolean isTileInBombBlastShape(int offsetX, int offsetY, int radiusTiles) {
+        return getAuraDistance(offsetX, offsetY) <= radiusTiles;
+    }
+
+    // Shared rounded-diamond shape for explosions, magnet/ice auras, and visibility ranges.
+    public int getAuraDistance(int offsetX, int offsetY) {
         int absX = Math.abs(offsetX);
         int absY = Math.abs(offsetY);
-
-        return absX <= radiusTiles
-                && absY <= radiusTiles
-                && absX + absY <= radiusTiles + 1;
+        return Math.max(Math.max(absX, absY), absX + absY - 1);
     }
 
     public void checkLaserGhostHits() {
@@ -6679,9 +7865,32 @@ public final class Game implements Runnable {
             return;
         }
 
-        double[] beam = getLaserBeamWorldBounds();
-        burnLaserTargetWall();
+        double[] forwardBeam = getLaserBeamWorldBounds();
+        burnLaserTargetWall(lastDirectionX, lastDirectionY);
+        if (processPlayerLaserBeam(forwardBeam)) {
+            return;
+        }
+
+        if (isSerumEffectActive(powerLaserType)) {
+            double centerX = playerPixelX + tileSize / 2.0;
+            double centerY = playerPixelY + tileSize / 2.0;
+            double[] reverseBeam = getDirectedLaserBeamWorldBounds(
+                    centerX,
+                    centerY,
+                    getPlayerCenterTileX(),
+                    getPlayerCenterTileY(),
+                    -lastDirectionX,
+                    -lastDirectionY,
+                    null,
+                    true);
+            burnLaserTargetWall(-lastDirectionX, -lastDirectionY);
+            processPlayerLaserBeam(reverseBeam);
+        }
+    }
+
+    public boolean processPlayerLaserBeam(double[] beam) {
         meltIceTilesInRect(beam[0], beam[1], beam[2], beam[3]);
+        destroyFrozenGhostsInRect(beam[0], beam[1], beam[2], beam[3]);
         startSmokeIgnitionInRect(beam[0], beam[1], beam[2], beam[3]);
 
         for (int i = ghosts.size() - 1; i >= 0; i--) {
@@ -6696,6 +7905,8 @@ public final class Game implements Runnable {
                 killGhostAt(i, getGhostEatScore(), true, ghostKillSoundFire, true);
             }
         }
+
+        return playerDead || deathAnimationDone;
     }
 
     public void checkPacCloneLaserHits() {
@@ -6713,6 +7924,7 @@ public final class Game implements Runnable {
             double[] beam = getPacCloneLaserBeamWorldBounds(clone);
             burnPacCloneLaserTargetWall(clone);
             meltIceTilesInRect(beam[0], beam[1], beam[2], beam[3]);
+            destroyFrozenGhostsInRect(beam[0], beam[1], beam[2], beam[3]);
             startSmokeIgnitionInRect(beam[0], beam[1], beam[2], beam[3]);
 
             for (int i = ghosts.size() - 1; i >= 0; i--) {
@@ -6734,10 +7946,16 @@ public final class Game implements Runnable {
     }
 
     public void burnLaserTargetWall() {
+        burnLaserTargetWall(lastDirectionX, lastDirectionY);
+    }
+
+    public void burnLaserTargetWall(int beamDirectionX, int beamDirectionY) {
+        if (beamDirectionX == 0 && beamDirectionY == 0) {
+            return;
+        }
+
         int tileX = getPlayerCenterTileX();
         int tileY = getPlayerCenterTileY();
-        int beamDirectionX = lastDirectionX;
-        int beamDirectionY = lastDirectionY;
         int[] wallTile = getLaserTargetWallTile(tileX, tileY, beamDirectionX, beamDirectionY, null, true);
 
         if (wallTile != null) {
@@ -6781,6 +7999,7 @@ public final class Game implements Runnable {
             double[] beam = getGhostLaserBeamWorldBounds(ghost);
             burnGhostLaserTargetWall(ghost);
             meltIceTilesInRect(beam[0], beam[1], beam[2], beam[3]);
+            destroyFrozenGhostsInRect(beam[0], beam[1], beam[2], beam[3]);
             startSmokeIgnitionInRect(beam[0], beam[1], beam[2], beam[3]);
 
             if (playerIntersectsRect(beam[0], beam[1], beam[2], beam[3])) {
@@ -6814,6 +8033,8 @@ public final class Game implements Runnable {
             double maxX = minX + tileSize;
             double maxY = minY + tileSize;
 
+            destroyFrozenGhostsInRect(minX, minY, maxX, maxY);
+
             if (fireTrail.ghostFire) {
                 if (playerIntersectsRect(minX, minY, maxX, maxY)) {
                     if (!isStoneRollingActive()) {
@@ -6836,7 +8057,8 @@ public final class Game implements Runnable {
 
                     Ghost ghost = ghosts.get(i);
                     if (!isGhostElectrified(ghost)
-                            && ghost.type == ghostBombType
+                            && !isFireGhostType(ghost.type)
+                            && isBombGhostType(ghost.type)
                             && ghostIntersectsRect(ghost, minX, minY, maxX, maxY)) {
                         killGhostAt(i, 0, true, ghostKillSoundFire);
                         return;
@@ -6898,7 +8120,7 @@ public final class Game implements Runnable {
 
                         if (powerMode && ghost.type != ghostMetalType && ghost.type != ghostStoneType && ghost.type != ghostCactusType) {
                             boolean droppedIcePower = killGhostAt(ghostIndex, getGhostEatScore());
-                            if (ghost.type == ghostIceType) {
+                            if (isIceGhostType(ghost.type)) {
                                 applyCloneBrainFreeze(clone, droppedIcePower);
                             }
                             ghostEatScore = Math.min(1600, ghostEatScore * 2);
@@ -6925,7 +8147,7 @@ public final class Game implements Runnable {
                         return;
                     } else if (powerMode) {
                         boolean droppedIcePower = killGhostAt(ghostIndex, getGhostEatScore());
-                        if (ghost.type == ghostIceType) {
+                        if (isIceGhostType(ghost.type)) {
                             applyCloneBrainFreeze(clone, droppedIcePower);
                         }
                         ghostEatScore = Math.min(1600, ghostEatScore * 2);
@@ -7227,6 +8449,10 @@ public final class Game implements Runnable {
                 continue;
             }
 
+            if (destroyIceWallToWater(tileX, tileY)) {
+                continue;
+            }
+
             if (isDestructibleMazeWallTile(tileX, tileY) && burnedWalls[tileX][tileY]) {
                 destroyBurnedWall(tileX, tileY);
             } else {
@@ -7244,6 +8470,10 @@ public final class Game implements Runnable {
             int tileX = tile[0];
             int tileY = tile[1];
 
+            if (destroyIceWallToWater(tileX, tileY)) {
+                continue;
+            }
+
             if (isDestructibleMazeWallTile(tileX, tileY)) {
                 destroyBurnedWall(tileX, tileY);
             } else if (isDrawnWallTile(tileX, tileY)) {
@@ -7257,12 +8487,27 @@ public final class Game implements Runnable {
             return;
         }
 
+        if (destroyIceWallToWater(tileX, tileY)) {
+            return;
+        }
+
         if (burnedWalls == null) {
             burnedWalls = new boolean[maxScreenCol][maxScreenRow];
         }
 
         burnedWalls[tileX][tileY] = true;
         startSmokeIgnitionAt(tileX, tileY);
+    }
+
+    public boolean destroyIceWallToWater(int tileX, int tileY) {
+        if (!isIceWallAt(tileX, tileY)) {
+            return false;
+        }
+
+        iceWalls[tileX][tileY] = false;
+        destroyMazeWall(tileX, tileY, false);
+        addWaterTile(tileX, tileY);
+        return true;
     }
 
     public boolean isDrawnWallTile(int tileX, int tileY) {
@@ -7288,6 +8533,26 @@ public final class Game implements Runnable {
 
     public boolean isOuterWallTile(int tileX, int tileY) {
         return tileX == 0 || tileX == maxScreenCol - 1 || tileY == 0 || tileY == maxScreenRow - 1;
+    }
+
+    public boolean isIceWallAt(int tileX, int tileY) {
+        return iceWalls != null
+                && tileX >= 0
+                && tileX < iceWalls.length
+                && tileY >= 0
+                && tileY < iceWalls[tileX].length
+                && !isOuterWallTile(tileX, tileY)
+                && iceWalls[tileX][tileY];
+    }
+
+    public void addIceWall(int tileX, int tileY) {
+        if (iceWalls == null || isOuterWallTile(tileX, tileY)
+                || tileX < 0 || tileX >= maxScreenCol || tileY < 0 || tileY >= maxScreenRow
+                || !isDestructibleMazeWallTile(tileX, tileY)) {
+            return;
+        }
+
+        iceWalls[tileX][tileY] = true;
     }
 
     public void destroyBurnedWall(int tileX, int tileY) {
@@ -7540,6 +8805,13 @@ public final class Game implements Runnable {
             }
 
             updateGhost(ghost);
+            emitGhostParticle(ghost);
+
+            updateBuffedCactusProjectiles(ghost);
+
+            if (checkMortisCollision(ghost)) {
+                continue;
+            }
 
             if (checkWaveGhostIceDeath(i)) {
                 continue;
@@ -7573,7 +8845,7 @@ public final class Game implements Runnable {
                 armMetalGhostElectrocution(ghost);
             }
 
-            if (ghost.type == ghostFireType && isGhostOnWaterTile(ghost)) {
+            if (isFireGhostType(ghost.type) && isGhostOnWaterTile(ghost)) {
                 killGhostAt(i, 0, true, ghostKillSoundFire);
                 continue;
             }
@@ -7584,8 +8856,82 @@ public final class Game implements Runnable {
         }
     }
 
+    public void emitGhostParticle(Ghost ghost) {
+        if (particlePlusSprite == null || !ghost.mortisBuffed || !isGhostMoving(ghost)) {
+            ghost.particleEmitTimer = 0;
+            return;
+        }
+
+        if (ghost.particleEmitTimer > 0) {
+            ghost.particleEmitTimer--;
+            return;
+        }
+
+        double directionLength = Math.hypot(ghost.directionX, ghost.directionY);
+        double behindX = ghost.pixelX + tileSize / 2.0;
+        double behindY = ghost.pixelY + tileSize / 2.0;
+        if (directionLength > 0.0) {
+            behindX -= ghost.directionX / directionLength * tileSize * 0.35;
+            behindY -= ghost.directionY / directionLength * tileSize * 0.35;
+        }
+        addSpriteParticle(behindX, behindY, particlePlusSprite);
+        ghost.particleEmitTimer = ghostParticleEmitInterval;
+    }
+
+    public void addSpriteParticle(double centerX, double centerY, BufferedImage sprite) {
+        if (sprite == null) {
+            return;
+        }
+
+        double angle = random.nextDouble() * Math.PI * 2.0;
+        double speed = spriteParticleMinSpeed
+                + random.nextDouble() * (spriteParticleMaxSpeed - spriteParticleMinSpeed);
+        double scale = spriteParticleMinScale
+                + random.nextDouble() * (spriteParticleMaxScale - spriteParticleMinScale);
+        spriteParticles.add(new SpriteParticle(
+                centerX,
+                centerY,
+                Math.cos(angle) * speed,
+                Math.sin(angle) * speed,
+                scale,
+                sprite));
+    }
+
+    public void emitIntoxicatedParticle() {
+        if (particleMinusSprite == null) {
+            return;
+        }
+        if (intoxicatedParticleTimer > 0) {
+            intoxicatedParticleTimer--;
+            return;
+        }
+
+        addSpriteParticle(
+                playerPixelX + tileSize / 2.0,
+                playerPixelY + tileSize / 2.0,
+                particleMinusSprite);
+        intoxicatedParticleTimer = intoxicatedParticleEmitInterval;
+    }
+
+    public void updateSpriteParticles() {
+        for (int i = spriteParticles.size() - 1; i >= 0; i--) {
+            SpriteParticle particle = spriteParticles.get(i);
+            particle.age++;
+            particle.centerX += particle.velocityX;
+            particle.centerY += particle.velocityY;
+            particle.velocityX *= 0.98;
+            particle.velocityY *= 0.98;
+            particle.scale = Math.max(0.0, particle.scale - spriteParticleShrinkPerFrame);
+            particle.opacity = 1.0;
+
+            if (particle.age >= spriteParticleLifetime || particle.scale <= 0.0) {
+                spriteParticles.remove(i);
+            }
+        }
+    }
+
     public void dropGhostFireTrail(Ghost ghost) {
-        if (ghost.type != ghostFireType || isGhostMoving(ghost)) {
+        if (!isFireGhostType(ghost.type) || isGhostMoving(ghost)) {
             return;
         }
 
@@ -7598,7 +8944,7 @@ public final class Game implements Runnable {
 
         ghost.lastFireTileX = tileX;
         ghost.lastFireTileY = tileY;
-        addFireTrail(tileX, tileY, true);
+        addFireTrail(tileX, tileY, true, ghost.mortisBuffed ? fireTrailDuration * 2 : fireTrailDuration);
     }
 
     public boolean updateElectrocutedGhost(Ghost ghost) {
@@ -7638,13 +8984,23 @@ public final class Game implements Runnable {
         double centerX = ghost.pixelX + tileSize / 2.0;
         double centerY = ghost.pixelY + tileSize / 2.0;
         boolean largeExplosion = ghost.electrocutedLargeExplosion;
+        int explosionEffectType = getGhostBombExplosionEffectType(ghost.type);
 
         addVisualDecal(decalAshType, ghost.pixelX, ghost.pixelY);
         tryDropSpecialGhostPower(ghost.type, getGhostCenterTileX(ghost), getGhostCenterTileY(ghost));
         ghosts.remove(index);
+        if (ghost.type == ghostCactusType) {
+            spawnCactusSpikeProjectiles(ghost.pixelX, ghost.pixelY);
+        }
 
         if (largeExplosion) {
-            triggerGhostBombExplosion(centerX, centerY, bombRadiusTiles + 1, true);
+            triggerGhostBombExplosion(
+                    centerX,
+                    centerY,
+                    bombRadiusTiles + 1,
+                    true,
+                    false,
+                    explosionEffectType);
         }
     }
 
@@ -7676,8 +9032,9 @@ public final class Game implements Runnable {
         int centerTileX = getGhostCenterTileX(ghost);
         int centerTileY = getGhostCenterTileY(ghost);
 
-        for (int offsetX = -ghostFlashElectricRadiusTiles; offsetX <= ghostFlashElectricRadiusTiles; offsetX++) {
-            for (int offsetY = -ghostFlashElectricRadiusTiles; offsetY <= ghostFlashElectricRadiusTiles; offsetY++) {
+        int radius = ghost.mortisBuffed ? 2 : ghostFlashElectricRadiusTiles;
+        for (int offsetX = -radius; offsetX <= radius; offsetX++) {
+            for (int offsetY = -radius; offsetY <= radius; offsetY++) {
                 addElectricTileAt(centerTileX + offsetX, centerTileY + offsetY, ghost);
             }
         }
@@ -7691,8 +9048,9 @@ public final class Game implements Runnable {
         int centerTileX = getGhostCenterTileX(ghost);
         int centerTileY = getGhostCenterTileY(ghost);
 
-        for (int offsetX = -1; offsetX <= 1; offsetX++) {
-            for (int offsetY = -1; offsetY <= 1; offsetY++) {
+        int radius = ghost.mortisBuffed ? 2 : 1;
+        for (int offsetX = -radius; offsetX <= radius; offsetX++) {
+            for (int offsetY = -radius; offsetY <= radius; offsetY++) {
                 addSmokeTile(centerTileX + offsetX, centerTileY + offsetY);
             }
         }
@@ -7903,7 +9261,7 @@ public final class Game implements Runnable {
             }
 
             Ghost ghost = ghosts.get(i);
-            if (ghost != waveGhost && ghost.type == ghostFireType && ghostIntersectsRect(ghost, minX, minY, maxX, maxY)) {
+            if (ghost != waveGhost && isFireGhostType(ghost.type) && ghostIntersectsRect(ghost, minX, minY, maxX, maxY)) {
                 killGhostAt(i, 0, true, ghostKillSoundFire);
                 return;
             }
@@ -7925,12 +9283,20 @@ public final class Game implements Runnable {
     }
 
     public boolean updateGhostSpecialState(Ghost ghost) {
+        if (isMortisGhost(ghost)) {
+            return updateMortisGhostState(ghost);
+        }
+
         if (ghost.type == ghostStoneType) {
             return updateStoneGhostState(ghost);
         }
 
         if (ghost.type == ghostBombType) {
             return updateBombGhostState(ghost);
+        }
+
+        if (isFireBombGhostType(ghost.type) || isIceBombGhostType(ghost.type)) {
+            return updateElementalBombGhostState(ghost);
         }
 
         if (ghost.type == ghostMetalType) {
@@ -7954,6 +9320,53 @@ public final class Game implements Runnable {
         }
 
         return false;
+    }
+
+    public boolean updateMortisGhostState(Ghost ghost) {
+        if (!ghost.mortisActive && ghost.mortisTimer > 0) {
+            ghost.mortisTimer--;
+            return false;
+        }
+
+        if (!ghost.mortisActive) {
+            startMortisActiveState(ghost);
+            return true;
+        }
+
+        return false;
+    }
+
+    public boolean checkMortisCollision(Ghost mortis) {
+        if (!isMortisGhost(mortis) || !mortis.mortisActive) {
+            return false;
+        }
+
+        for (Ghost target : ghosts) {
+            if (target == mortis || target.mortisBuffed) {
+                continue;
+            }
+
+            if (ghostIntersectsRect(target, mortis.pixelX, mortis.pixelY,
+                    mortis.pixelX + tileSize, mortis.pixelY + tileSize)) {
+                applyMortisBuff(target);
+                startMortisInactiveState(mortis);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public void applyMortisBuff(Ghost target) {
+        target.mortisBuffed = true;
+        if (target.type == ghostCactusType) {
+            target.cactusLastDirectionX = target.directionX;
+            target.cactusLastDirectionY = target.directionY;
+        }
+        target.path.clear();
+        if (isMortisGhost(target)) {
+            startMortisInactiveState(target);
+        }
     }
 
     public boolean updateStoneGhostState(Ghost ghost) {
@@ -8001,7 +9414,45 @@ public final class Game implements Runnable {
             return true;
         }
 
+        if (ghost.bombTriggerGraceTimer > 0) {
+            ghost.bombTriggerGraceTimer--;
+            return false;
+        }
+
         ghost.speedRampTimer++;
+
+        if (isPacmanOrCloneInBombGhostTriggerZone(ghost)) {
+            ghost.fuseTimer = ghostBombFuseTime;
+            ghost.directionX = 0;
+            ghost.directionY = 0;
+            ghost.targetPixelX = ghost.pixelX;
+            ghost.targetPixelY = ghost.pixelY;
+            if (shouldPlayGameSound()) {
+                soundManager.playBombAim();
+            }
+            return true;
+        }
+
+        return false;
+    }
+
+    public boolean updateElementalBombGhostState(Ghost ghost) {
+        if (ghost.fuseTimer > 0) {
+            ghost.fuseTimer--;
+            ghost.targetPixelX = ghost.pixelX;
+            ghost.targetPixelY = ghost.pixelY;
+
+            if (ghost.fuseTimer <= 0) {
+                killBombGhostWithoutRespawn(ghost);
+            }
+
+            return true;
+        }
+
+        if (ghost.bombTriggerGraceTimer > 0) {
+            ghost.bombTriggerGraceTimer--;
+            return false;
+        }
 
         if (isPacmanOrCloneInBombGhostTriggerZone(ghost)) {
             ghost.fuseTimer = ghostBombFuseTime;
@@ -8165,15 +9616,21 @@ public final class Game implements Runnable {
 
         addVisualDecal(decalAshType, ghost.pixelX, ghost.pixelY);
         boolean electrocutedExplosion = ghost.electrocutedFuse;
+        int explosionEffectType = getGhostBombExplosionEffectType(ghost.type);
         ghost.electrocutedFuse = false;
         ghosts.remove(index);
-        int explosionRadius = electrocutedExplosion ? bombRadiusTiles + 1 : bombRadiusTiles;
+        int explosionRadius = getGhostBombExplosionRadius(ghost) + (electrocutedExplosion ? 1 : 0);
 
+        boolean previousFireLifeBoost = ghostFireExplosionLifeBoosted;
+        ghostFireExplosionLifeBoosted = ghost.mortisBuffed;
         triggerGhostBombExplosion(
                 ghost.pixelX + tileSize / 2.0,
                 ghost.pixelY + tileSize / 2.0,
                 explosionRadius,
-                electrocutedExplosion);
+                electrocutedExplosion,
+                false,
+                explosionEffectType);
+        ghostFireExplosionLifeBoosted = previousFireLifeBoost;
     }
 
     public boolean updateLaserGhostState(Ghost ghost) {
@@ -8203,7 +9660,7 @@ public final class Game implements Runnable {
 
         ghost.laserActive = true;
         setGhostLaserDirection(ghost);
-        ghost.activeTimer = ghostLaserFireTime;
+        ghost.activeTimer = ghostLaserFireTime * (ghost.mortisBuffed ? 2 : 1);
 
         // Consume the activation frame. The next frame will choose a fresh
         // wall-safe target instead of reusing a portal spawn target.
@@ -8221,7 +9678,7 @@ public final class Game implements Runnable {
         ghost.laserActive = false;
         ghost.chargeTimer = ghostLaserChargeTime;
         ghost.warningTimer = ghostLaserWarningTime;
-        ghost.activeTimer = ghostLaserFireTime;
+        ghost.activeTimer = ghostLaserFireTime * (ghost.mortisBuffed ? 2 : 1);
         ghost.targetPixelX = ghost.pixelX;
         ghost.targetPixelY = ghost.pixelY;
         ghost.path.clear();
@@ -8347,8 +9804,13 @@ public final class Game implements Runnable {
         GhostDefinition definition = getGhostDefinition(ghost.type);
 
         if (isFrighteningPowerModeActive() && isGhostScared(ghost)) {
-            ghost.path.clear();
-            return chooseFleeDirection(tileX, tileY);
+            return chooseScaredDirection(ghost, tileX, tileY);
+        }
+
+        if (isMortisGhost(ghost)) {
+            return ghost.mortisActive
+                    ? chooseMortisDirection(ghost, tileX, tileY)
+                    : chooseRandomWallBounceDirection(ghost, tileX, tileY);
         }
 
         if (ghost.type == ghostCloneType) {
@@ -8358,6 +9820,9 @@ public final class Game implements Runnable {
         if (ghost.type == ghostFireType
                 || ghost.type == ghostMetalType
                 || ghost.type == ghostFlashType) {
+            if (ghost.type == ghostMetalType && ghost.mortisBuffed) {
+                return chooseAStarDirection(ghost, tileX, tileY);
+            }
             return chooseRandomWallBounceDirection(ghost, tileX, tileY);
         }
 
@@ -8378,7 +9843,9 @@ public final class Game implements Runnable {
         }
 
         if (ghost.type == ghostSpeedType) {
-            return chooseRandomWallBounceDirection(ghost, tileX, tileY);
+            return ghost.mortisBuffed
+                    ? chooseAStarDirection(ghost, tileX, tileY)
+                    : chooseRandomWallBounceDirection(ghost, tileX, tileY);
         }
 
         if (ghost.type == ghostBombType || ghost.type == ghostLaserType) {
@@ -8412,6 +9879,47 @@ public final class Game implements Runnable {
         }
 
         return chooseAStarDirection(ghost, tileX, tileY);
+    }
+
+    public int[] chooseMortisDirection(Ghost ghost, int tileX, int tileY) {
+        if (ghost.path.isEmpty() || (tileX == ghost.goalX && tileY == ghost.goalY)) {
+            Ghost targetGhost = findNearestUnbuffedGhost(ghost, tileX, tileY);
+            if (targetGhost == null) {
+                return chooseRandomWallBounceDirection(ghost, tileX, tileY);
+            }
+
+            ghost.goalX = getGhostCenterTileX(targetGhost);
+            ghost.goalY = getGhostCenterTileY(targetGhost);
+            ghost.path = findAStarPath(tileX, tileY, ghost.goalX, ghost.goalY);
+        }
+
+        int[] direction = consumeScaredPathDirection(ghost, tileX, tileY);
+        return direction == null ? chooseRandomWallBounceDirection(ghost, tileX, tileY) : direction;
+    }
+
+    public Ghost findNearestUnbuffedGhost(Ghost source, int startX, int startY) {
+        Ghost nearest = null;
+        int bestDistance = Integer.MAX_VALUE;
+
+        for (Ghost candidate : ghosts) {
+            if (candidate == source || candidate.mortisBuffed || candidate.electrocutedTimer > 0) {
+                continue;
+            }
+
+            int targetX = getGhostCenterTileX(candidate);
+            int targetY = getGhostCenterTileY(candidate);
+            ArrayList<int[]> candidatePath = findAStarPath(startX, startY, targetX, targetY);
+            if (candidatePath.isEmpty() && (startX != targetX || startY != targetY)) {
+                continue;
+            }
+
+            if (candidatePath.size() < bestDistance) {
+                bestDistance = candidatePath.size();
+                nearest = candidate;
+            }
+        }
+
+        return nearest;
     }
 
     public int[] chooseDefinitionTargetDirection(Ghost ghost, int tileX, int tileY,
@@ -8632,40 +10140,161 @@ public final class Game implements Runnable {
         return new int[] { nextTile[0] - tileX, nextTile[1] - tileY };
     }
 
-    public int[] chooseFleeDirection(int tileX, int tileY) {
-        int[][] directions = {
-            { 1, 0 },
-            { -1, 0 },
-            { 0, 1 },
-            { 0, -1 }
-        };
-        int bestDistance = -1;
-        ArrayList<int[]> bestDirections = new ArrayList<>();
+    public int[] chooseScaredDirection(Ghost ghost, int tileX, int tileY) {
+        if (ghost.type != ghostMagnetType && !isMortisGhost(ghost)) {
+            int[] powerTarget = findNearestPowerUpTile(tileX, tileY);
+            if (powerTarget != null) {
+                if (!ghost.fleeTargetingPower
+                        || ghost.goalX != powerTarget[0]
+                        || ghost.goalY != powerTarget[1]) {
+                    ghost.goalX = powerTarget[0];
+                    ghost.goalY = powerTarget[1];
+                    ghost.path = findAStarPath(tileX, tileY, ghost.goalX, ghost.goalY);
+                    ghost.fleeTargetingPower = true;
+                }
 
-        for (int[] direction : directions) {
-            int nextX = tileX + direction[0];
-            int nextY = tileY + direction[1];
+                int[] powerDirection = consumeScaredPathDirection(ghost, tileX, tileY);
+                if (powerDirection != null) {
+                    return powerDirection;
+                }
+            }
+        }
 
-            if (!canMove(nextX, nextY)) {
+        ghost.fleeTargetingPower = false;
+        if (ghost.fleeCornerIndex < 0 || ghost.fleeCornerIndex >= getCornerSpawnTargets().length) {
+            chooseNearestScaredCorner(ghost, tileX, tileY);
+        } else if (tileX == ghost.goalX && tileY == ghost.goalY) {
+            chooseNextScaredCorner(ghost, tileX, tileY);
+        }
+
+        int[] cornerDirection = consumeScaredPathDirection(ghost, tileX, tileY);
+        if (cornerDirection != null) {
+            return cornerDirection;
+        }
+
+        return chooseRandomWallBounceDirection(ghost, tileX, tileY);
+    }
+
+    public int[] findNearestPowerUpTile(int startX, int startY) {
+        int bestDistance = Integer.MAX_VALUE;
+        ArrayList<int[]> bestTiles = new ArrayList<>();
+
+        for (PowerUp powerUp : powerUps) {
+            ArrayList<int[]> path = findAStarPath(startX, startY, powerUp.tileX, powerUp.tileY);
+            if (path.isEmpty() && (startX != powerUp.tileX || startY != powerUp.tileY)) {
                 continue;
             }
 
-            int distance = getManhattanDistance(nextX, nextY, getPlayerTileX(), getPlayerTileY());
-
-            if (distance > bestDistance) {
+            int distance = path.size();
+            if (distance < bestDistance) {
                 bestDistance = distance;
-                bestDirections.clear();
-                bestDirections.add(direction);
+                bestTiles.clear();
+                bestTiles.add(new int[] { powerUp.tileX, powerUp.tileY });
             } else if (distance == bestDistance) {
-                bestDirections.add(direction);
+                bestTiles.add(new int[] { powerUp.tileX, powerUp.tileY });
             }
         }
 
-        if (bestDirections.isEmpty()) {
-            return null;
+        return bestTiles.isEmpty() ? null : bestTiles.get(random.nextInt(bestTiles.size()));
+    }
+
+    public void chooseNearestScaredCorner(Ghost ghost, int startX, int startY) {
+        int[][] corners = getCornerSpawnTargets();
+        int bestIndex = -1;
+        int bestDistance = Integer.MAX_VALUE;
+        ArrayList<int[]> bestPaths = new ArrayList<>();
+
+        for (int cornerIndex = 0; cornerIndex < corners.length; cornerIndex++) {
+            int[] target = findGhostSpawnTileNear(corners[cornerIndex][0], corners[cornerIndex][1]);
+            ArrayList<int[]> path = findAStarPath(startX, startY, target[0], target[1]);
+            if (path.isEmpty() && (startX != target[0] || startY != target[1])) {
+                continue;
+            }
+
+            int distance = path.size();
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                bestIndex = cornerIndex;
+                bestPaths.clear();
+                bestPaths.add(new int[] { target[0], target[1] });
+            } else if (distance == bestDistance) {
+                bestPaths.add(new int[] { target[0], target[1] });
+            }
         }
 
-        return bestDirections.get(random.nextInt(bestDirections.size()));
+        if (bestIndex == -1) {
+            ghost.path.clear();
+            return;
+        }
+
+        int[] selectedTarget = bestPaths.get(random.nextInt(bestPaths.size()));
+        ghost.fleeCornerIndex = bestIndex;
+        ghost.goalX = selectedTarget[0];
+        ghost.goalY = selectedTarget[1];
+        ghost.path = findAStarPath(startX, startY, ghost.goalX, ghost.goalY);
+    }
+
+    public void chooseNextScaredCorner(Ghost ghost, int startX, int startY) {
+        int[][] corners = getCornerSpawnTargets();
+        ArrayList<Integer> candidates = new ArrayList<>();
+
+        for (int cornerIndex = 0; cornerIndex < corners.length; cornerIndex++) {
+            if (cornerIndex != ghost.fleeCornerIndex) {
+                candidates.add(cornerIndex);
+            }
+        }
+
+        while (!candidates.isEmpty()) {
+            int candidatePosition = random.nextInt(candidates.size());
+            int cornerIndex = candidates.remove(candidatePosition);
+            int[] target = findGhostSpawnTileNear(corners[cornerIndex][0], corners[cornerIndex][1]);
+            ArrayList<int[]> path = findAStarPath(startX, startY, target[0], target[1]);
+            if (!path.isEmpty() || (startX == target[0] && startY == target[1])) {
+                ghost.fleeCornerIndex = cornerIndex;
+                ghost.goalX = target[0];
+                ghost.goalY = target[1];
+                ghost.path = path;
+                return;
+            }
+        }
+
+        ghost.path.clear();
+    }
+
+    public int[] consumeScaredPathDirection(Ghost ghost, int tileX, int tileY) {
+        boolean wrappedThroughPortal = false;
+
+        while (!ghost.path.isEmpty()) {
+            int[] nextTile = ghost.path.remove(0);
+            int deltaX = nextTile[0] - tileX;
+            int deltaY = nextTile[1] - tileY;
+
+            if (isPortalTile(tileX, tileY) && isPortalTile(nextTile[0], nextTile[1])) {
+                if (wrappedThroughPortal) {
+                    ghost.path.clear();
+                    return null;
+                }
+
+                int[] oppositePortal = getOppositePortalTile(tileX, tileY);
+                ghost.pixelX = oppositePortal[0] * tileSize;
+                ghost.pixelY = oppositePortal[1] * tileSize;
+                ghost.targetPixelX = ghost.pixelX;
+                ghost.targetPixelY = ghost.pixelY;
+                tileX = getGhostCenterTileX(ghost);
+                tileY = getGhostCenterTileY(ghost);
+                wrappedThroughPortal = true;
+                continue;
+            }
+
+            if (Math.abs(deltaX) + Math.abs(deltaY) != 1) {
+                ghost.path.clear();
+                return null;
+            }
+
+            return new int[] { deltaX, deltaY };
+        }
+
+        return null;
     }
 
     public int[] chooseRandomWallBounceDirection(Ghost ghost, int tileX, int tileY) {
@@ -9276,7 +10905,25 @@ public final class Game implements Runnable {
 
     public void drawPowerUps(Graphics2D g2) {
         for (PowerUp powerUp : powerUps) {
-            drawImageAtTile(g2, powerUpSprites[powerUp.type], powerUp.tileX, powerUp.tileY);
+            BufferedImage sprite = powerUp.pill ? pillSprite : powerUpSprites[powerUp.type];
+            drawImageAtTile(g2, sprite, powerUp.tileX, powerUp.tileY);
+        }
+    }
+
+    public void drawSpriteParticles(Graphics2D g2) {
+        for (SpriteParticle particle : spriteParticles) {
+            if (particle.sprite == null) {
+                continue;
+            }
+
+            int size = Math.max(1, (int) Math.round(tileSize * particle.scale));
+            int screenX = worldToScreenX(particle.centerX - size / 2.0);
+            int screenY = worldToScreenY(particle.centerY - size / 2.0);
+            Graphics2D particleGraphics = (Graphics2D) g2.create();
+            particleGraphics.setComposite(AlphaComposite.getInstance(
+                    AlphaComposite.SRC_OVER, (float) clampDouble(particle.opacity, 0.0, 1.0)));
+            particleGraphics.drawImage(particle.sprite, screenX, screenY, size, size, null);
+            particleGraphics.dispose();
         }
     }
 
@@ -9353,8 +11000,7 @@ public final class Game implements Runnable {
 
             if (sprite != null) {
                 if (!smokeTile.evilFire) {
-                    float smokeOpacity = isStealthPowerActive() ? 0.10f : 0.90f;
-                    g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, smokeOpacity));
+                    g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, getSmokeOpacity(smokeTile)));
                 } else {
                     g2.setComposite(originalComposite);
                 }
@@ -9364,6 +11010,24 @@ public final class Game implements Runnable {
         }
 
         g2.setComposite(originalComposite);
+    }
+
+    public float getSmokeOpacity(SmokeTile smokeTile) {
+        int playerTileX = getPlayerCenterTileX();
+        int playerTileY = getPlayerCenterTileY();
+        int tileDistance = getAuraDistance(smokeTile.tileX - playerTileX, smokeTile.tileY - playerTileY);
+        int transparentRadius = isStealthPowerActive() || isSerumEffectActive(powerStealthType) ? 1 : 0;
+        int opacityStep = tileDistance - transparentRadius;
+
+        if (opacityStep <= 0) {
+            return 0.0f;
+        }
+
+        if (opacityStep <= 3) {
+            return opacityStep * 0.25f;
+        }
+
+        return 1.0f;
     }
 
     public int getEvilFireFrame(SmokeTile smokeTile) {
@@ -9468,9 +11132,9 @@ public final class Game implements Runnable {
         g2.setColor(new Color(0x7fff7f));
 
         if (isPowerUpActive(powerMagnetType)) {
-            drawMagnetAuraAt(g2, getPlayerCenterTileX(), getPlayerCenterTileY());
+            drawMagnetAuraAt(g2, getPlayerCenterTileX(), getPlayerCenterTileY(), getPlayerMagnetAuraRadius());
             for (PacClone clone : pacClones) {
-                drawMagnetAuraAt(g2, getPacCloneCenterTileX(clone), getPacCloneCenterTileY(clone));
+                drawMagnetAuraAt(g2, getPacCloneCenterTileX(clone), getPacCloneCenterTileY(clone), getPlayerMagnetAuraRadius());
             }
         }
 
@@ -9513,10 +11177,7 @@ public final class Game implements Runnable {
     }
 
     public boolean isTileInMagnetAuraShape(int offsetX, int offsetY, int radius) {
-        int auraRadius = Math.max(0, radius);
-        return Math.abs(offsetX) <= auraRadius
-                && Math.abs(offsetY) <= auraRadius
-                && Math.abs(offsetX) + Math.abs(offsetY) <= auraRadius + 1;
+        return isTileInBombBlastShape(offsetX, offsetY, Math.max(0, radius));
     }
 
     public void drawIceAuras(Graphics2D g2) {
@@ -9527,15 +11188,19 @@ public final class Game implements Runnable {
         g2.setColor(new Color(0x00ffff));
 
         if (isPowerUpActive(powerIceType)) {
-            drawIceAuraAt(g2, getPlayerCenterTileX(), getPlayerCenterTileY());
+            drawIceAuraAt(g2, getPlayerCenterTileX(), getPlayerCenterTileY(), getPlayerIceAuraRadius());
             for (PacClone clone : pacClones) {
-                drawIceAuraAt(g2, getPacCloneCenterTileX(clone), getPacCloneCenterTileY(clone));
+                drawIceAuraAt(g2, getPacCloneCenterTileX(clone), getPacCloneCenterTileY(clone), getPlayerIceAuraRadius());
             }
         }
 
         for (Ghost ghost : ghosts) {
-            if (!isGhostElectrified(ghost) && ghost.type == ghostIceType) {
-                drawIceAuraAt(g2, getGhostCenterTileX(ghost), getGhostCenterTileY(ghost));
+            if (!isGhostElectrified(ghost) && isIceGhostType(ghost.type)) {
+                drawIceAuraAt(
+                        g2,
+                        getGhostCenterTileX(ghost),
+                        getGhostCenterTileY(ghost),
+                        getIceGhostAuraRadius(ghost.type));
             }
         }
 
@@ -9544,13 +11209,17 @@ public final class Game implements Runnable {
     }
 
     public void drawIceAuraAt(Graphics2D g2, int centerTileX, int centerTileY) {
-        for (int offsetX = -bombRadiusTiles; offsetX <= bombRadiusTiles; offsetX++) {
-            for (int offsetY = -bombRadiusTiles; offsetY <= bombRadiusTiles; offsetY++) {
+        drawIceAuraAt(g2, centerTileX, centerTileY, bombRadiusTiles);
+    }
+
+    public void drawIceAuraAt(Graphics2D g2, int centerTileX, int centerTileY, int radius) {
+        for (int offsetX = -radius; offsetX <= radius; offsetX++) {
+            for (int offsetY = -radius; offsetY <= radius; offsetY++) {
                 int tileX = centerTileX + offsetX;
                 int tileY = centerTileY + offsetY;
 
                 if (tileX >= 0 && tileX < maxScreenCol && tileY >= 0 && tileY < maxScreenRow
-                        && isTileInBombBlastShape(offsetX, offsetY)) {
+                        && isTileInBombBlastShape(offsetX, offsetY, radius)) {
                     g2.fillRect(worldToScreenX(tileX * tileSize), worldToScreenY(tileY * tileSize), tileSize, tileSize);
                 }
             }
@@ -9559,7 +11228,37 @@ public final class Game implements Runnable {
 
     public void drawFrozenGhosts(Graphics2D g2) {
         for (FrozenGhost frozenGhost : frozenGhosts) {
-            drawImageAtTile(g2, iceCubeSprite, frozenGhost.tileX, frozenGhost.tileY);
+            BufferedImage sprite = frozenGhost.fromClone ? pacFrozeSprite : iceCubeSprite;
+            drawImageAtPixel(g2, sprite, frozenGhost.pixelX, frozenGhost.pixelY);
+        }
+    }
+
+    public void drawIceFragments(Graphics2D g2) {
+        for (IceFragment fragment : iceFragments) {
+            if (fragment.spriteIndex < 0 || fragment.spriteIndex >= iceFragmentSprites.length
+                    || iceFragmentSprites[fragment.spriteIndex] == null) {
+                continue;
+            }
+
+            float alpha = (float) clampDouble(fragment.opacity, 0.0, 1.0);
+
+            int size = Math.max(1, (int) Math.round(tileSize * fragment.scale));
+            int screenX = worldToScreenX(fragment.centerX - size / 2.0);
+            int screenY = worldToScreenY(fragment.centerY - size / 2.0);
+            BufferedImage renderedFragment = iceFragmentRenderer.renderSprite(
+                    iceFragmentSprites[fragment.spriteIndex],
+                    fragment.angle);
+
+            Graphics2D fragmentGraphics = (Graphics2D) g2.create();
+            fragmentGraphics.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
+            fragmentGraphics.drawImage(
+                    renderedFragment,
+                    screenX,
+                    screenY,
+                    size,
+                    size,
+                    null);
+            fragmentGraphics.dispose();
         }
     }
 
@@ -9685,6 +11384,19 @@ public final class Game implements Runnable {
         }
 
         drawLaserBeam(g2, getLaserBeamWorldBounds());
+        if (isSerumEffectActive(powerLaserType)) {
+            double centerX = playerPixelX + tileSize / 2.0;
+            double centerY = playerPixelY + tileSize / 2.0;
+            drawLaserBeam(g2, getDirectedLaserBeamWorldBounds(
+                    centerX,
+                    centerY,
+                    getPlayerCenterTileX(),
+                    getPlayerCenterTileY(),
+                    -lastDirectionX,
+                    -lastDirectionY,
+                    null,
+                    true));
+        }
     }
 
     public void drawGhostLasers(Graphics2D g2) {
@@ -9729,7 +11441,13 @@ public final class Game implements Runnable {
         Stroke originalStroke = g2.getStroke();
         Color originalColor = g2.getColor();
 
-        g2.setColor(new Color(0xff0000));
+        if (bombExplosionEffectType == bombExplosionIceType) {
+            g2.setColor(getPowerUpHudColor(powerIceType));
+        } else if (bombExplosionEffectType == bombExplosionFireType) {
+            g2.setColor(getPowerUpHudColor(powerFireType));
+        } else {
+            g2.setColor(getPowerUpHudColor(powerBombType));
+        }
         g2.setStroke(new BasicStroke(2));
 
         for (int[] tile : bombExplosionTiles) {
@@ -9767,9 +11485,10 @@ public final class Game implements Runnable {
     }
 
     public void drawPacClones(Graphics2D g2) {
-        BufferedImage sprite = getActivePacCloneSprite();
-
         for (PacClone clone : pacClones) {
+            BufferedImage sprite = clone.electrocutedTimer > 0
+                    ? pacElectrocutedSprites[(ghostAnimationCounter / 3) % pacElectrocutedSprites.length]
+                    : getActivePacCloneSprite();
             int screenX = worldToScreenX(clone.pixelX);
             int screenY = worldToScreenY(clone.pixelY);
             double angle = getDirectionAngle(clone.directionX, clone.directionY);
@@ -9833,6 +11552,9 @@ public final class Game implements Runnable {
 
         Graphics2D playerGraphics = (Graphics2D) g2.create();
         playerGraphics.rotate(angle, screenX + tileSize / 2.0, screenY + tileSize / 2.0);
+        if (isPacmanIntoxicated()) {
+            drawPixelOutline(playerGraphics, sprite, screenX, screenY, new Color(0xff0000));
+        }
         playerGraphics.drawImage(sprite, screenX, screenY, tileSize, tileSize, null);
         playerGraphics.dispose();
     }
@@ -10069,7 +11791,7 @@ public final class Game implements Runnable {
 
     public void drawMenu(Graphics2D g2) {
         g2.drawImage(menuScreen, 0, 0, getWidth(), getHeight(), null);
-        drawTopCenteredImage(g2, titleScreen, 32);
+        drawTopCenteredImage(g2, titleScreen, mainMenuTitleTopMargin);
 
         String[] options = { "NEW RUN", "OPTION", "ALMANAC", "HALL OF FAME", "QUIT" };
         g2.setFont(new Font("Bahnschrift SemiBold", Font.BOLD, 30));
@@ -10143,6 +11865,30 @@ public final class Game implements Runnable {
     public void drawOptionCategoryPage(Graphics2D g2) {
         String[] options = getCurrentOptionLabels();
         int centerX = getWidth() / 2;
+        if (isScrollableOptionPage()) {
+            ensureOptionScrollPosition(options);
+            int totalRows = options.length + 1;
+            int visibleRows = Math.min(optionScrollVisibleRows, totalRows);
+            int firstRowY = 102;
+
+            g2.setFont(new Font("Bahnschrift SemiBold", Font.BOLD, 25));
+            drawCenteredMenuText(g2, getOptionCategoryTitle(), centerX, 52);
+            g2.setFont(new Font("Bahnschrift SemiBold", Font.BOLD, 18));
+
+            for (int row = 0; row < visibleRows; row++) {
+                int itemIndex = optionScrollOffset + row;
+                String label = itemIndex < options.length ? options[itemIndex] : "BACK";
+                String text = itemIndex == optionChoice ? ">" + label + "<" : label;
+                drawCenteredMenuText(g2, text, centerX, firstRowY + row * optionScrollRowSpacing);
+            }
+
+            drawOptionScrollBar(g2, totalRows, visibleRows, optionScrollOffset,
+                    578, 82, 500);
+            g2.setFont(new Font("Bahnschrift SemiBold", Font.BOLD, 14));
+            drawCenteredMenuText(g2, "UP/DOWN SCROLL   ENTER TOGGLE   ESC BACK", centerX, getHeight() - 24);
+            return;
+        }
+
         int rowSpacing = 32;
         int rowCount = options.length + 1;
         int y = Math.max(78, getHeight() / 2 - rowCount * rowSpacing / 2 + rowSpacing);
@@ -10160,6 +11906,49 @@ public final class Game implements Runnable {
 
         String backText = optionChoice == options.length ? ">BACK<" : "BACK";
         drawCenteredMenuText(g2, backText, centerX, y + 10);
+    }
+
+    public boolean isScrollableOptionPage() {
+        return optionCategory == 0 && (optionSubCategory == 1 || optionSubCategory == 2);
+    }
+
+    public void ensureOptionScrollPosition(String[] options) {
+        if (!isScrollableOptionPage()) {
+            optionScrollOffset = 0;
+            return;
+        }
+
+        int totalRows = options.length + 1;
+        int visibleRows = Math.min(optionScrollVisibleRows, totalRows);
+        int maxOffset = Math.max(0, totalRows - visibleRows);
+
+        if (optionChoice < optionScrollOffset) {
+            optionScrollOffset = optionChoice;
+        } else if (optionChoice >= optionScrollOffset + visibleRows) {
+            optionScrollOffset = optionChoice - visibleRows + 1;
+        }
+
+        optionScrollOffset = clampInt(optionScrollOffset, 0, maxOffset);
+    }
+
+    public void drawOptionScrollBar(Graphics2D g2, int totalRows, int visibleRows,
+            int scrollOffset, int x, int y, int height) {
+        g2.setColor(new Color(0x303030));
+        g2.fillRect(x, y, 8, height);
+
+        int thumbHeight = Math.max(28, height * visibleRows / Math.max(1, totalRows));
+        int maxOffset = Math.max(1, totalRows - visibleRows);
+        int thumbY = y + (height - thumbHeight) * scrollOffset / maxOffset;
+        g2.setColor(menuTextColor);
+        g2.fillRect(x, thumbY, 8, thumbHeight);
+        g2.setColor(Color.WHITE);
+        g2.drawRect(x, y, 8, height);
+
+        g2.setColor(menuTextColor);
+        g2.fillPolygon(new int[] { x - 2, x + 4, x + 10 },
+                new int[] { y - 5, y - 12, y - 5 }, 3);
+        g2.fillPolygon(new int[] { x - 2, x + 4, x + 10 },
+                new int[] { y + height + 5, y + height + 12, y + height + 5 }, 3);
     }
 
     public String getOptionCategoryTitle() {
@@ -10216,6 +12005,7 @@ public final class Game implements Runnable {
             "GHOST POWER DROP CHANCE: " + draftSpecialGhostPowerDropChancePercent + "%",
             "CLONY CAP: " + getClonyMaximumCountLabel(draftClonyMaximumCount),
             "DISABLE TRANSITION ANIMATION: " + draftDisableTransitionAnimation,
+            "ALLOW RESIZE: " + draftAllowResize,
             "MAZE WIDTH: " + draftMazeWidth,
             "MAZE HEIGHT: " + draftMazeHeight,
             "CUSTOMIZE GHOSTS/POWER-UPS",
@@ -10352,11 +12142,29 @@ public final class Game implements Runnable {
         drawAlmanacText(g2, almanacTitles.get(almanacIndex), 230, 105);
 
         g2.setFont(new Font("Bahnschrift SemiBold", Font.BOLD, 16));
-        drawWrappedAlmanacText(g2, almanacBodies.get(almanacIndex), 230, 145, getWidth() - 270, 25);
+        int bodyX = 220;
+        int bodyY = 130;
+        int bodyWidth = getWidth() - 245;
+        int bodyHeight = Math.max(1, getHeight() - 220);
+        int bodyTextWidth = getWidth() - 270;
+        int contentHeight = getWrappedAlmanacTextHeight(
+                g2, almanacBodies.get(almanacIndex), bodyTextWidth, almanacScrollLineHeight);
+        int maxScroll = Math.max(0, contentHeight - bodyHeight + almanacScrollLineHeight);
+        almanacScrollOffset = clampInt(almanacScrollOffset, 0, maxScroll);
+
+        Graphics2D bodyGraphics = (Graphics2D) g2.create();
+        bodyGraphics.clipRect(bodyX, bodyY, bodyWidth, bodyHeight);
+        bodyGraphics.translate(0, -almanacScrollOffset);
+        drawWrappedAlmanacText(bodyGraphics, almanacBodies.get(almanacIndex), 230, 145,
+                bodyTextWidth, almanacScrollLineHeight);
+        bodyGraphics.dispose();
+        drawAlmanacScrollBar(g2, contentHeight, bodyHeight, almanacScrollOffset,
+                getWidth() - 22, bodyY, bodyHeight);
 
         g2.setFont(new Font("Bahnschrift SemiBold", Font.BOLD, 15));
         drawCenteredAlmanacText(g2,
-                (almanacIndex + 1) + "/" + almanacTitles.size() + "   LEFT/RIGHT PAGE   ESC BACK",
+                (almanacIndex + 1) + "/" + almanacTitles.size()
+                        + "   LEFT/RIGHT PAGE   UP/DOWN SCROLL   ESC BACK",
                 getWidth() / 2,
                 getHeight() - 58);
     }
@@ -10365,16 +12173,9 @@ public final class Game implements Runnable {
         String key = almanacIndex >= 0 && almanacIndex < almanacEntries.size()
                 ? almanacEntries.get(almanacIndex).key().toLowerCase(Locale.ROOT)
                 : "";
-        boolean flipped = !key.equals("pacman")
-                && !key.equals("twoface")
-                && !key.equals("cold")
-                && !key.equals("cactus")
-                && !key.equals("robot")
-                && !key.equals("wave")
-                && !key.equals("pika")
-                && !key.equals("golem")
-                && !key.equals("horror")
-                && getMenuAnimationFrame(2) == 1;
+        int ghostType = ghostTypesByKey.getOrDefault(key, -1);
+        boolean animated = key.equals("pacman") || hasAnimatedGhostDefinition(ghostType);
+        boolean flipped = !animated && getMenuAnimationFrame(2) == 1;
 
         if (flipped) {
             g2.drawImage(sprite, x + size, y, -size, size, null);
@@ -10384,15 +12185,14 @@ public final class Game implements Runnable {
     }
 
     public BufferedImage getAlmanacSprite(int index) {
-        int frame = getMenuAnimationFrame(2);
-
         if (index < 0 || index >= almanacEntries.size()) {
             return ghostSprites[0];
         }
 
         String key = almanacEntries.get(index).key().toLowerCase(Locale.ROOT);
         if (key.equals("pacman")) {
-            return pacSprites[frame % Math.max(1, Math.min(2, pacSprites.length))];
+            int frameCount = Math.max(1, Math.min(2, pacSprites.length));
+            return pacSprites[getMenuAnimationFrame(frameCount)];
         }
 
         int type = ghostTypesByKey.getOrDefault(key, 0);
@@ -10415,35 +12215,35 @@ public final class Game implements Runnable {
             return ghostBombSprites[0];
         }
         if (type == ghostMagnetType) {
-            return ghostMagnetSprites[frame % ghostMagnetSprites.length];
+            return ghostMagnetSprites[getMenuAnimationFrame(ghostMagnetSprites.length)];
         }
         if (type == ghostIceType) {
-            return ghostIceSprites[frame % ghostIceSprites.length];
+            return ghostIceSprites[getMenuAnimationFrame(ghostIceSprites.length)];
         }
         if (type == ghostCactusType) {
-            return ghostCactusSprites[frame % ghostCactusSprites.length];
+            return ghostCactusSprites[getMenuAnimationFrame(ghostCactusSprites.length)];
         }
         if (type == ghostMetalType) {
-            return ghostMetalSprites[frame % 2];
+            return ghostMetalSprites[getMenuAnimationFrame(ghostMetalSprites.length)];
         }
         if (type == ghostWaveType) {
-            return ghostWaveSprites[frame % ghostWaveSprites.length];
+            return ghostWaveSprites[getMenuAnimationFrame(ghostWaveSprites.length)];
         }
         if (type == ghostFlashType) {
             return ghostPikaChargedSprites[getMenuAnimationFrame(ghostPikaChargedSprites.length)];
         }
         if (type == ghostStoneType) {
-            return ghostStoneSprites[frame % ghostStoneSprites.length];
+            return ghostStoneSprites[getMenuAnimationFrame(ghostStoneSprites.length)];
         }
         if (type == ghostPhantomType) {
-            return ghostPhantomSprites[frame % ghostPhantomSprites.length];
+            return ghostPhantomSprites[getMenuAnimationFrame(ghostPhantomSprites.length)];
         }
 
         BufferedImage[] configuredSprites = type >= 0 && type < ghostDefinitionSprites.length
                 ? ghostDefinitionSprites[type]
                 : null;
         if (configuredSprites != null && configuredSprites.length > 0) {
-            return configuredSprites[frame % configuredSprites.length];
+            return configuredSprites[getMenuAnimationFrame(configuredSprites.length)];
         }
 
         return ghostSprites[Math.min(type, ghostSprites.length - 1)];
@@ -10485,6 +12285,62 @@ public final class Game implements Runnable {
 
             currentY += lineHeight / 2;
         }
+    }
+
+    public int getWrappedAlmanacTextHeight(Graphics2D g2, String text, int maxWidth, int lineHeight) {
+        FontMetrics metrics = g2.getFontMetrics();
+        int lineCount = 0;
+        String[] paragraphs = text.split("\\R\\s*\\R");
+
+        for (String paragraph : paragraphs) {
+            String[] words = paragraph.replace('\n', ' ').trim().split("\\s+");
+            String line = "";
+
+            for (String word : words) {
+                if (word.isEmpty()) {
+                    continue;
+                }
+
+                String candidate = line.isEmpty() ? word : line + " " + word;
+                if (metrics.stringWidth(candidate) > maxWidth && !line.isEmpty()) {
+                    lineCount++;
+                    line = word;
+                } else {
+                    line = candidate;
+                }
+            }
+
+            if (!line.isEmpty()) {
+                lineCount++;
+            }
+        }
+
+        if (lineCount == 0) {
+            return 0;
+        }
+
+        return lineCount * lineHeight + Math.max(0, paragraphs.length - 1) * (lineHeight / 2);
+    }
+
+    public void drawAlmanacScrollBar(Graphics2D g2, int contentHeight, int viewportHeight,
+            int scrollOffset, int x, int y, int height) {
+        g2.setColor(new Color(0x303030));
+        g2.fillRect(x, y, 8, height);
+
+        int thumbHeight = Math.max(28, height * viewportHeight / Math.max(viewportHeight, contentHeight));
+        int maxScroll = Math.max(1, contentHeight - viewportHeight
+                + (contentHeight > viewportHeight ? almanacScrollLineHeight : 0));
+        int thumbY = y + (height - thumbHeight) * scrollOffset / maxScroll;
+        g2.setColor(menuTextColor);
+        g2.fillRect(x, thumbY, 8, thumbHeight);
+        g2.setColor(Color.WHITE);
+        g2.drawRect(x, y, 8, height);
+
+        g2.setColor(menuTextColor);
+        g2.fillPolygon(new int[] { x - 2, x + 4, x + 10 },
+                new int[] { y - 5, y - 12, y - 5 }, 3);
+        g2.fillPolygon(new int[] { x - 2, x + 4, x + 10 },
+                new int[] { y + height + 5, y + height + 12, y + height + 5 }, 3);
     }
 
     public void drawCenteredAlmanacText(Graphics2D g2, String text, int centerX, int y) {
@@ -10570,6 +12426,7 @@ public final class Game implements Runnable {
         draftSpecialGhostPowerDropChancePercent = specialGhostPowerDropChancePercent;
         draftClonyMaximumCount = clonyMaximumCount;
         draftDisableTransitionAnimation = disableTransitionAnimation;
+        draftAllowResize = allowResize;
         copyBooleanArray(spawnGhostEnabled, draftSpawnGhostEnabled);
         copyBooleanArray(droppedPowerEnabled, draftDroppedPowerEnabled);
         draftMazeWidth = normalizeOddInt(maxScreenCol, 11, 51);
@@ -10603,6 +12460,7 @@ public final class Game implements Runnable {
         draftSpecialGhostPowerDropChancePercent = 20;
         draftClonyMaximumCount = minClonyMaximumCount;
         draftDisableTransitionAnimation = false;
+        draftAllowResize = false;
         draftMazeWidth = 25;
         draftMazeHeight = 31;
         setAllSpawnGhostOptions(draftSpawnGhostEnabled, true);
@@ -10673,6 +12531,7 @@ public final class Game implements Runnable {
         specialGhostPowerDropChancePercent = draftSpecialGhostPowerDropChancePercent;
         clonyMaximumCount = normalizeClonyMaximumCount(draftClonyMaximumCount);
         disableTransitionAnimation = draftDisableTransitionAnimation;
+        allowResize = draftAllowResize;
         ensureAtLeastOneSpawnGhostEnabled(draftSpawnGhostEnabled);
         copyBooleanArray(draftSpawnGhostEnabled, spawnGhostEnabled);
         copyBooleanArray(draftDroppedPowerEnabled, droppedPowerEnabled);
@@ -10705,6 +12564,7 @@ public final class Game implements Runnable {
         draftHudPelletMode = hudPelletMode;
         draftShowHudGhostCount = showHudGhostCount;
         draftDisableTransitionAnimation = disableTransitionAnimation;
+        draftAllowResize = allowResize;
         copyBooleanArray(spawnGhostEnabled, draftSpawnGhostEnabled);
         copyBooleanArray(droppedPowerEnabled, draftDroppedPowerEnabled);
         applyAudioVolumes(masterVolume, musicVolume, sfxVolume);
@@ -10730,7 +12590,7 @@ public final class Game implements Runnable {
     public void updatePanelSize() {
         screenWidth = tileSize * maxScreenCol;
         boardHeight = tileSize * maxScreenRow;
-        screenHeight = boardHeight + hudHeight;
+        screenHeight = fixedScreenHeight;
     }
 
     public void handleMenuKey(int keyCode) {
@@ -10748,6 +12608,7 @@ public final class Game implements Runnable {
                 openOptions();
             } else if (menuChoice == 2) {
                 almanacIndex = 0;
+                almanacScrollOffset = 0;
                 screenState = STATE_ALMANAC;
             } else if (menuChoice == 3) {
                 screenState = STATE_HALL_OF_FAME;
@@ -10888,10 +12749,12 @@ public final class Game implements Runnable {
         } else if (optionChoice == 9) {
             draftDisableTransitionAnimation = !draftDisableTransitionAnimation;
         } else if (optionChoice == 10) {
-            draftMazeWidth = normalizeOddInt(draftMazeWidth + direction * 2, 11, 51);
+            draftAllowResize = !draftAllowResize;
         } else if (optionChoice == 11) {
-            draftMazeHeight = normalizeOddInt(draftMazeHeight + direction * 2, 11, 51);
+            draftMazeWidth = normalizeOddInt(draftMazeWidth + direction * 2, 11, 51);
         } else if (optionChoice == 12) {
+            draftMazeHeight = normalizeOddInt(draftMazeHeight + direction * 2, 11, 51);
+        } else if (optionChoice == 13) {
             optionSubCategory = 0;
             optionChoice = 0;
         }
@@ -11225,6 +13088,9 @@ public final class Game implements Runnable {
         if (powerUpType == powerStealthType) {
             return "STEALTH";
         }
+        if (powerUpType == powerSerumType) {
+            return "SERUM";
+        }
 
         return "POWER";
     }
@@ -11272,6 +13138,9 @@ public final class Game implements Runnable {
         if (powerUpType == powerStealthType) {
             return new Color(0x7f00ff);
         }
+        if (powerUpType == powerSerumType) {
+            return new Color(0x00ff00);
+        }
 
         return Color.GREEN;
     }
@@ -11300,9 +13169,16 @@ public final class Game implements Runnable {
         int rowHeight = 22;
         int lastTimerRowY = hasHudBoardStatsRow() ? 82 : 60;
 
+        if (isPacmanIntoxicated()) {
+            String text = "INTOXICATED " + getTimerSeconds(intoxicatedTimer);
+            drawActiveTimerToken(g2, text, x, y, maxX, new Color(0x00ff00), false, false);
+            return;
+        }
+
         if (powerMode) {
             String text = "PELLET " + getTimerSeconds(powerModeTimer);
-            x = drawActiveTimerToken(g2, text, x, y, maxX, Color.CYAN, false);
+            x = drawActiveTimerToken(g2, text, x, y, maxX, Color.CYAN, false,
+                    isSerumEffectActive(powerPelletType));
 
             if (x == 12) {
                 y += rowHeight;
@@ -11310,13 +13186,14 @@ public final class Game implements Runnable {
         }
 
         for (int i = 0; i < powerUpTimers.length; i++) {
-            if (i == 4 || powerUpTimers[i] <= 0) {
+            if (i == powerPelletType || i == powerSerumType || powerUpTimers[i] <= 0) {
                 continue;
             }
 
             String text = getPowerUpName(i) + " " + getTimerSeconds(powerUpTimers[i]);
             Color color = getPowerUpHudColor(i);
             boolean whiteOutline = i == powerCloneType;
+            boolean greenOutline = isSerumEffectActive(i);
 
             if (x + g2.getFontMetrics().stringWidth(text) > maxX && x > 12) {
                 x = 12;
@@ -11327,19 +13204,24 @@ public final class Game implements Runnable {
                 return;
             }
 
-            x = drawActiveTimerToken(g2, text, x, y, maxX, color, whiteOutline);
+            x = drawActiveTimerToken(g2, text, x, y, maxX, color, whiteOutline, greenOutline);
         }
     }
 
     public int drawActiveTimerToken(Graphics2D g2, String text, int x, int y, int maxX, Color color, boolean whiteOutline) {
+        return drawActiveTimerToken(g2, text, x, y, maxX, color, whiteOutline, false);
+    }
+
+    public int drawActiveTimerToken(Graphics2D g2, String text, int x, int y, int maxX,
+            Color color, boolean whiteOutline, boolean greenOutline) {
         int tokenWidth = g2.getFontMetrics().stringWidth(text);
 
         if (x + tokenWidth > maxX && x > 12) {
             return 12;
         }
 
-        if (whiteOutline) {
-            g2.setColor(Color.WHITE);
+        if (whiteOutline || greenOutline) {
+            g2.setColor(greenOutline ? new Color(0x00ff00) : Color.WHITE);
             g2.drawString(text, x - 1, y);
             g2.drawString(text, x + 1, y);
             g2.drawString(text, x, y - 1);
@@ -11377,9 +13259,13 @@ public final class Game implements Runnable {
         int screenY = worldToScreenY(ghost.pixelY);
         boolean flipped = (ghostAnimationCounter / animationDelay) % 2 == 1;
 
+        if (ghost.mortisBuffed) {
+            drawGreenPixelOutline(g2, sprite, screenX, screenY);
+        }
+
         if (ghost.electrocutedTimer > 0 || hasAnimatedGhostDefinition(ghost)
                 || ghost.type == ghostMagnetType
-                || ghost.type == ghostIceType
+                || isIceGhostType(ghost.type)
                 || ghost.type == ghostCactusType
                 || ghost.type == ghostMetalType
                 || ghost.type == ghostWaveType
@@ -11394,9 +13280,47 @@ public final class Game implements Runnable {
         }
     }
 
+    public void drawGreenPixelOutline(Graphics2D g2, BufferedImage sprite, int screenX, int screenY) {
+        drawPixelOutline(g2, sprite, screenX, screenY, new Color(0x00ff00));
+    }
+
+    public void drawPixelOutline(Graphics2D g2, BufferedImage sprite, int screenX, int screenY, Color color) {
+        if (sprite == null) {
+            return;
+        }
+
+        BufferedImage outline = new BufferedImage(
+                sprite.getWidth(), sprite.getHeight(), BufferedImage.TYPE_INT_ARGB);
+        int outlineColor = 0xff000000 | (color.getRGB() & 0x00ffffff);
+        for (int y = 0; y < sprite.getHeight(); y++) {
+            for (int x = 0; x < sprite.getWidth(); x++) {
+                if ((sprite.getRGB(x, y) >>> 24) == 0) {
+                    continue;
+                }
+
+                for (int offsetY = -1; offsetY <= 1; offsetY++) {
+                    for (int offsetX = -1; offsetX <= 1; offsetX++) {
+                        int outlineX = x + offsetX;
+                        int outlineY = y + offsetY;
+                        if (outlineX >= 0 && outlineX < sprite.getWidth()
+                                && outlineY >= 0 && outlineY < sprite.getHeight()
+                                && (sprite.getRGB(outlineX, outlineY) >>> 24) == 0) {
+                            outline.setRGB(outlineX, outlineY, outlineColor);
+                        }
+                    }
+                }
+            }
+        }
+        g2.drawImage(outline, screenX, screenY, tileSize, tileSize, null);
+    }
+
     public BufferedImage getGhostSprite(Ghost ghost) {
         if (ghost.electrocutedTimer > 0) {
             return ghostElectrocutedSprites[(ghostAnimationCounter / 3) % ghostElectrocutedSprites.length];
+        }
+
+        if (isMortisGhost(ghost) && !ghost.mortisActive) {
+            return ghostMortisSlowSprites[(ghostAnimationCounter / animationDelay) % ghostMortisSlowSprites.length];
         }
 
         if (isFrighteningPowerModeActive() && isGhostScared(ghost) && isClassicGhost(ghost)) {
@@ -11409,6 +13333,20 @@ public final class Game implements Runnable {
 
         if (ghost.type == ghostCloneType) {
             return ghostCloneSprite;
+        }
+        if (isFireBombGhostType(ghost.type)) {
+            if (ghost.fuseTimer > 0) {
+                return ghostFireBombAimSprites[(ghostAnimationCounter / animationDelay) % ghostFireBombAimSprites.length];
+            }
+
+            return getConfiguredGhostSprite(ghost.type, ghostFireSprite);
+        }
+        if (isIceBombGhostType(ghost.type)) {
+            if (ghost.fuseTimer > 0) {
+                return ghostIceBombAimSprites[(ghostAnimationCounter / animationDelay) % ghostIceBombAimSprites.length];
+            }
+
+            return getConfiguredGhostSprite(ghost.type, ghostIceSprites[0]);
         }
         if (ghost.type == ghostBombType) {
             if (ghost.fuseTimer > 0) {
@@ -11454,7 +13392,7 @@ public final class Game implements Runnable {
         if (ghost.type == ghostSpikeType) {
             return ghostSpikeSprites[0];
         }
-        if (ghost.type == ghostIceType) {
+        if (isIceGhostType(ghost.type)) {
             return ghostIceSprites[(ghostAnimationCounter / animationDelay) % ghostIceSprites.length];
         }
         if (ghost.type == ghostCactusType) {
@@ -11492,10 +13430,14 @@ public final class Game implements Runnable {
     }
 
     public boolean hasAnimatedGhostDefinition(Ghost ghost) {
-        return ghost.type >= 0
-                && ghost.type < ghostDefinitionSprites.length
-                && ghostDefinitionSprites[ghost.type] != null
-                && ghostDefinitionSprites[ghost.type].length > 1;
+        return hasAnimatedGhostDefinition(ghost.type);
+    }
+
+    public boolean hasAnimatedGhostDefinition(int ghostType) {
+        return ghostType >= 0
+                && ghostType < ghostDefinitionSprites.length
+                && ghostDefinitionSprites[ghostType] != null
+                && ghostDefinitionSprites[ghostType].length > 1;
     }
 
     public void handleKeyPressed(int keyCode) {
@@ -11708,11 +13650,19 @@ public final class Game implements Runnable {
             return;
         }
 
-        if (isMoveLeftKey(keyCode) || isMoveUpKey(keyCode)) {
+        if (isMoveLeftKey(keyCode)) {
             almanacIndex = (almanacIndex + almanacTitles.size() - 1) % almanacTitles.size();
+            almanacScrollOffset = 0;
             soundManager.playMenuMove();
-        } else if (isMoveRightKey(keyCode) || isMoveDownKey(keyCode)) {
+        } else if (isMoveRightKey(keyCode)) {
             almanacIndex = (almanacIndex + 1) % almanacTitles.size();
+            almanacScrollOffset = 0;
+            soundManager.playMenuMove();
+        } else if (isMoveUpKey(keyCode)) {
+            almanacScrollOffset = Math.max(0, almanacScrollOffset - almanacScrollLineHeight);
+            soundManager.playMenuMove();
+        } else if (isMoveDownKey(keyCode)) {
+            almanacScrollOffset += almanacScrollLineHeight;
             soundManager.playMenuMove();
         }
     }

@@ -64,7 +64,7 @@
     {
       "key": "cold",
       "display": "Icy",
-      "desc": "Slows anyone she touches and turns the ground into ice... mostly so she can slide, skid, and dance around on it herself.\n\nShe's always dreamed of opening a skating park somewhere inside the Eternal Maze. Winter is her favorite season, entirely unironically.\n\nAccording to Icy, Pacman's inability to turn corners while sliding on ice is simply a \"skill issue.\"\n\nAccording to Pacman, ice physics were a mistake and the dev should remove this thing. The request was denied because me, the dev, said, \"it's for the plot.\"\n\nShe HATES Infernous, who somehow manages to melt every carefully constructed ice path within minutes of its completion.\n\nTheir rivalry has caused enough property damage to qualify as a weather phenomenon."
+      "desc": "Slows anyone she touches and turns the ground into ice... mostly so she can slide, skid, and dance around on it herself.\n\nShe's always dreamed of opening a skating park somewhere inside the Eternal Maze. Winter is her favorite season, entirely unironically.\n\nAccording to Icy, Pacman's inability to turn corners while sliding on ice is simply a \"skill issue.\"\n\nAccording to Pacman, ice physics were a mistake and the dev should remove this thing. The request was denied because me, the dev, said, \"it's for the plot.\"\n\nShe absolutely DESPISES Infernous, who somehow manages to melt every carefully constructed ice path within minutes of its completion.\n\nTheir rivalry has caused enough property damage to qualify as a weather phenomenon."
     },
     {
       "key": "cactus",
@@ -79,7 +79,7 @@
     {
       "key": "wave",
       "display": "Wavey",
-      "desc": "Wavey loves creating waves across the maze, making navigation harder for everyone nearby.\n\nHow water slows down ghosts remains unclear, since ghosts are generally expected to float. Current theories include spectral drag, haunted surface tension or stop to look at him. Wavey insists his magnificent wave-shaped hair existed before he became a ghost\n\nThe Almanac doesn't buy it one bit and suspects this guy is just bald like any other ghosts.\n\nHe's dreamed of opening an aquarium in the maze, but Icy keeps ruining it by turning the place into a skating park (literally). He doesn't hate Icy because he's just chill like that.\n\n\"You can't hate someone because of something they don't have control over.\" — Wavey\n\n\"I swear this guy is just performative.\" — Pacman"
+      "desc": "Wavey loves creating waves across the maze, making navigation harder for everyone nearby.\n\nHow water slows down ghosts remains unclear, since ghosts are generally expected to float. Current theories include spectral drag, haunted surface tension or other stops to look at him. Wavey insists his magnificent wave-shaped hair existed before he became a ghost\n\nThe Almanac doesn't buy it one bit and suspects this guy is just bald like any other ghost.\n\nHe's dreamed of opening an aquarium in the maze, but Icy keeps ruining it by turning the place into a skating park. He doesn't hate Icy because he's just chill like that.\n\n\"You can't hate someone because of something they don't have control over.\" — Wavey\n\n\"I swear this guy is just performative.\" — Pacman"
     },
     {
       "key": "pika",
@@ -95,6 +95,21 @@
       "key": "horror",
       "display": "Nyctophobia",
       "desc": "Covers the maze in unnatural darkness wherever he travels.\n\nHis smoke is so thick that Pacman and nearby ghosts can become completely lost inside it. Even the other ghosts claim they have no idea who Nycto is or how he got into the maze. He just kinda appears one day and scares the crap out of everyone.\n\nHe also has far too many eyes for an ordinary ghost. (Seriously, who is this guy???)\n\nThankfully, his smoke appears to be highly flammable.\n\nSo, the current plan: send Infernous in, set the entire cloud on fire, and run away.\n\n\"Wait, what?\" — Infernous"
+    },
+    {
+      "key": "sun",
+      "display": "Helios, The Sun",
+      "desc": "Will eradicate you with the power of the sun.\n\nApparently, ghost has found a way to perform merging spell or that they just perform some crazy ritual or that someone wrote a fanfic so crazy that it becomes real. Anyways, Helios here is a guy with both Bomby and Infernous’s power, who can indeed, explode into a ground of fire that lasted idk, 5 seconds? Depends…\n\nSome of you may ask: \"isn’t that’s just straight up Napalm?\"\n\nIn which, I, the dev, will answer: \"yes, it was indeed, Napalm and I’m not regret adding this guy to the game\""
+    },
+    {
+      "key": "moon",
+      "display": "Selene, The Moon",
+      "desc": "Will encage you in the eternal ice cold prison.\n\nIcy once wished upon the moon for a skating park, what do you know the moon answered and gave her… Bomby’s ability.\nNow she can pretty much explode and turns the entire area to a small skating park.\nWas the trade worth it? Absolutely! Look how happy she is!\n\nJust don’t go too close to her unless you want to be part of the decoratives in the skating rink."
+    },
+    {
+      "key": "doctor",
+      "display": "Dr Mortis",
+      "desc": "Makes everyone permanently stronger with his “homebrew” (self proclaimed) serum, and by everyone I mean pacman excluded.\n\nHe used to be a crazy doctor before he dies doing what he loves (testing chemical on body). He swore that he has made a thing that can afect spectre being (which explain why pacman can’t use it). Pacman suspect that this guy has a fake PhD because the same pills he gave to everyone makes him ill\n\n“well you see here, the reason is that because you’re not a ghost” – Dr Mortis\n\nJust… don’t pick up anything you see on the ground or better yet, don’t do drug, kid."
     }
   ]
 }
