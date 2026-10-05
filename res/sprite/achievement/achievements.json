@@ -1,0 +1,2258 @@
+[
+  {
+    "key": "eye_behind_your_back",
+    "name": "Eye Behind Your Back",
+    "icon": "achievement_placeholder.png",
+    "description": "Who needs peripheral vision when one eye is doing all the work?",
+    "tips": "Eat Lazory with Power Pellet while his laser is active.",
+    "secret": false,
+    "condition": {
+      "type": "eat_laser_active",
+      "target": "alien",
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 100,
+    "order": 1
+  },
+  {
+    "key": "oh_youre_approaching_me",
+    "name": "Oh, You're Approaching Me?",
+    "icon": "achievement_placeholder.png",
+    "description": "You really chose to walk toward the laser.",
+    "tips": "Eat Lazory with Metal Power while he is beaming his laser directly at you.",
+    "secret": false,
+    "condition": {
+      "type": "eat_metal_laser_active",
+      "target": "alien",
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 100,
+    "order": 2
+  },
+  {
+    "key": "laser_tag",
+    "name": "Laser Tag",
+    "icon": "achievement_placeholder.png",
+    "description": "Finally, a laser tag match where someone actually gets vaporized.",
+    "tips": "Kill Lazory with Laser Power while his laser is active.",
+    "secret": false,
+    "condition": {
+      "type": "kill_laser_active",
+      "target": "alien",
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 100,
+    "order": 3
+  },
+  {
+    "key": "eradicated",
+    "name": "Eradicated",
+    "icon": "achievement_placeholder.png",
+    "description": "That laser was, apparently, very effective.",
+    "tips": "Get killed by Lazory's laser.",
+    "secret": false,
+    "condition": {
+      "type": "die_laser",
+      "target": "alien",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 4
+  },
+  {
+    "key": "negative_aura",
+    "name": "Negative Aura",
+    "icon": "achievement_placeholder.png",
+    "description": "Your points have entered the negatives. Truly impressive.",
+    "tips": "Let Magneto run free until your points reach -5,000.",
+    "secret": false,
+    "condition": {
+      "type": "points_negative",
+      "target": "twoface",
+      "count": 5000
+    },
+    "ingame_bonus": false,
+    "order": 5
+  },
+  {
+    "key": "escape_gravity",
+    "name": "Escape Gravity",
+    "icon": "achievement_placeholder.png",
+    "description": "Sometimes the best way to beat gravity is simply to walk away.",
+    "tips": "Have Magneto charge at you while in Metal Form, then dodge him instead of eating him.",
+    "secret": false,
+    "condition": {
+      "type": "dodge_magnet_charge_metal",
+      "target": "twoface",
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 200,
+    "order": 6
+  },
+  {
+    "key": "tax_evasion",
+    "name": "Tax Evasion",
+    "icon": "achievement_placeholder.png",
+    "description": "Magneto has been audited.",
+    "tips": "Kill Magneto after he has stolen at least 2 Power Pellets.",
+    "secret": false,
+    "condition": {
+      "type": "kill_after_stealing_pellets",
+      "target": "twoface",
+      "count": 2
+    },
+    "ingame_bonus": false,
+    "order": 7
+  },
+  {
+    "key": "a_small_price_to_pay",
+    "name": "A Small Price to Pay",
+    "icon": "achievement_placeholder.png",
+    "description": "It was only half the pellets. Surely that won't matter.",
+    "tips": "Let Magneto eat 50% of the maze's pellets and proceed to the next level.",
+    "secret": false,
+    "condition": {
+      "type": "pellets_eaten_percent_next_level",
+      "target": "twoface",
+      "count": 50
+    },
+    "ingame_bonus": false,
+    "order": 8
+  },
+  {
+    "key": "loan_shark",
+    "name": "Loan Shark",
+    "icon": "achievement_placeholder.png",
+    "description": "At 90%, this is less of a loan and more of a hostile acquisition.",
+    "tips": "Let Magneto eat 90% of the maze's pellets and proceed to the next level.",
+    "secret": false,
+    "condition": {
+      "type": "pellets_eaten_percent_next_level",
+      "target": "twoface",
+      "count": 90
+    },
+    "ingame_bonus": false,
+    "order": 9
+  },
+  {
+    "key": "woodchipper",
+    "name": "Woodchipper",
+    "icon": "achievement_placeholder.png",
+    "description": "Three powers enter. The maze leaves in pieces.",
+    "tips": "Have Clones, Speed, and Magnet Power active at the same time.",
+    "secret": false,
+    "condition": {
+      "type": "powers_active",
+      "target": "clone",
+      "count": 3
+    },
+    "ingame_bonus": true,
+    "score": 300,
+    "order": 10
+  },
+  {
+    "key": "ggez",
+    "name": "GGEZ",
+    "icon": "achievement_placeholder.png",
+    "description": "The maze never stood a chance.",
+    "tips": "Clear the entire board in under 1 minute.",
+    "secret": false,
+    "condition": {
+      "type": "full_board_clear_time",
+      "target": "maze",
+      "count": 60
+    },
+    "ingame_bonus": true,
+    "score": 1000,
+    "order": 11
+  },
+  {
+    "key": "nitpicker",
+    "name": "Nitpicker",
+    "icon": "achievement_placeholder.png",
+    "description": "You found the point and removed it.",
+    "tips": "Kill Cacty with Spike Power.",
+    "secret": false,
+    "condition": {
+      "type": "kill_spike",
+      "target": "cactus",
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 50,
+    "order": 12
+  },
+  {
+    "key": "point_taken",
+    "name": "Point Taken",
+    "icon": "achievement_placeholder.png",
+    "description": "You tried to eat a cactus. What did you expect?",
+    "tips": "Get killed while trying to eat Cacty with Power Pellet.",
+    "secret": false,
+    "condition": {
+      "type": "die_eating",
+      "target": "cactus",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 13
+  },
+  {
+    "key": "he_can_do_that",
+    "name": "He Can Do That??",
+    "icon": "achievement_placeholder.png",
+    "description": "Apparently, yes. He can do that.",
+    "tips": "Get killed by Cacty's projectile spike.",
+    "secret": false,
+    "condition": {
+      "type": "die_projectile_spike",
+      "target": "cactus",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 14
+  },
+  {
+    "key": "it_pops_out_of_nowhere",
+    "name": "It Pops Out of Nowhere",
+    "icon": "achievement_placeholder.png",
+    "description": "The spikes were there. You just weren't looking.",
+    "tips": "Get killed by a spike spawned by Cacty.",
+    "secret": false,
+    "condition": {
+      "type": "die_spawned_spike",
+      "target": "cactus",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 15
+  },
+  {
+    "key": "surprise",
+    "name": "Surprise!",
+    "icon": "achievement_placeholder.png",
+    "description": "Nothing says welcome like a ghost spawning directly beside you.",
+    "tips": "Get killed by a newly spawned ghost near the portal.",
+    "secret": false,
+    "condition": {
+      "type": "die_new_spawn_near_portal",
+      "target": "ghost",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 16
+  },
+  {
+    "key": "hot_wheel",
+    "name": "Hot Wheel",
+    "icon": "achievement_placeholder.png",
+    "description": "Zoomie met the wrong kind of hot wheels.",
+    "tips": "Kill Zoomie with Fire Trail while he is charging at you.",
+    "secret": false,
+    "condition": {
+      "type": "kill_fire_trail_charge",
+      "target": "fast",
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 50,
+    "order": 17
+  },
+  {
+    "key": "ghost_rider",
+    "name": "Ghost Rider",
+    "icon": "achievement_placeholder.png",
+    "description": "Gotta go fast. Gotta go hot.",
+    "tips": "Have Speed and Fire Power active at the same time.",
+    "secret": false,
+    "condition": {
+      "type": "powers_active",
+      "target": "fast",
+      "count": 2
+    },
+    "ingame_bonus": true,
+    "score": 100,
+    "order": 18
+  },
+  {
+    "key": "cold_drift",
+    "name": "Cold Drift",
+    "icon": "achievement_placeholder.png",
+    "description": "Even Zoomie can't outrun absolute cold.",
+    "tips": "Freeze Zoomie while he is in his dash state.",
+    "secret": false,
+    "condition": {
+      "type": "freeze_dashing",
+      "target": "fast",
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 500,
+    "order": 19
+  },
+  {
+    "key": "headbutt",
+    "name": "Headbutt",
+    "icon": "achievement_placeholder.png",
+    "description": "When two idiots charge at each other, Pac-Man wins.",
+    "tips": "Run toward Zoomie as he charges at you and eat him.",
+    "secret": false,
+    "condition": {
+      "type": "eat_charging",
+      "target": "fast",
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 50,
+    "order": 20
+  },
+  {
+    "key": "your_too_slow",
+    "name": "Your Too Slow",
+    "icon": "achievement_placeholder.png",
+    "description": "You were, in fact, too slow.",
+    "tips": "Get chased down and killed by Zoomie.",
+    "secret": false,
+    "condition": {
+      "type": "die_chased",
+      "target": "fast",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 21
+  },
+  {
+    "key": "youve_fallen_into_my_trap",
+    "name": "You’ve Fallen Into My Trap",
+    "icon": "achievement_placeholder.png",
+    "description": "You have activated the trap card, Zoomie!",
+    "tips": "Run away from Zoomie as he charges at you while having Power Pellet, causing him to die as soon as he touches you.",
+    "secret": false,
+    "condition": {
+      "type": "die_charging_power_pellet",
+      "target": "fast",
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 50,
+    "order": 22
+  },
+  {
+    "key": "family_of_4",
+    "name": "Family of 4",
+    "icon": "achievement_placeholder.png",
+    "description": "A perfectly normal family outing. For everyone except the ghosts.",
+    "tips": "Kill Bobby and the three ghosts she spawns.",
+    "secret": false,
+    "condition": {
+      "type": "kill_mama_and_spawns",
+      "target": "mama",
+      "count": 4
+    },
+    "ingame_bonus": true,
+    "score": 100,
+    "order": 23
+  },
+  {
+    "key": "where_are_these_coming_from",
+    "name": "Where Are These Coming From??",
+    "icon": "achievement_placeholder.png",
+    "description": "Bobby appears to have discovered infinite friends.",
+    "tips": "Let Bobby spawn at least 10 ghosts onto the board.",
+    "secret": false,
+    "condition": {
+      "type": "spawn_count",
+      "target": "mama",
+      "count": 10
+    },
+    "ingame_bonus": true,
+    "score": 500,
+    "order": 24
+  },
+  {
+    "key": "youre_evil_man",
+    "name": "You're Evil, Man",
+    "icon": "achievement_placeholder.png",
+    "description": "You left Bobby alive. That somehow makes this worse.",
+    "tips": "Kill at least 10 ghosts spawned by Bobby without killing Bobby, then proceed to the next level.",
+    "secret": false,
+    "condition": {
+      "type": "kill_spawns_without_mama_next_level",
+      "target": "mama",
+      "count": 10
+    },
+    "ingame_bonus": true,
+    "score": 1000,
+    "order": 25
+  },
+  {
+    "key": "the_chance_is_rigged",
+    "name": "The Chance Is Rigged",
+    "icon": "achievement_placeholder.png",
+    "description": "Ten Clonies. Zero freebies. Suspicious.",
+    "tips": "Kill 10 Clonies in a row without them dropping any Power.",
+    "secret": false,
+    "condition": {
+      "type": "kill_consecutive_no_drop",
+      "target": "clone",
+      "count": 10
+    },
+    "ingame_bonus": true,
+    "score": 250,
+    "order": 26
+  },
+  {
+    "key": "the_ghoulonies",
+    "name": "The Ghoulonies",
+    "icon": "achievement_placeholder.png",
+    "description": "There are now more Clonies than anyone reasonably needs.",
+    "tips": "Let the number of Clonies on the board reach 20 or more.",
+    "secret": false,
+    "condition": {
+      "type": "active_count",
+      "target": "clone",
+      "count": 20
+    },
+    "ingame_bonus": true,
+    "score": 2000,
+    "order": 27
+  },
+  {
+    "key": "you_and_what_armies",
+    "name": "You and What Armies?",
+    "icon": "achievement_placeholder.png",
+    "description": "Apparently, nine clones.",
+    "tips": "Have 9 Pac-Clones active on the board.",
+    "secret": false,
+    "condition": {
+      "type": "pac_clone_active",
+      "target": "clone",
+      "count": 9
+    },
+    "ingame_bonus": true,
+    "score": 1000,
+    "order": 28
+  },
+  {
+    "key": "clone_war",
+    "name": "Clone War",
+    "icon": "achievement_placeholder.png",
+    "description": "The clones have begun fighting among themselves.",
+    "tips": "Kill a Clony with a Pac-Clone.",
+    "secret": false,
+    "condition": {
+      "type": "kill_with_pac_clone",
+      "target": "clone",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 29
+  },
+  {
+    "key": "aw_man",
+    "name": "Aw Man",
+    "icon": "achievement_placeholder.png",
+    "description": "Well, that went with a bang.",
+    "tips": "Get blown up by Bomby.",
+    "secret": false,
+    "condition": {
+      "type": "die_explosion",
+      "target": "bomby",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 30
+  },
+  {
+    "key": "explosive_flavor",
+    "name": "Explosive Flavor",
+    "icon": "achievement_placeholder.png",
+    "description": "Turns out Bomby is not food.",
+    "tips": "Get killed while trying to eat Bomby with Power Pellet.",
+    "secret": false,
+    "condition": {
+      "type": "die_eating",
+      "target": "bomby",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 31
+  },
+  {
+    "key": "defused",
+    "name": "Defused",
+    "icon": "achievement_placeholder.png",
+    "description": "No boom today.",
+    "tips": "Freeze Bomby before he can explode.",
+    "secret": false,
+    "condition": {
+      "type": "freeze_before_explode",
+      "target": "bomby",
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 100,
+    "order": 32
+  },
+  {
+    "key": "terrorizer",
+    "name": "Terrorizer",
+    "icon": "achievement_placeholder.png",
+    "description": "Five ghosts, one very explosive solution.",
+    "tips": "Kill 5 ghosts with Bomb Power.",
+    "secret": false,
+    "condition": {
+      "type": "kill_with_bomb",
+      "target": "bomby",
+      "count": 5
+    },
+    "ingame_bonus": true,
+    "score": 500,
+    "order": 33
+  },
+  {
+    "key": "get_nuked",
+    "name": "Get Nuked",
+    "icon": "achievement_placeholder.png",
+    "description": "Ten ghosts. That is no longer a bomb. That is a statement.",
+    "tips": "Kill 10 ghosts with Bomb Power.",
+    "secret": false,
+    "condition": {
+      "type": "kill_with_bomb",
+      "target": "bomby",
+      "count": 10
+    },
+    "ingame_bonus": true,
+    "score": 1000,
+    "order": 34
+  },
+  {
+    "key": "charged_explosion",
+    "name": "Charged Explosion",
+    "icon": "achievement_placeholder.png",
+    "description": "Electricity makes everything more exciting.",
+    "tips": "Electrocute Bomby or GH-05T.",
+    "secret": false,
+    "condition": {
+      "type": "electrocute",
+      "target": "bomby",
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 100,
+    "order": 35
+  },
+  {
+    "key": "omg_get_away_from_me",
+    "name": "OMG, GET AWAY FROM ME",
+    "icon": "achievement_placeholder.png",
+    "description": "Running away only made Bomby faster. Oops.",
+    "tips": "Let Bomby reach maximum speed and kill you with his explosion.",
+    "secret": false,
+    "condition": {
+      "type": "die_max_speed_explosion",
+      "target": "bomby",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 36
+  },
+  {
+    "key": "detonate_from_a_safe_distance",
+    "name": "Detonate from a Safe Distance",
+    "icon": "achievement_placeholder.png",
+    "description": "Safety first. Explosion second.",
+    "tips": "Kill Bomby with any ranged Power.",
+    "secret": false,
+    "condition": {
+      "type": "kill_ranged",
+      "target": "bomby",
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 50,
+    "order": 37
+  },
+  {
+    "key": "accidental_ally",
+    "name": "Accidental Ally",
+    "icon": "achievement_placeholder.png",
+    "description": "Bomby helped. Bomby did not mean to help.",
+    "tips": "Make Bomby explode and kill 5 nearby ghosts.",
+    "secret": false,
+    "condition": {
+      "type": "explosion_kills_ghosts",
+      "target": "bomby",
+      "count": 5
+    },
+    "ingame_bonus": false,
+    "order": 38
+  },
+  {
+    "key": "go_out_with_a_bang",
+    "name": "Go Out with a Bang",
+    "icon": "achievement_placeholder.png",
+    "description": "You got the kill. Bomby got the last laugh.",
+    "tips": "Kill Bomby with Bomb Power and die to his explosion.",
+    "secret": false,
+    "condition": {
+      "type": "kill_bomb_and_die_explosion",
+      "target": "bomby",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 39
+  },
+  {
+    "key": "mine_is_bigger",
+    "name": "Mine Is Bigger",
+    "icon": "achievement_placeholder.png",
+    "description": "Bigger explosion wins. Somehow, you survived.",
+    "tips": "Kill Bomby with Bomb Power without dying.",
+    "secret": false,
+    "condition": {
+      "type": "kill_bomb_survive",
+      "target": "bomby",
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 200,
+    "order": 40
+  },
+  {
+    "key": "fire_ball",
+    "name": "Fire Ball",
+    "icon": "achievement_placeholder.png",
+    "description": "Fire plus bomb. What could possibly go wrong?",
+    "tips": "Activate Bomb Power while Fire Power is active and kill a ghost with it.",
+    "secret": true,
+    "condition": {
+      "type": "kill_bomb_fire_active",
+      "target": "ghost",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 41
+  },
+  {
+    "key": "absolute_zero",
+    "name": "Absolute Zero",
+    "icon": "achievement_placeholder.png",
+    "description": "Bombs are apparently compatible with winter.",
+    "tips": "Activate Bomb Power while Ice Power is active and kill a ghost with it.",
+    "secret": true,
+    "condition": {
+      "type": "kill_bomb_ice_active",
+      "target": "ghost",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 42
+  },
+  {
+    "key": "kill_fire_with_fire",
+    "name": "Kill Fire with Fire",
+    "icon": "achievement_placeholder.png",
+    "description": "The best way to fight fire is apparently more fire.",
+    "tips": "Kill Infernous with Fire Power.",
+    "secret": false,
+    "condition": {
+      "type": "kill_fire",
+      "target": "hot",
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 50,
+    "order": 43
+  },
+  {
+    "key": "toasted",
+    "name": "Toasted",
+    "icon": "achievement_placeholder.png",
+    "description": "You have been thoroughly cooked.",
+    "tips": "Get burned by Infernous's fire.",
+    "secret": false,
+    "condition": {
+      "type": "die_fire",
+      "target": "hot",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 44
+  },
+  {
+    "key": "oh_no_hes_hot",
+    "name": "Oh No, He’s Hot",
+    "icon": "achievement_placeholder.png",
+    "description": "That was a very short-lived victory.",
+    "tips": "Get killed by Infernous's fire within 0.5 seconds of eating him.",
+    "secret": false,
+    "condition": {
+      "type": "die_fire_after_eat",
+      "target": "hot",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 45
+  },
+  {
+    "key": "medium_rare",
+    "name": "Medium Rare",
+    "icon": "achievement_placeholder.png",
+    "description": "Perfectly cooked. Not even slightly burned.",
+    "tips": "Eat Infernous without getting burned.",
+    "secret": false,
+    "condition": {
+      "type": "eat_without_burn",
+      "target": "hot",
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 100,
+    "order": 46
+  },
+  {
+    "key": "fire_extinguisher",
+    "name": "Fire Extinguisher",
+    "icon": "achievement_placeholder.png",
+    "description": "Ice: 1. Fire: 0.",
+    "tips": "Kill Infernous with Ice Power.",
+    "secret": false,
+    "condition": {
+      "type": "kill_ice",
+      "target": "hot",
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 50,
+    "order": 47
+  },
+  {
+    "key": "hotter_than_the_sun",
+    "name": "Hotter Than the Sun",
+    "icon": "achievement_placeholder.png",
+    "description": "Apparently the sun isn't the hottest thing in the maze.",
+    "tips": "Kill Infernous with Laser Power.",
+    "secret": false,
+    "condition": {
+      "type": "kill_laser",
+      "target": "hot",
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 50,
+    "order": 48
+  },
+  {
+    "key": "colder_than_ice",
+    "name": "Colder Than Ice",
+    "icon": "achievement_placeholder.png",
+    "description": "Icy has been introduced to an even worse day.",
+    "tips": "Freeze Icy.",
+    "secret": false,
+    "condition": {
+      "type": "freeze",
+      "target": "cold",
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 50,
+    "order": 49
+  },
+  {
+    "key": "slippery_slope",
+    "name": "Slippery Slope",
+    "icon": "achievement_placeholder.png",
+    "description": "Ice is slippery. Ghosts are deadly. You did the math.",
+    "tips": "Get killed by any ghost while sliding on ice.",
+    "secret": false,
+    "condition": {
+      "type": "die_while_sliding",
+      "target": "ghost",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 50
+  },
+  {
+    "key": "clearly_skill_issue",
+    "name": "Clearly, Skill Issue",
+    "icon": "achievement_placeholder.png",
+    "description": "The ice was not the problem. Probably.",
+    "tips": "Get killed by Icy while sliding on ice.",
+    "secret": false,
+    "condition": {
+      "type": "die_while_sliding",
+      "target": "cold",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 51
+  },
+  {
+    "key": "oh_god_i_cant_move",
+    "name": "Oh God, I Can’t Move",
+    "icon": "achievement_placeholder.png",
+    "description": "And now you understand Icy's plan.",
+    "tips": "Get frozen by Icy.",
+    "secret": false,
+    "condition": {
+      "type": "freeze_player",
+      "target": "cold",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 52
+  },
+  {
+    "key": "brainfreeze",
+    "name": "Brainfreeze",
+    "icon": "achievement_placeholder.png",
+    "description": "The name was not metaphorical.",
+    "tips": "Eat Icy and experience the speed debuff.",
+    "secret": false,
+    "condition": {
+      "type": "eat_speed_debuff",
+      "target": "cold",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 53
+  },
+  {
+    "key": "ice_breaker",
+    "name": "Ice Breaker",
+    "icon": "achievement_placeholder.png",
+    "description": "A hundred cubes later, you are still not done.",
+    "tips": "Break 100 ice cubes.",
+    "secret": false,
+    "condition": {
+      "type": "break",
+      "target": "ice_tile",
+      "count": 100
+    },
+    "ingame_bonus": false,
+    "order": 54
+  },
+  {
+    "key": "get_squished",
+    "name": "Get Squished",
+    "icon": "achievement_placeholder.png",
+    "description": "The cube was pushed. The ghost was there. Physics happened.",
+    "tips": "Push an ice cube into a ghost.",
+    "secret": false,
+    "condition": {
+      "type": "kill_with_ice_cube",
+      "target": "ghost",
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 50,
+    "order": 55
+  },
+  {
+    "key": "unstoppable_force",
+    "name": "Unstoppable Force",
+    "icon": "achievement_placeholder.png",
+    "description": "One cube. Three ghosts. Very poor decision-making.",
+    "tips": "Kill more than 2 ghosts with a single ice cube.",
+    "secret": false,
+    "condition": {
+      "type": "kill_with_ice_cube",
+      "target": "ghost",
+      "count": 3
+    },
+    "ingame_bonus": true,
+    "score": 200,
+    "order": 56
+  },
+  {
+    "key": "immovable_object",
+    "name": "Immovable Object",
+    "icon": "achievement_placeholder.png",
+    "description": "The cube won.",
+    "tips": "Get killed by an ice cube pushed into you.",
+    "secret": false,
+    "condition": {
+      "type": "die_ice_cube",
+      "target": "player",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 57
+  },
+  {
+    "key": "betrayal",
+    "name": "Betrayal",
+    "icon": "achievement_placeholder.png",
+    "description": "You expected help from your clone. Foolish.",
+    "tips": "Get killed by an ice cube pushed into you by a Pac-Clone.",
+    "secret": false,
+    "condition": {
+      "type": "die_ice_cube_pac_clone",
+      "target": "player",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 58
+  },
+  {
+    "key": "ice_hockey",
+    "name": "Ice Hockey",
+    "icon": "achievement_placeholder.png",
+    "description": "Puck, ghost, same difference.",
+    "tips": "Push an ice cube into Icy.",
+    "secret": false,
+    "condition": {
+      "type": "hit_with_ice_cube",
+      "target": "cold",
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 200,
+    "order": 59
+  },
+  {
+    "key": "decorative_ice_rink",
+    "name": "Decorative Ice Rink",
+    "icon": "achievement_placeholder.png",
+    "description": "It is technically a rink now.",
+    "tips": "Have 10 ice cubes on the board.",
+    "secret": false,
+    "condition": {
+      "type": "active_count",
+      "target": "ice_tile",
+      "count": 10
+    },
+    "ingame_bonus": false,
+    "order": 60
+  },
+  {
+    "key": "skating_rink",
+    "name": "Skating Rink",
+    "icon": "achievement_placeholder.png",
+    "description": "Half the maze is now a skating hazard.",
+    "tips": "Cover half of the maze in ice.",
+    "secret": false,
+    "condition": {
+      "type": "cover_percent",
+      "target": "ice_tile",
+      "count": 50
+    },
+    "ingame_bonus": true,
+    "score": 500,
+    "order": 61
+  },
+  {
+    "key": "achieve_icys_dream",
+    "name": "Achieve Icy’s Dream",
+    "icon": "achievement_placeholder.png",
+    "description": "The maze has become one giant freezer.",
+    "tips": "Convert the entire maze into ice. Walls don't count.",
+    "secret": false,
+    "condition": {
+      "type": "cover_percent_no_walls",
+      "target": "ice_tile",
+      "count": 100
+    },
+    "ingame_bonus": true,
+    "score": 1000,
+    "order": 62
+  },
+  {
+    "key": "winter_is_over",
+    "name": "Winter Is Over",
+    "icon": "achievement_placeholder.png",
+    "description": "Spring cleaning, Pac-Man edition.",
+    "tips": "Melt 100 ice tiles.",
+    "secret": false,
+    "condition": {
+      "type": "melt",
+      "target": "ice_tile",
+      "count": 100
+    },
+    "ingame_bonus": false,
+    "order": 63
+  },
+  {
+    "key": "oh_yeah_right",
+    "name": "Oh Yeah, Right",
+    "icon": "achievement_placeholder.png",
+    "description": "Fire and ice. Surely this won't cause problems.",
+    "tips": "Collect Fire Power while Ice Power is active, or vice versa.",
+    "secret": false,
+    "condition": {
+      "type": "collect_fire_ice",
+      "target": "power",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 64
+  },
+  {
+    "key": "this_is_bullshit",
+    "name": "This Is Bullshit",
+    "icon": "achievement_placeholder.png",
+    "description": "Fire and water. That makes even less sense.",
+    "tips": "Collect Fire Power while Water Power is active, or vice versa.",
+    "secret": false,
+    "condition": {
+      "type": "collect_fire_water",
+      "target": "power",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 65
+  },
+  {
+    "key": "i_can_skate",
+    "name": "I Can Skate!",
+    "icon": "achievement_placeholder.png",
+    "description": "Metal Pac-Man has discovered ice physics.",
+    "tips": "Move on ice while using Metal Power.",
+    "secret": false,
+    "condition": {
+      "type": "move_on_ice_metal",
+      "target": "ice_tile",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 66
+  },
+  {
+    "key": "who_designed_this_thing",
+    "name": "Who Designed This Thing?",
+    "icon": "achievement_placeholder.png",
+    "description": "Someone apparently forgot that metal and water don't mix.",
+    "tips": "Get killed by walking into water while using Metal Power.",
+    "secret": false,
+    "condition": {
+      "type": "die_water_metal",
+      "target": "wave",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 67
+  },
+  {
+    "key": "hi_how_are_you",
+    "name": "Hi, How Are You?",
+    "icon": "achievement_placeholder.png",
+    "description": "A perfectly normal greeting between two pieces of metal.",
+    "tips": "Slam into GH-05T while using Metal Power.",
+    "secret": false,
+    "condition": {
+      "type": "slam_metal",
+      "target": "robot",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 68
+  },
+  {
+    "key": "target_eliminated",
+    "name": "Target Eliminated",
+    "icon": "achievement_placeholder.png",
+    "description": "Target successfully eliminated. At what cost?",
+    "tips": "Get killed by GH-05T.",
+    "secret": false,
+    "condition": {
+      "type": "die",
+      "target": "robot",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 69
+  },
+  {
+    "key": "self_destruct_in_3",
+    "name": "Self-Destruct in 3...",
+    "icon": "achievement_placeholder.png",
+    "description": "Three seconds? Who needs three seconds?",
+    "tips": "Detonate GH-05T with Magnet Power.",
+    "secret": false,
+    "condition": {
+      "type": "detonate_magnet",
+      "target": "robot",
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 100,
+    "order": 70
+  },
+  {
+    "key": "i_have_the_high_ground",
+    "name": "I Have the High Ground",
+    "icon": "achievement_placeholder.png",
+    "description": "The high ground was apparently made of water.",
+    "tips": "Kill GH-05T by leading it into water tiles you created.",
+    "secret": false,
+    "condition": {
+      "type": "kill_water_created",
+      "target": "robot",
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 50,
+    "order": 71
+  },
+  {
+    "key": "its_not_working",
+    "name": "IT’S NOT WORKING",
+    "icon": "achievement_placeholder.png",
+    "description": "Sometimes the laser really does just not work.",
+    "tips": "Try to shoot a laser at GH-05T for 1 second.",
+    "secret": false,
+    "condition": {
+      "type": "laser_contact_time",
+      "target": "robot",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 72
+  },
+  {
+    "key": "maze_surfer",
+    "name": "Maze Surfer",
+    "icon": "achievement_placeholder.png",
+    "description": "No board required.",
+    "tips": "Walk across 100 water tiles.",
+    "secret": false,
+    "condition": {
+      "type": "walk_water_tiles",
+      "target": "wave",
+      "count": 100
+    },
+    "ingame_bonus": false,
+    "order": 73
+  },
+  {
+    "key": "flooded",
+    "name": "Flooded",
+    "icon": "achievement_placeholder.png",
+    "description": "Congratulations. You've ruined the floor.",
+    "tips": "Cover 50% of the maze with water.",
+    "secret": false,
+    "condition": {
+      "type": "cover_percent",
+      "target": "water_tile",
+      "count": 50
+    },
+    "ingame_bonus": true,
+    "score": 250,
+    "order": 74
+  },
+  {
+    "key": "waveys_aquarium",
+    "name": "Wavey’s Aquarium",
+    "icon": "achievement_placeholder.png",
+    "description": "At least the fish are happy.",
+    "tips": "Cover the entire maze with water tiles. Walls don't count.",
+    "secret": false,
+    "condition": {
+      "type": "cover_percent_no_walls",
+      "target": "water_tile",
+      "count": 100
+    },
+    "ingame_bonus": true,
+    "score": 500,
+    "order": 75
+  },
+  {
+    "key": "live_wire",
+    "name": "Live Wire",
+    "icon": "achievement_placeholder.png",
+    "description": "Water and electricity: a classic combination for bad decisions.",
+    "tips": "Conduct a water tile.",
+    "secret": false,
+    "condition": {
+      "type": "conduct",
+      "target": "water_tile",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 76
+  },
+  {
+    "key": "winter_is_coming",
+    "name": "Winter Is Coming",
+    "icon": "achievement_placeholder.png",
+    "description": "The water is having a very cold day.",
+    "tips": "Freeze 100 water tiles.",
+    "secret": false,
+    "condition": {
+      "type": "freeze",
+      "target": "water_tile",
+      "count": 100
+    },
+    "ingame_bonus": false,
+    "order": 77
+  },
+  {
+    "key": "too_cold_for_summer",
+    "name": "Too Cold for Summer",
+    "icon": "achievement_placeholder.png",
+    "description": "Wavey has seen the last of summer.",
+    "tips": "Freeze Wavey.",
+    "secret": false,
+    "condition": {
+      "type": "freeze",
+      "target": "wave",
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 50,
+    "order": 78
+  },
+  {
+    "key": "im_icy",
+    "name": "I’m Icy!",
+    "icon": "achievement_placeholder.png",
+    "description": "You are now your own weather system.",
+    "tips": "Have Water Power and Ice Power active at the same time.",
+    "secret": false,
+    "condition": {
+      "type": "water_ice_active",
+      "target": "power",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 79
+  },
+  {
+    "key": "antarctica",
+    "name": "Antarctica",
+    "icon": "achievement_placeholder.png",
+    "description": "Chain reaction, but make it freezing.",
+    "tips": "Get frozen by chain-freezing water.",
+    "secret": false,
+    "condition": {
+      "type": "die_chain_freeze",
+      "target": "water_tile",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 80
+  },
+  {
+    "key": "heart_attack",
+    "name": "Heart Attack",
+    "icon": "achievement_placeholder.png",
+    "description": "You touched the wrong water.",
+    "tips": "Get electrocuted by Flashy.",
+    "secret": false,
+    "condition": {
+      "type": "die_electric",
+      "target": "pika",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 81
+  },
+  {
+    "key": "dont_tread_on_me",
+    "name": "Don’t Tread on Me",
+    "icon": "achievement_placeholder.png",
+    "description": "That water was charged, you stupid mutt.",
+    "tips": "Walk into conducted water tiles.",
+    "secret": false,
+    "condition": {
+      "type": "die_conducted",
+      "target": "water_tile",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 82
+  },
+  {
+    "key": "i_choose_you",
+    "name": "I Choose You, P*kachu",
+    "icon": "achievement_placeholder.png",
+    "description": "Gotta zap them all.",
+    "tips": "Use Electric Power while Pac-Clones are active.",
+    "secret": false,
+    "condition": {
+      "type": "electric_pac_clones",
+      "target": "pika",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 83
+  },
+  {
+    "key": "fast_charger",
+    "name": "Fast Charger",
+    "icon": "achievement_placeholder.png",
+    "description": "Flashy got a shocking surprise.",
+    "tips": "Electrocute Flashy.",
+    "secret": false,
+    "condition": {
+      "type": "electrocute",
+      "target": "pika",
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 200,
+    "order": 84
+  },
+  {
+    "key": "walking_tempest",
+    "name": "Walking Tempest",
+    "icon": "achievement_placeholder.png",
+    "description": "All that electricity, absolutely no productivity.",
+    "tips": "Waste all of your Electric Power without killing a single ghost.",
+    "secret": false,
+    "condition": {
+      "type": "waste_without_kill",
+      "target": "electricity",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 85
+  },
+  {
+    "key": "rocks_are_uninterested_in_weather",
+    "name": "Rocks Are Uninterested in Weather",
+    "icon": "achievement_placeholder.png",
+    "description": "Boulder remains unimpressed by your fancy weather powers.",
+    "tips": "Try to electrocute, freeze, or burn Boulder.",
+    "secret": false,
+    "condition": {
+      "type": "immune_weather",
+      "target": "golem",
+      "count": 3
+    },
+    "ingame_bonus": false,
+    "order": 86
+  },
+  {
+    "key": "rock_vs_rock_is_a_tie",
+    "name": "Rock vs. Rock Is... a Tie?",
+    "icon": "achievement_placeholder.png",
+    "description": "Turns out rock beats rock.",
+    "tips": "Kill Boulder with Stone Power.",
+    "secret": false,
+    "condition": {
+      "type": "kill_stone",
+      "target": "golem",
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 50,
+    "order": 87
+  },
+  {
+    "key": "bomb_beats_rocks",
+    "name": "Bomb Beats Rocks",
+    "icon": "achievement_placeholder.png",
+    "description": "Explosions: surprisingly effective against rocks.",
+    "tips": "Kill Boulder with Bomb Power.",
+    "secret": false,
+    "condition": {
+      "type": "kill_bomb",
+      "target": "golem",
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 50,
+    "order": 88
+  },
+  {
+    "key": "what_have_you_done",
+    "name": "What Have You Done??",
+    "icon": "achievement_placeholder.png",
+    "description": "The walls were there for a reason.",
+    "tips": "Let Boulder eat half of the walls in the maze.",
+    "secret": false,
+    "condition": {
+      "type": "walls_eaten_percent",
+      "target": "golem",
+      "count": 50
+    },
+    "ingame_bonus": true,
+    "score": 500,
+    "order": 89
+  },
+  {
+    "key": "its_just_a_room_now",
+    "name": "It’s Just a “Room” Now",
+    "icon": "achievement_placeholder.png",
+    "description": "Technically, it is still a maze. Technically.",
+    "tips": "Let Boulder eat all the walls in the maze.",
+    "secret": false,
+    "condition": {
+      "type": "walls_eaten_percent",
+      "target": "golem",
+      "count": 100
+    },
+    "ingame_bonus": true,
+    "score": 1000,
+    "order": 90
+  },
+  {
+    "key": "my_legs",
+    "name": "My Legs!!!",
+    "icon": "achievement_placeholder.png",
+    "description": "Boulder has discovered the ancient art of foot crushing.",
+    "tips": "Get crushed by Boulder.",
+    "secret": false,
+    "condition": {
+      "type": "die_crushed",
+      "target": "golem",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 91
+  },
+  {
+    "key": "bowling",
+    "name": "Bowling",
+    "icon": "achievement_placeholder.png",
+    "description": "Strike!",
+    "tips": "Push an ice cube into Boulder.",
+    "secret": false,
+    "condition": {
+      "type": "hit_ice_cube",
+      "target": "golem",
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 500,
+    "order": 92
+  },
+  {
+    "key": "hard_boots",
+    "name": "Hard Boots",
+    "icon": "achievement_placeholder.png",
+    "description": "Stone Power: because normal shoes weren't enough.",
+    "tips": "Dash over spike tiles with Stone Power.",
+    "secret": false,
+    "condition": {
+      "type": "dash_over_spikes_stone",
+      "target": "golem",
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 200,
+    "order": 93
+  },
+  {
+    "key": "rock_beats_spike",
+    "name": "Rock Beats Spike",
+    "icon": "achievement_placeholder.png",
+    "description": "Rock beats spike. Nature is healing.",
+    "tips": "Kill Cacty with Stone Power.",
+    "secret": false,
+    "condition": {
+      "type": "kill_stone",
+      "target": "cactus",
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 50,
+    "order": 94
+  },
+  {
+    "key": "2_ghosts_1_stone",
+    "name": "2 Ghosts, 1 Stone",
+    "icon": "achievement_placeholder.png",
+    "description": "Two problems. One rock.",
+    "tips": "Kill 2 ghosts with a single Stone Power attack.",
+    "secret": true,
+    "condition": {
+      "type": "kill_two_stone",
+      "target": "ghost",
+      "count": 2
+    },
+    "ingame_bonus": true,
+    "score": 200,
+    "order": 95
+  },
+  {
+    "key": "what_was_that",
+    "name": "What Was That?",
+    "icon": "achievement_placeholder.png",
+    "description": "You saw nothing. Probably.",
+    "tips": "Get killed inside Nycto's smoke.",
+    "secret": false,
+    "condition": {
+      "type": "die_smoke",
+      "target": "horror",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 96
+  },
+  {
+    "key": "this_thing_is_flammable",
+    "name": "This Thing Is Flammable",
+    "icon": "achievement_placeholder.png",
+    "description": "Apparently, smoke has a fire setting.",
+    "tips": "Get killed by the fire produced by burning Nycto's smoke.",
+    "secret": false,
+    "condition": {
+      "type": "die_burning_smoke",
+      "target": "horror",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 97
+  },
+  {
+    "key": "found_you",
+    "name": "Found You",
+    "icon": "achievement_placeholder.png",
+    "description": "Five seconds in the smoke and you still found him.",
+    "tips": "Eat Nycto after spending 5 seconds in his smoke.",
+    "secret": false,
+    "condition": {
+      "type": "eat_after_smoke",
+      "target": "horror",
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 100,
+    "order": 98
+  },
+  {
+    "key": "they_all_see_you",
+    "name": "They All See You",
+    "icon": "achievement_placeholder.png",
+    "description": "Visibility has left the building.",
+    "tips": "Cover half of the maze in smoke.",
+    "secret": false,
+    "condition": {
+      "type": "cover_percent",
+      "target": "smoke",
+      "count": 50
+    },
+    "ingame_bonus": true,
+    "score": 1000,
+    "order": 99
+  },
+  {
+    "key": "i_cant_see_shit",
+    "name": "I Can’t See Shit",
+    "icon": "achievement_placeholder.png",
+    "description": "Neither can you.",
+    "tips": "Cover the entire maze in smoke.",
+    "secret": false,
+    "condition": {
+      "type": "cover_percent",
+      "target": "smoke",
+      "count": 100
+    },
+    "ingame_bonus": true,
+    "score": 2000,
+    "order": 100
+  },
+  {
+    "key": "extra_sneaky",
+    "name": "Extra Sneaky",
+    "icon": "achievement_placeholder.png",
+    "description": "Stealth and smoke. Now that's commitment.",
+    "tips": "Run into Nycto's smoke while using Stealth Power.",
+    "secret": false,
+    "condition": {
+      "type": "enter_smoke_stealth",
+      "target": "horror",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 101
+  },
+  {
+    "key": "did_i_step_on_someone",
+    "name": "Did I Step on Someone?",
+    "icon": "achievement_placeholder.png",
+    "description": "Something definitely made a noise.",
+    "tips": "Kill a ghost in Nycto's smoke.",
+    "secret": false,
+    "condition": {
+      "type": "kill_in_smoke",
+      "target": "ghost",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 102
+  },
+  {
+    "key": "hell_never_see_this_coming",
+    "name": "He’ll Never See This Coming",
+    "icon": "achievement_placeholder.png",
+    "description": "He literally could not see it coming.",
+    "tips": "Kill Nycto in his smoke while using Stealth Power.",
+    "secret": false,
+    "condition": {
+      "type": "kill_in_smoke_stealth",
+      "target": "horror",
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 200,
+    "order": 103
+  },
+  {
+    "key": "assassinated",
+    "name": "Assassinated",
+    "icon": "achievement_placeholder.png",
+    "description": "Quiet, efficient, and extremely rude.",
+    "tips": "Kill a ghost with Stealth Power.",
+    "secret": false,
+    "condition": {
+      "type": "kill_stealth",
+      "target": "ghost",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 104
+  },
+  {
+    "key": "dont_do_drugs_kid",
+    "name": "Don’t Do Drugs, Kid",
+    "icon": "achievement_placeholder.png",
+    "description": "Doctor's orders.",
+    "tips": "Pick up Dr. Mortis's pill.",
+    "secret": false,
+    "condition": {
+      "type": "pickup_pill",
+      "target": "doctor",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 105
+  },
+  {
+    "key": "i_am_bullet_proof",
+    "name": "I AM BULLET PROOF!!!",
+    "icon": "achievement_placeholder.png",
+    "description": "The serum has given you entirely too much confidence.",
+    "tips": "Pick up Serum Power.",
+    "secret": false,
+    "condition": {
+      "type": "pickup_serum",
+      "target": "doctor",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 106
+  },
+  {
+    "key": "fda_approved",
+    "name": "FDA Approved*",
+    "icon": "achievement_placeholder.png",
+    "description": "The asterisk is doing a lot of work here.",
+    "tips": "Let Mortis buff another Mortis.",
+    "secret": false,
+    "condition": {
+      "type": "buff_mortis",
+      "target": "doctor",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 107
+  },
+  {
+    "key": "doc_are_you_sure_about_this",
+    "name": "Doc, Are You Sure About This?",
+    "icon": "achievement_placeholder.png",
+    "description": "Mortis insists this is perfectly safe.",
+    "tips": "Let Mortis buff 10 ghosts in the maze.",
+    "secret": false,
+    "condition": {
+      "type": "buff_ghosts",
+      "target": "doctor",
+      "count": 10
+    },
+    "ingame_bonus": true,
+    "score": 500,
+    "order": 108
+  },
+  {
+    "key": "what_in_the_tarnation",
+    "name": "What in the Tarnation",
+    "icon": "achievement_placeholder.png",
+    "description": "The buffed ghost was apparently enough.",
+    "tips": "Get killed by a buffed special ghost.",
+    "secret": false,
+    "condition": {
+      "type": "die_buffed_special",
+      "target": "ghost",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 109
+  },
+  {
+    "key": "i_guess_that_does_something",
+    "name": "I Guess That Does Something",
+    "icon": "achievement_placeholder.png",
+    "description": "Speed is technically a buff.",
+    "tips": "Get killed by the buffed versions of the 4 original ghosts.",
+    "secret": false,
+    "condition": {
+      "type": "die_buffed_originals",
+      "target": "ghost",
+      "count": 4
+    },
+    "ingame_bonus": false,
+    "order": 110
+  },
+  {
+    "key": "refreshing_glass_of_water",
+    "name": "Refreshing Glass of Water",
+    "icon": "achievement_placeholder.png",
+    "description": "Hydration saves the day.",
+    "tips": "Cure the Intoxicated debuff by walking into water tiles.",
+    "secret": true,
+    "condition": {
+      "type": "cure_intoxicated",
+      "target": "water_tile",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 111
+  },
+  {
+    "key": "were_so_back",
+    "name": "We’re So Back",
+    "icon": "achievement_placeholder.png",
+    "description": "The poison wore off. We are so back.",
+    "tips": "Wait out the Intoxicated debuff.",
+    "secret": false,
+    "condition": {
+      "type": "wait_out_intoxicated",
+      "target": "player",
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 50,
+    "order": 112
+  },
+  {
+    "key": "your_poison_affects_me",
+    "name": "Your Poison Affects Me? Who Decided That?",
+    "icon": "achievement_placeholder.png",
+    "description": "Apparently, the poison respects level transitions more than medicine.",
+    "tips": "Cure the Intoxicated debuff by proceeding to the next level.",
+    "secret": true,
+    "condition": {
+      "type": "cure_intoxicated_next_level",
+      "target": "level",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 113
+  },
+  {
+    "key": "youre_100_years_too_early",
+    "name": "You're 100 Years Too Early to Fight Me",
+    "icon": "achievement_placeholder.png",
+    "description": "You brought a buff to a buff fight.",
+    "tips": "Kill the buffed versions of the 4 original ghosts while having a buff.",
+    "secret": false,
+    "condition": {
+      "type": "kill_buffed_while_buffed",
+      "target": "ghost",
+      "count": 4
+    },
+    "ingame_bonus": true,
+    "score": 50,
+    "order": 114
+  },
+  {
+    "key": "finally_a_worthy_opponent",
+    "name": "Finally, a Worthy Opponent",
+    "icon": "achievement_placeholder.png",
+    "description": "Our fight will be legendary",
+    "tips": "Kill a buffed special ghost while having a buff.",
+    "secret": false,
+    "condition": {
+      "type": "kill_buffed_special_while_buffed",
+      "target": "ghost",
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 200,
+    "order": 115
+  },
+  {
+    "key": "gotta_go_fast",
+    "name": "Gotta Go Fast",
+    "icon": "achievement_placeholder.png",
+    "description": "Complete a level with ghosts at least 8 units faster than Pac-Man.",
+    "tips": "Set the ghosts' speed to at least 8 units above Pac-Man's speed, then clear a level.",
+    "secret": true,
+    "condition": {
+      "type": "half_clear_with_setting",
+      "target": {
+        "ghost_speed_difference": 8
+      },
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 116
+  },
+  {
+    "key": "cant_catch_me",
+    "name": "Can't Catch Me",
+    "icon": "achievement_placeholder.png",
+    "description": "Full-clear a board with ghosts at least 8 units faster than Pac-Man.",
+    "tips": "Set the ghosts' speed to at least 8 units above Pac-Man's speed, then full-clear the board.",
+    "secret": true,
+    "condition": {
+      "type": "full_clear_with_settings",
+      "target": {
+        "ghost_speed_difference": 8
+      },
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 500,
+    "order": 117
+  },
+  {
+    "key": "and_they_wont_stop_coming",
+    "name": "And They Won't Stop Coming",
+    "icon": "achievement_placeholder.png",
+    "description": "Complete a level with a 5-second-or-less spawn timer and 4 ghosts per wave.",
+    "tips": "Set the spawn timer to 5 seconds or less and spawn 4 ghosts per wave, then clear a level.",
+    "secret": true,
+    "condition": {
+      "type": "half_clear_with_setting",
+      "target": {
+        "spawn_timer_max": 5,
+        "ghosts_per_wave": 4
+      },
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 118
+  },
+  {
+    "key": "sharpest_tools_in_the_shed",
+    "name": "Sharpest Tools in the Shed",
+    "icon": "achievement_placeholder.png",
+    "description": "Full-clear a board with a 5-second-or-less spawn timer and 4 ghosts per wave.",
+    "tips": "Set the spawn timer to 5 seconds or less and spawn 4 ghosts per wave, then full-clear the board.",
+    "secret": true,
+    "condition": {
+      "type": "full_clear_with_settings",
+      "target": {
+        "spawn_timer_max": 5,
+        "ghosts_per_wave": 4
+      },
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 500,
+    "order": 119
+  },
+  {
+    "key": "what_even_is_the_point",
+    "name": "What Even Is the Point",
+    "icon": "achievement_placeholder.png",
+    "description": "Complete a level with both Power time and Pellet time set to 1 second.",
+    "tips": "Set both Power time and Pellet time to 1 second, then clear a level.",
+    "secret": true,
+    "condition": {
+      "type": "half_clear_with_setting",
+      "target": {
+        "power_time": 1,
+        "pellet_time": 1
+      },
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 120
+  },
+  {
+    "key": "who_needs_power_anyways",
+    "name": "Who Needs Power Anyways",
+    "icon": "achievement_placeholder.png",
+    "description": "Full-clear a board with both Power time and Pellet time set to 1 second.",
+    "tips": "Set both Power time and Pellet time to 1 second, then full-clear the board.",
+    "secret": true,
+    "condition": {
+      "type": "full_clear_with_settings",
+      "target": {
+        "power_time": 1,
+        "pellet_time": 1
+      },
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 200,
+    "order": 121
+  },
+  {
+    "key": "the_true_maze",
+    "name": "The True Maze",
+    "icon": "achievement_placeholder.png",
+    "description": "Clear at least half of a 51×51 maze.",
+    "tips": "Play a 51×51 maze and clear at least half of it.",
+    "secret": true,
+    "condition": {
+      "type": "half_clear_with_settings",
+      "target": {
+        "maze_width": 51,
+        "maze_height": 51
+      },
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 122
+  },
+  {
+    "key": "true_maze_completionist",
+    "name": "True Maze Completionist",
+    "icon": "achievement_placeholder.png",
+    "description": "Full-clear a 51×51 maze.",
+    "tips": "Play a 51×51 maze and full-clear it.",
+    "secret": true,
+    "condition": {
+      "type": "full_clear_with_settings",
+      "target": {
+        "maze_width": 51,
+        "maze_height": 51
+      },
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 1000,
+    "order": 123
+  },
+  {
+    "key": "are_we_there_yet",
+    "name": "Are We There Yet?",
+    "icon": "achievement_placeholder.png",
+    "description": "Spend at least 10 minutes in a 51×51 maze without clearing half of it.",
+    "tips": "Stay in a 51×51 maze for at least 10 minutes without clearing half of it.",
+    "secret": true,
+    "condition": {
+      "type": "survive_with_settings",
+      "target": {
+        "maze_width": 51,
+        "maze_height": 51,
+        "time": 600,
+        "maximum_clear_percentage": 50
+      },
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 124
+  },
+  {
+    "key": "this_place_is_crowded",
+    "name": "This Place Is Crowded",
+    "icon": "achievement_placeholder.png",
+    "description": "Complete the smallest valid maze.",
+    "tips": "Set the maze to its smallest valid size, then clear a level.",
+    "secret": true,
+    "condition": {
+      "type": "half_clear_with_setting",
+      "target": {
+        "maze_size": "minimum_valid"
+      },
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 125
+  },
+  {
+    "key": "claustrophobia",
+    "name": "Claustrophobia",
+    "icon": "achievement_placeholder.png",
+    "description": "Full-clear the smallest valid maze.",
+    "tips": "Set the maze to its smallest valid size, then full-clear it.",
+    "secret": true,
+    "condition": {
+      "type": "full_clear_with_settings",
+      "target": {
+        "maze_size": "minimum_valid"
+      },
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 200,
+    "order": 126
+  },
+  {
+    "key": "missing_the_point",
+    "name": "Missing the Point",
+    "icon": "achievement_placeholder.png",
+    "description": "Complete a level without collecting any Power.",
+    "tips": "Don't collect any Power, then clear a level.",
+    "secret": true,
+    "condition": {
+      "type": "clear_level_without_action",
+      "target": "collect_power",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 127
+  },
+  {
+    "key": "wait_i_was_supposed_to_collect_those",
+    "name": "Wait, I Was Supposed to Collect Those?",
+    "icon": "achievement_placeholder.png",
+    "description": "Full-clear a board without collecting any Power.",
+    "tips": "Don't collect any Power, then full-clear the board.",
+    "secret": true,
+    "condition": {
+      "type": "full_clear_without_action",
+      "target": "collect_power",
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 1000,
+    "order": 128
+  },
+  {
+    "key": "hell_customization",
+    "name": "Hell Customization",
+    "icon": "achievement_placeholder.png",
+    "description": "Complete a level with an Achievement Point total above 50.",
+    "tips": "Set your Achievement Points above 50, then clear a level.",
+    "secret": true,
+    "condition": {
+      "type": "half_clear_with_setting",
+      "target": "ap>50",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 129
+  },
+  {
+    "key": "overqualified",
+    "name": "Overqualified",
+    "icon": "achievement_placeholder.png",
+    "description": "Full-clear a board with an Achievement Point total above 50.",
+    "tips": "Set your Achievement Points above 50, then full-clear the board.",
+    "secret": true,
+    "condition": {
+      "type": "full_clear_with_settings",
+      "target": "ap>50",
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 2000,
+    "order": 130
+  },
+  {
+    "key": "cosplaying_god",
+    "name": "Cosplaying God",
+    "icon": "achievement_placeholder.png",
+    "description": "Complete a level with an Achievement Point total below -100.",
+    "tips": "Set your Achievement Points below -100, then clear a level.",
+    "secret": true,
+    "ap_override": true,
+    "condition": {
+      "type": "half_clear_with_setting",
+      "target": "ap<-100",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 131
+  },
+  {
+    "key": "wheres_the_fun_in_that",
+    "name": "Where's the Fun in That?",
+    "icon": "achievement_placeholder.png",
+    "description": "Full-clear a board with an Achievement Point total below -100.",
+    "tips": "Set your Achievement Points below -100, then full-clear the board.",
+    "secret": true,
+    "ap_override": true,
+    "condition": {
+      "type": "full_clear_with_settings",
+      "target": "ap<-100",
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 100,
+    "order": 132
+  },
+  {
+    "key": "good_game",
+    "name": "Good Game!",
+    "icon": "achievement_placeholder.png",
+    "description": "Complete a level with your AP set to 1.",
+    "tips": "Set your AP to 1, then clear at least half of the board.",
+    "secret": true,
+    "condition": {
+      "type": "half_clear_with_settings",
+      "target": {
+        "ap": 1
+      },
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 133
+  },
+  {
+    "key": "absolutely_balanced",
+    "name": "Absolutely Balanced!",
+    "icon": "achievement_placeholder.png",
+    "description": "Full-clear a board with your AP set to 1.",
+    "tips": "Set your AP to 1, then full-clear the board.",
+    "secret": true,
+    "condition": {
+      "type": "full_clear_with_settings",
+      "target": {
+        "ap": 1
+      },
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 250,
+    "order": 134
+  },
+  {
+    "key": "quality_over_quantity",
+    "name": "Quality Over Quantity",
+    "icon": "achievement_placeholder.png",
+    "description": "Complete a level with one ghost wave and a 100% special ghost spawn rate.",
+    "tips": "Set the spawn wave to 1 and the special ghost spawn rate to 100%, then clear a level.",
+    "secret": true,
+    "condition": {
+      "type": "half_clear_with_setting",
+      "target": {
+        "spawn_waves": 1,
+        "special_ghost_chance": 100
+      },
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 135
+  },
+  {
+    "key": "oops_all_specials",
+    "name": "Oops, All Specials!",
+    "icon": "achievement_placeholder.png",
+    "description": "Full-clear a board with one ghost wave and a 100% special ghost spawn rate.",
+    "tips": "Set the spawn wave to 1 and the special ghost spawn rate to 100%, then full-clear the board.",
+    "secret": true,
+    "condition": {
+      "type": "full_clear_with_settings",
+      "target": {
+        "spawn_waves": 1,
+        "special_ghost_chance": 100
+      },
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 200,
+    "order": 136
+  },
+  {
+    "key": "quantity_over_quality",
+    "name": "Quantity Over Quality",
+    "icon": "achievement_placeholder.png",
+    "description": "Complete a level with 4 ghost waves, a 1-second spawn timer, no special ghosts, and no Power.",
+    "tips": "Set the spawn wave to 4, the spawn timer to 1 second, and the special ghost chance to 0%, then disable all Power. Clear at least half of the board.",
+    "secret": true,
+    "condition": {
+      "type": "half_clear_with_settings",
+      "target": {
+        "spawn_waves": 4,
+        "spawn_timer": 1,
+        "special_ghost_chance": 0,
+        "power_disabled": true
+      },
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 137
+  },
+  {
+    "key": "not_pacman_championship_edition",
+    "name": "NOT Pac-Man Championship Edition",
+    "icon": "achievement_placeholder.png",
+    "description": "Full-clear a board with 4 ghost waves, a 1-second spawn timer, no special ghosts, and no Power.",
+    "tips": "Set the spawn wave to 4, the spawn timer to 1 second, and the special ghost chance to 0%, then disable all Power. Full-clear the board.",
+    "secret": true,
+    "condition": {
+      "type": "full_clear_with_settings",
+      "target": {
+        "spawn_waves": 4,
+        "spawn_timer": 1,
+        "special_ghost_chance": 0,
+        "power_disabled": true
+      },
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 150,
+    "order": 138
+  },
+  {
+    "key": "that_was_crazy",
+    "name": "That was crazy",
+    "icon": "achievement_placeholder.png",
+    "description": "Half-clear a board with an Achievement Point total above 100.",
+    "tips": "Set your Achievement Points above 100, then half-clear the board.",
+    "secret": true,
+    "condition": {
+      "type": "half_clear_with_settings",
+      "target": "ap>100",
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 2500,
+    "order": 139
+  },
+  {
+    "key": "now_that_is_crazy",
+    "name": "Now THAT, is crazy",
+    "icon": "achievement_placeholder.png",
+    "description": "Full-clear a board with an Achievement Point total above 100.",
+    "tips": "Set your Achievement Points above 100, then full-clear the board.",
+    "secret": true,
+    "condition": {
+      "type": "full_clear_with_settings",
+      "target": "ap>100",
+      "count": 1
+    },
+    "ingame_bonus": true,
+    "score": 5000,
+    "order": 140
+  },
+  {
+    "key": "you_coward",
+    "name": "You Coward!",
+    "icon": "achievement_placeholder.png",
+    "description": "Half-clear a board with an Achievement Point total below -200.",
+    "tips": "Set your Achievement Points below -200, then half-clear the board.",
+    "secret": true,
+    "ap_override": true,
+    "condition": {
+      "type": "half_clear_with_settings",
+      "target": "ap<-200",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 141
+  }
+  ,
+  {
+    "key": "spoon_fed_victory",
+    "name": "Spoon-fed Victory",
+    "icon": "achievement_placeholder.png",
+    "description": "Full-clear a board with an Achievement Point total below -200.",
+    "tips": "Set your Achievement Points below -200, then full-clear the board.",
+    "secret": true,
+    "ap_override": true,
+    "condition": {
+      "type": "full_clear_with_settings",
+      "target": "ap<-200",
+      "count": 1
+    },
+    "ingame_bonus": false,
+    "order": 142
+  }
+]
+

@@ -36,13 +36,22 @@ Ghosts spawn over time and can enter powered forms naturally or by collecting po
 
 This project has no external dependencies beyond a JDK. Assets are loaded from `res/...`, so run the game from the project root.
 
-The runtime target is Java 21. A newer JDK may be used to compile, but keep `--release 21` so the generated classes remain compatible with Java 21.
+The runtime target is Java 21. A newer JDK may be used to compile, but the launcher keeps `--release 21` so the generated classes remain compatible with Java 21.
 
-### Command Line
+See [REQUIREMENT.MD](REQUIREMENT.MD) for installation instructions. After installing a JDK 21 or newer, open Command Prompt in the project folder and run:
 
-```powershell
-javac --release 21 -d bin (Get-ChildItem -Recurse src -Filter *.java).FullName
-java -cp bin game.GameMain
+```cmd
+run.cmd --run
+```
+
+The launcher compiles the source files into the ignored `bin` folder and starts `game.GameMain`. It does not require an `.exe`. For a shorter command, `run --run` also works in a normal Command Prompt opened in the project folder.
+
+Useful commands:
+
+```cmd
+run.cmd --build
+run.cmd --clean
+run.cmd --help
 ```
 
 ### Eclipse

@@ -20,6 +20,11 @@ public final class GameRenderer {
         try {
             game.setViewportSize(width, height);
 
+            if (game.getState() == GameState.SAVE_SLOTS) {
+                game.drawSaveSlots(frameGraphics);
+                return;
+            }
+
             if (game.getState() == GameState.MENU) {
                 game.drawMenu(frameGraphics);
                 return;

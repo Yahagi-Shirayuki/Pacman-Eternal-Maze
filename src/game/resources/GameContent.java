@@ -12,6 +12,7 @@ public final class GameContent {
 
     public static final String GHOST_DIRECTORY = "res/sprite/ghost/";
     public static final String PLAYER_DIRECTORY = "res/sprite/player/";
+    public static final String ACHIEVEMENT_DIRECTORY = "res/sprite/achievement/";
 
     private GameContent() {
     }
@@ -86,14 +87,46 @@ public final class GameContent {
                 priority);
     }
 
+    public static List<AchievementDefinition> loadAchievementDefinitions() throws IOException {
+        Object root = readValue(ACHIEVEMENT_DIRECTORY + "achievements.json");
+        List<AchievementDefinition> definitions = new ArrayList<>();
+
+        for (Object value : JsonParser.array(root)) {
+            Map<String, Object> achievement = JsonParser.object(value);
+            Map<String, Object> condition = JsonParser.object(achievement.get("condition"));
+            definitions.add(new AchievementDefinition(
+                    requiredString(achievement, "key"),
+                    requiredString(achievement, "name"),
+                    requiredString(achievement, "icon"),
+                    JsonParser.string(achievement, "description", ""),
+                    JsonParser.string(achievement, "tips", ""),
+                    JsonParser.bool(achievement, "secret", false),
+                    new AchievementCondition(
+                            requiredString(condition, "type"),
+                            condition.getOrDefault("target", ""),
+                            Math.max(1, integerOrDefault(condition, "count", 1))),
+                    JsonParser.bool(achievement, "ingame_bonus", false),
+                    Math.max(0, integerOrDefault(achievement, "score", 0)),
+                    integerOrDefault(achievement, "order", Integer.MAX_VALUE),
+                    JsonParser.bool(achievement, "ap_override", false)));
+        }
+
+        definitions.sort((first, second) -> Integer.compare(first.order(), second.order()));
+        return List.copyOf(definitions);
+    }
+
     private static Map<String, Object> readObject(String path) throws IOException {
+        return JsonParser.object(readValue(path));
+    }
+
+    private static Object readValue(String path) throws IOException {
         try (InputStream stream = ResourceLoader.open(path)) {
             if (stream == null) {
                 throw new IOException("Missing content file: " + path);
             }
 
             String source = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
-            return JsonParser.object(JsonParser.parse(source));
+            return JsonParser.parse(source);
         }
     }
 
@@ -108,5 +141,10 @@ public final class GameContent {
 
     private static Double numberAsDouble(Object value) {
         return value instanceof Number number ? number.doubleValue() : null;
+    }
+
+    private static int integerOrDefault(Map<String, Object> object, String key, int fallback) {
+        Integer value = JsonParser.integer(object, key);
+        return value == null ? fallback : value;
     }
 }

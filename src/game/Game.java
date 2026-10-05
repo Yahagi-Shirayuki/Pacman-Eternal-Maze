@@ -2,9 +2,12 @@ package game;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Comparator;
+import java.util.PriorityQueue;
 import java.util.Random;
 import java.io.File;
 import java.io.IOException;
@@ -28,6 +31,7 @@ import javax.imageio.ImageIO;
 
 import game.resources.ResourceLoader;
 import game.resources.AlmanacEntry;
+import game.resources.AchievementDefinition;
 import game.resources.GameContent;
 import game.resources.GhostDefinition;
 import game.resources.PacmanDefinition;
@@ -126,6 +130,9 @@ public final class Game implements Runnable {
     int[][] wallTextureIndexes;
     int[][] debrisIndexes;
     Random random = new Random();
+    private static final int[] CARDINAL_X = { 1, -1, 0, 0 };
+    private static final int[] CARDINAL_Y = { 0, 0, 1, -1 };
+    private final Map<BufferedImage, Map<Integer, BufferedImage>> pixelOutlineCache = new IdentityHashMap<>();
 
     int tunnelY = maxScreenRow / 2;
     // Pacman speed
@@ -190,6 +197,7 @@ public final class Game implements Runnable {
     final Map<Integer, GhostDefinition> ghostDefinitionsByType = new HashMap<>();
     final Map<String, Integer> ghostTypesByKey = new HashMap<>();
     final ArrayList<AlmanacEntry> almanacEntries = new ArrayList<>();
+    final ArrayList<AchievementDefinition> achievementDefinitions = new ArrayList<>();
     PacmanDefinition pacmanDefinition = new PacmanDefinition(
             "pacman", "Pacman", Map.of(), List.of());
     // Almanac order after the Pacman entry; this connects each ghost type to its title/option alias.
@@ -307,12 +315,24 @@ public final class Game implements Runnable {
     final int iceTileVariantFileCount = 8;
     final int waterDecalVariantFileCount = 8;
     int specialGhostChancePercent = 10;
-    int specialGhostPowerDropChancePercent = 20;
+    int specialGhostPowerDropChancePercent = 10;
     final int minGhostSpawnInterval = framesPerSecond * 2;
     final double speedIncreasePerLevel = 0.2;
     final double maxPlayerSpeed = 10.0;
     final double maxGhostSpeed = 9.0;
     final int maxSmallDotScore = 10;
+    final int baseAchievementPoints = 5;
+    final double defaultAchievementGhostSpeed = 1.5;
+    final double defaultAchievementPlayerSpeed = 3.5;
+    final int defaultAchievementSpawnSeconds = 10;
+    final int defaultAchievementGhostsPerWave = 1;
+    final int defaultAchievementPelletSeconds = 5;
+    final int defaultAchievementPowerSeconds = 5;
+    final int defaultAchievementSpecialChancePercent = 10;
+    final int defaultAchievementPowerDropChancePercent = 10;
+    final int defaultAchievementMazeWidth = 25;
+    final int defaultAchievementMazeHeight = 31;
+    final int achievementPointsPerDisabledSpecialGhost = 10;
 
     BufferedImage[] pacSprites = new BufferedImage[5];
     BufferedImage[] pacBombSprites = new BufferedImage[2];
@@ -355,6 +375,9 @@ public final class Game implements Runnable {
     BufferedImage[] outSprites = new BufferedImage[4];
     BufferedImage[] fruitSprites = new BufferedImage[4];
     BufferedImage[] powerUpSprites = new BufferedImage[powerUpTypeCount];
+    BufferedImage[] achievementSprites = new BufferedImage[0];
+    BufferedImage[] achievementGrayscaleSprites = new BufferedImage[0];
+    BufferedImage achievementSecretSprite;
     BufferedImage pillSprite;
     BufferedImage particlePlusSprite;
     BufferedImage particleMinusSprite;
@@ -396,6 +419,7 @@ public final class Game implements Runnable {
     BufferedImage titleScreen;
 
     static final GameState STATE_MENU = GameState.MENU;
+    static final GameState STATE_SAVE_SLOTS = GameState.SAVE_SLOTS;
     static final GameState STATE_OPTIONS = GameState.OPTIONS;
     static final GameState STATE_GAME = GameState.PLAYING;
     static final GameState STATE_HALL_OF_FAME = GameState.HALL_OF_FAME;
@@ -407,8 +431,17 @@ public final class Game implements Runnable {
     static final int HUD_PELLET_NUMBER = 0;
     static final int HUD_PELLET_PERCENT = 1;
     static final int HUD_PELLET_DISABLED = 2;
-    GameState screenState = STATE_MENU;
+    GameState screenState = STATE_SAVE_SLOTS;
     int menuChoice = 0;
+    final int saveSlotCount = 3;
+    final File saveDirectory = new File("saves");
+    int saveSlotChoice = 0;
+    int selectedSaveSlot = -1;
+    PlayerStats playerStats = new PlayerStats();
+    PlayerStats runStats;
+    boolean runDeathRecorded = false;
+    int runAchievementPoints = baseAchievementPoints;
+    boolean runAchievementsEnabled = true;
     int optionCategory = -1;
     int optionSubCategory = -1;
     int optionChoice = 0;
@@ -416,6 +449,12 @@ public final class Game implements Runnable {
     int optionScrollOffset = 0;
     boolean resetOptionsConfirmVisible = false;
     int resetOptionsConfirmChoice = 0;
+    static final int ALMANAC_GHOST_TAB = 0;
+    static final int ALMANAC_POWER_TAB = 1;
+    static final int ALMANAC_STATS_TAB = 2;
+    static final int ALMANAC_ACHIEVEMENT_TAB = 3;
+    static final int ALMANAC_TAB_COUNT = 4;
+    int almanacTab = ALMANAC_GHOST_TAB;
     int almanacIndex = 0;
     int almanacScrollOffset = 0;
     ArrayList<String> almanacTitles = new ArrayList<>();
@@ -540,6 +579,8 @@ public final class Game implements Runnable {
     // Larger value = slower death animation.
     final int deathFrameDelay = 8;
     boolean boardClear = false;
+    boolean boardPowerCollected = false;
+    boolean surviveAchievementChecked = false;
 
     ArrayList<Ghost> ghosts = new ArrayList<>();
     ArrayList<GhostTransferData> pendingCarriedGhosts = new ArrayList<>();
@@ -587,7 +628,7 @@ public final class Game implements Runnable {
         initializeCustomizeOptionDefaults();
         loadOptions();
         resetGame();
-        screenState = STATE_MENU;
+        screenState = STATE_SAVE_SLOTS;
     }
 
     public void loadContentDefinitions() {
@@ -596,6 +637,8 @@ public final class Game implements Runnable {
             ghostDefinitions.addAll(GameContent.loadGhostDefinitions());
             almanacEntries.clear();
             almanacEntries.addAll(GameContent.loadAlmanacEntries());
+            achievementDefinitions.clear();
+            achievementDefinitions.addAll(GameContent.loadAchievementDefinitions());
             pacmanDefinition = GameContent.loadPacmanDefinition();
         } catch (IOException | RuntimeException exception) {
             System.err.println("Could not load JSON game content: " + exception.getMessage());
@@ -604,6 +647,14 @@ public final class Game implements Runnable {
 
         ghostDefinitionsByType.clear();
         ghostTypesByKey.clear();
+
+        if (achievementDefinitions.isEmpty()) {
+            achievementSprites = new BufferedImage[0];
+            achievementGrayscaleSprites = new BufferedImage[0];
+        } else {
+            achievementSprites = new BufferedImage[achievementDefinitions.size()];
+            achievementGrayscaleSprites = new BufferedImage[achievementDefinitions.size()];
+        }
 
         int nextDynamicType = ghostPhantomType + 1;
         for (GhostDefinition definition : ghostDefinitions) {
@@ -1108,6 +1159,31 @@ public final class Game implements Runnable {
     public int worldBoundaryToScreenY(double worldY) {
         return hudHeight + (int) Math.round(getVisibleViewportBoardHeight() - (worldY + renderWorldOffsetY - camera.viewY));
     }
+
+    // Restrict board iteration to tiles that can intersect the current clip.
+    // This matters once the maze is larger than the fixed window: zooming out
+    // should not make every render pass proportional to the whole board.
+    private int firstVisibleTileX(double worldOffsetX, int minimum) {
+        int first = (int) Math.floor((camera.viewX - worldOffsetX) / tileSize) - 1;
+        return Math.max(minimum, first);
+    }
+
+    private int lastVisibleTileX(double worldOffsetX, int maximum) {
+        int last = (int) Math.ceil((camera.viewX + getVisibleViewportWidth() - worldOffsetX) / tileSize) + 1;
+        return Math.min(maximum, last);
+    }
+
+    private int firstVisibleTileY(double worldOffsetY, int minimum) {
+        double bottomWorld = camera.viewY - tileSize;
+        int first = (int) Math.floor((bottomWorld - worldOffsetY) / tileSize) - 1;
+        return Math.max(minimum, first);
+    }
+
+    private int lastVisibleTileY(double worldOffsetY, int maximum) {
+        double topWorld = camera.viewY + getVisibleViewportBoardHeight() - tileSize;
+        int last = (int) Math.ceil((topWorld - worldOffsetY) / tileSize) + 1;
+        return Math.min(maximum, last);
+    }
     
     //maze gen algo
     public void generateMaze() {
@@ -1131,25 +1207,43 @@ public final class Game implements Runnable {
     }
 
     public void carveMazeFrom(int x, int y) {
+        // Iterative DFS avoids one array allocation and one recursive stack
+        // frame per cell, and remains safe for very large generated boards.
+        int capacity = Math.max(1, maxScreenCol * maxScreenRow / 2);
+        int[] stackX = new int[capacity];
+        int[] stackY = new int[capacity];
+        int[] triedDirections = new int[capacity];
+        int top = 0;
+        stackX[0] = x;
+        stackY[0] = y;
         maze[x][y] = false;
 
-        int[][] directions = {
-            { 2, 0 },
-            { -2, 0 },
-            { 0, 2 },
-            { 0, -2 }
-        };
-
-        shuffleDirections(directions);
-
-        for (int[] direction : directions) {
-            int nextX = x + direction[0];
-            int nextY = y + direction[1];
-
-            if (isInsideMaze(nextX, nextY) && maze[nextX][nextY]) {
-                maze[x + direction[0] / 2][y + direction[1] / 2] = false;
-                carveMazeFrom(nextX, nextY);
+        while (top >= 0) {
+            int tried = triedDirections[top];
+            if (tried == 0b1111) {
+                top--;
+                continue;
             }
+
+            int direction = random.nextInt(4);
+            int bit = 1 << direction;
+            if ((tried & bit) != 0) {
+                continue;
+            }
+            triedDirections[top] = tried | bit;
+
+            int nextX = stackX[top] + CARDINAL_X[direction] * 2;
+            int nextY = stackY[top] + CARDINAL_Y[direction] * 2;
+            if (!isInsideMaze(nextX, nextY) || !maze[nextX][nextY]) {
+                continue;
+            }
+
+            maze[stackX[top] + CARDINAL_X[direction]][stackY[top] + CARDINAL_Y[direction]] = false;
+            top++;
+            stackX[top] = nextX;
+            stackY[top] = nextY;
+            triedDirections[top] = 0;
+            maze[nextX][nextY] = false;
         }
     }
 
@@ -1204,16 +1298,9 @@ public final class Game implements Runnable {
 
     public int countOpenNeighbors(int x, int y) {
         int count = 0;
-        int[][] directions = {
-            { 1, 0 },
-            { -1, 0 },
-            { 0, 1 },
-            { 0, -1 }
-        };
-
-        for (int[] direction : directions) {
-            int nextX = x + direction[0];
-            int nextY = y + direction[1];
+        for (int direction = 0; direction < 4; direction++) {
+            int nextX = x + CARDINAL_X[direction];
+            int nextY = y + CARDINAL_Y[direction];
 
             if (isPortalTile(nextX, nextY) || (isInsideMaze(nextX, nextY) && !maze[nextX][nextY])) {
                 count++;
@@ -1224,20 +1311,13 @@ public final class Game implements Runnable {
     }
 
     public boolean openDeadEndExit(int x, int y) {
-        int[][] directions = {
-            { 1, 0 },
-            { -1, 0 },
-            { 0, 1 },
-            { 0, -1 }
-        };
-
-        shuffleDirections(directions);
-
-        for (int[] direction : directions) {
-            int wallX = x + direction[0];
-            int wallY = y + direction[1];
-            int nextX = x + direction[0] * 2;
-            int nextY = y + direction[1] * 2;
+        int startDirection = random.nextInt(4);
+        for (int attempt = 0; attempt < 4; attempt++) {
+            int direction = (startDirection + attempt) & 3;
+            int wallX = x + CARDINAL_X[direction];
+            int wallY = y + CARDINAL_Y[direction];
+            int nextX = x + CARDINAL_X[direction] * 2;
+            int nextY = y + CARDINAL_Y[direction] * 2;
 
             if (isInsideMaze(wallX, wallY) && isInsideMaze(nextX, nextY) && maze[wallX][wallY] && !maze[nextX][nextY]) {
                 maze[wallX][wallY] = false;
@@ -1412,6 +1492,7 @@ public final class Game implements Runnable {
             powerUpSprites[14] = loadSprite("res/sprite/pow_14.png");
             powerUpSprites[15] = loadSprite("res/sprite/pow_15.png");
             pillSprite = loadOptionalSprite("res/sprite/tiles/pill.png", powerUpSprites[15]);
+            loadAchievementSprites();
             particlePlusSprite = loadOptionalSprite("res/sprite/other/particle_plus.png", null);
             particleMinusSprite = loadOptionalSprite("res/sprite/other/particle_minus.png", null);
             spikeSprites[0] = loadSprite("res/sprite/spike_0.png");
@@ -1452,6 +1533,30 @@ public final class Game implements Runnable {
             applyGhostSpriteDefinitions();
         } catch (IOException e) {
             throw new RuntimeException("Could not load sprite images from res/sprite.", e);
+        }
+    }
+
+    public void loadAchievementSprites() throws IOException {
+        if (achievementDefinitions.isEmpty()) {
+            achievementSprites = new BufferedImage[0];
+            achievementGrayscaleSprites = new BufferedImage[0];
+            achievementSecretSprite = null;
+            return;
+        }
+
+        BufferedImage placeholder = loadOptionalSprite(
+                "res/sprite/achievement/achievement_placeholder.png", null);
+        achievementSecretSprite = loadOptionalSprite(
+                "res/sprite/achievement/achievement_secret.png", placeholder);
+        achievementSprites = new BufferedImage[achievementDefinitions.size()];
+        achievementGrayscaleSprites = new BufferedImage[achievementDefinitions.size()];
+
+        for (int i = 0; i < achievementDefinitions.size(); i++) {
+            AchievementDefinition definition = achievementDefinitions.get(i);
+            BufferedImage icon = loadOptionalSprite(
+                    "res/sprite/achievement/" + definition.icon(), placeholder);
+            achievementSprites[i] = icon;
+            achievementGrayscaleSprites[i] = GrayscaleRenderer.toGrayscale(icon);
         }
     }
 
@@ -2319,6 +2424,8 @@ public final class Game implements Runnable {
         nameEntryIndex = 0;
         powerMode = false;
         boardClear = false;
+        boardPowerCollected = false;
+        surviveAchievementChecked = false;
         soundManager.stopLaser();
 
         playerPixelX = (maxScreenCol - 2) * tileSize;
@@ -2717,6 +2824,13 @@ public final class Game implements Runnable {
         }
 
         elapsedFrames++;
+        if (runStats != null) {
+            runStats.recordTimeFrame();
+        }
+        if (!surviveAchievementChecked && elapsedFrames >= 600 * framesPerSecond) {
+            recordSettingAchievementEvent("survive_with_settings");
+            surviveAchievementChecked = true;
+        }
         updatePowerUpTimers();
         updateSpriteParticles();
         updateElectricityChanneling();
@@ -3305,7 +3419,7 @@ public final class Game implements Runnable {
 
         if (!isMetalPacmanActive() && !isStonePacmanActive()
                 && playerIntersectsRect(minX, minY, maxX, maxY)) {
-            startDeathAnimation();
+            startDeathAnimationWithCause("burnt");
         }
 
         for (int cloneIndex = pacClones.size() - 1; cloneIndex >= 0; cloneIndex--) {
@@ -3650,7 +3764,7 @@ public final class Game implements Runnable {
                     continue;
                 }
 
-                killGhostAt(ghostIndex, 0, true, ghostKillSoundSpike, true);
+                killGhostAt(ghostIndex, 0, true, ghostKillSoundSpike, true, "spike");
                 return true;
             }
         }
@@ -3663,7 +3777,7 @@ public final class Game implements Runnable {
             return;
         }
 
-        forceStartDeathAnimation();
+        startDeathAnimationWithCause("spike");
     }
 
     public void updateAfterImages() {
@@ -4711,6 +4825,10 @@ public final class Game implements Runnable {
                 - levelTransitionOffsetTileY * tileSize;
 
         level++;
+        if (runStats != null) {
+            runStats.recordLevelCleared(level - 1);
+            runStats.recordLevelReached(level);
+        }
         applyFruitBonuses();
         if (levelTransitionLeftEarly) {
             consecutiveBoardClears = 0;
@@ -4720,6 +4838,7 @@ public final class Game implements Runnable {
         fruitsSpawnedThisLevel = 0;
         collectedFruits = new int[4];
         boardClear = false;
+        boardPowerCollected = false;
 
         maze = nextMaze;
         dots = nextDots;
@@ -4928,6 +5047,9 @@ public final class Game implements Runnable {
     public void collectPelletAt(int tileX, int tileY, boolean countTowardPowerDrop) {
         if (dots[tileX][tileY]) {
             dots[tileX][tileY] = false;
+            if (runStats != null) {
+                runStats.recordPelletConsumed(false);
+            }
             addScore(getSmallDotScore());
             playGameSoundEatDot();
 
@@ -4939,6 +5061,9 @@ public final class Game implements Runnable {
 
         if (bigDots[tileX][tileY]) {
             bigDots[tileX][tileY] = false;
+            if (runStats != null) {
+                runStats.recordPelletConsumed(true);
+            }
             addScore(getBigDotScore());
             playGameSoundEatPower();
             startPowerMode();
@@ -4979,6 +5104,9 @@ public final class Game implements Runnable {
     public void collectSmallPelletAt(int tileX, int tileY) {
         if (dots[tileX][tileY]) {
             dots[tileX][tileY] = false;
+            if (runStats != null) {
+                runStats.recordPelletConsumed(false);
+            }
             addScore(getSmallDotScore());
             playGameSoundEatDot();
         }
@@ -4991,11 +5119,17 @@ public final class Game implements Runnable {
         if (dots[tileX][tileY]) {
             dots[tileX][tileY] = false;
             clone.path.clear();
+            if (runStats != null) {
+                runStats.recordPelletConsumed(false);
+            }
             addScore(getClonePelletScore());
             playGameSoundEatDot();
         } else if (bigDots[tileX][tileY]) {
             bigDots[tileX][tileY] = false;
             clone.path.clear();
+            if (runStats != null) {
+                runStats.recordPelletConsumed(true);
+            }
             addScore(getClonePelletScore());
             playGameSoundEatPower();
             startPowerMode();
@@ -5210,6 +5344,11 @@ public final class Game implements Runnable {
         boardClear = true;
         clearWarningPortal();
         boardHalfSoundPlayed = true;
+        recordSettingAchievementEvent("half_clear_with_setting");
+        recordSettingAchievementEvent("half_clear_with_settings");
+        if (!boardPowerCollected) {
+            recordAchievementEvent("clear_level_without_action", "collect_power");
+        }
         playGameSoundBoardHalf();
     }
 
@@ -5228,6 +5367,13 @@ public final class Game implements Runnable {
         }
 
         boardFullClearAwarded = true;
+        if (runStats != null) {
+            runStats.recordFullRoomCleared();
+        }
+        recordSettingAchievementEvent("full_clear_with_settings");
+        if (!boardPowerCollected) {
+            recordAchievementEvent("full_clear_without_action", "collect_power");
+        }
         consecutiveBoardClears++;
         playGameSoundBoardClear();
     }
@@ -5307,6 +5453,9 @@ public final class Game implements Runnable {
     public void addScore(int points) {
         score += points;
         updateFruitSpawns();
+        if (score <= -5000) {
+            recordAchievementEvent("points_negative", "twoface", 5000);
+        }
     }
 
     public void updateFruitSpawns() {
@@ -5406,6 +5555,17 @@ public final class Game implements Runnable {
 
             if (powerUp.tileX == tileX && powerUp.tileY == tileY) {
                 playGameSoundEatPower();
+                boardPowerCollected = true;
+                if (runStats != null) {
+                    runStats.recordPowerCollected(powerUp.pill
+                            ? "pill"
+                            : getPowerStatsKey(powerUp.type));
+                }
+                if (powerUp.pill) {
+                    recordAchievementEvent("pickup_pill", "doctor");
+                } else if (powerUp.type == powerSerumType) {
+                    recordAchievementEvent("pickup_serum", "doctor");
+                }
                 if (isPacmanIntoxicated()) {
                     // Intoxication makes every later collectible inert, except serum,
                     // which is allowed to cure it.
@@ -5975,6 +6135,10 @@ public final class Game implements Runnable {
     private void recordPlayerTileWalked() {
         playerTileHistory.add(new int[] { lastPlayerTileX, lastPlayerTileY });
 
+        if (runStats != null) {
+            runStats.recordTileWalked();
+        }
+
         if (playerTileHistory.size() > clonyTrailHistoryLimit) {
             playerTileHistory.remove(0);
         }
@@ -6380,7 +6544,7 @@ public final class Game implements Runnable {
 
             Ghost ghost = ghosts.get(i);
             if (!isGhostElectrified(ghost) && isFireGhostType(ghost.type) && isGhostInAnyIceAura(ghost)) {
-                killGhostAt(i, 0, true);
+                killGhostAt(i, 0, true, ghostKillSoundEat, false, "freeze");
             }
         }
     }
@@ -6669,6 +6833,10 @@ public final class Game implements Runnable {
         frozenGhost.tileY = tileY;
         frozenGhost.mortisBuffed = ghost.mortisBuffed;
         frozenGhosts.add(frozenGhost);
+        if (runStats != null) {
+            runStats.recordGhostKilled("freeze");
+            recordGhostKillAchievement("freeze", ghost);
+        }
         playGameSoundFreeze();
         ghosts.remove(ghostIndex);
     }
@@ -6700,6 +6868,8 @@ public final class Game implements Runnable {
         if (!ignoreDefensivePowers && (isMetalPacmanActive() || isStoneRollingActive())) {
             return;
         }
+
+        recordRunDeathCause("freeze");
 
         soundManager.playFreeze();
         soundManager.fadeOutMusicAndStop();
@@ -6740,6 +6910,10 @@ public final class Game implements Runnable {
                     if (ghost.type == ghostMetalType) {
                         bouncePacmanAndMetalGhost(ghost);
                         return;
+                    }
+
+                    if (ghost.type == ghostLaserType && ghost.laserActive) {
+                        recordAchievementEvent("eat_metal_laser_active", getGhostStatsKey(ghost));
                     }
 
                     if (ghost.type == ghostMagnetType && ghost.speedDashActive) {
@@ -6786,7 +6960,7 @@ public final class Game implements Runnable {
                 }
 
                 if (ghost.type == ghostCactusType) {
-                    startDeathAnimation();
+                    startDeathByGhost(ghost);
                     return;
                 }
 
@@ -6796,14 +6970,17 @@ public final class Game implements Runnable {
                 }
 
                 if (ghost.type == ghostStoneType) {
-                    startDeathAnimation();
+                    startDeathByGhost(ghost);
                     return;
                 }
 
                 if (powerMode) {
                     if (ghost.type == ghostMetalType || ghost.type == ghostStoneType) {
-                        startDeathAnimation();
+                        startDeathByGhost(ghost);
                         return;
+                    }
+                    if (ghost.type == ghostLaserType && ghost.laserActive) {
+                        recordAchievementEvent("eat_laser_active", getGhostStatsKey(ghost));
                     }
                     boolean droppedIcePower = killGhostAt(i, getGhostEatScore());
                     if (isIceGhostType(ghost.type)) {
@@ -6814,11 +6991,11 @@ public final class Game implements Runnable {
                 }
 
                 if (ghost.type == ghostLaserType) {
-                    startDeathAnimation();
+                    startDeathByGhost(ghost);
                     return;
                 }
 
-                startDeathAnimation();
+                startDeathByGhost(ghost);
                 return;
             }
         }
@@ -6895,7 +7072,7 @@ public final class Game implements Runnable {
                 return;
             }
             frozenGhosts.remove(frozenIndex);
-            forceStartDeathAnimation();
+            startDeathAnimationWithCause("squished");
             return;
         }
 
@@ -6915,7 +7092,7 @@ public final class Game implements Runnable {
             }
 
             boolean heavyGhost = ghost.type == ghostStoneType || ghost.type == ghostMetalType;
-            killGhostAt(ghostIndex, 0, true, ghostKillSoundEat, heavyGhost);
+            killGhostAt(ghostIndex, 0, true, ghostKillSoundEat, heavyGhost, "squished");
             if (heavyGhost) {
                 frozenGhosts.remove(frozenIndex);
             }
@@ -6981,20 +7158,77 @@ public final class Game implements Runnable {
     }
 
     public void startDeathAnimation() {
+        startDeathAnimationWithCause("touched");
+    }
+
+    public boolean startDeathAnimationWithCause(String cause) {
         if (playerDead || deathAnimationDone) {
-            return;
+            return false;
         }
         if (isMetalPacmanActive()) {
+            return false;
+        }
+
+        recordRunDeathCause(cause);
+        forceStartDeathAnimation();
+        return playerDead;
+    }
+
+    public void startDeathByGhost(Ghost ghost) {
+        if (playerDead || deathAnimationDone || isMetalPacmanActive()) {
+            return;
+        }
+        if (ghost != null) {
+            recordRunDeathByGhost(ghost);
+        }
+        startDeathAnimationWithCause("touched");
+    }
+
+    public void recordRunDeathByGhost(Ghost ghost) {
+        if (runStats == null || ghost == null || runDeathRecorded) {
             return;
         }
 
-        forceStartDeathAnimation();
+        GhostDefinition definition = getGhostDefinition(ghost.type);
+        String key = definition == null
+                ? "ghost_" + ghost.type
+                : definition.key().toLowerCase(Locale.ROOT);
+        runStats.recordDeathByGhost(key);
+    }
+
+    public void recordRunDeathCause(String cause) {
+        if (runStats == null || runDeathRecorded) {
+            return;
+        }
+
+        runStats.recordDeathByCause(cause);
+        if ("bomb".equals(cause)) {
+            recordAchievementEvent("die_explosion", "bomby");
+        } else if ("burnt".equals(cause)) {
+            recordAchievementEvent("die_fire", "hot");
+            recordAchievementEvent("die_burning_smoke", "horror");
+        } else if ("freeze".equals(cause)) {
+            recordAchievementEvent("freeze_player", "cold");
+            recordAchievementEvent("die_ice_cube", "player");
+        } else if ("lasered".equals(cause)) {
+            recordAchievementEvent("die_laser", "alien");
+        } else if ("electrocuted".equals(cause)) {
+            recordAchievementEvent("electrocute", "pika");
+            recordAchievementEvent("die_electric", "pika");
+        } else if ("spike".equals(cause)) {
+            recordAchievementEvent("die_projectile_spike", "cactus");
+        } else if ("squished".equals(cause)) {
+            recordAchievementEvent("die_ice_cube", "player");
+        }
+        runDeathRecorded = true;
     }
 
     public void forceStartDeathAnimation() {
         if (playerDead || deathAnimationDone) {
             return;
         }
+
+        recordRunDeathCause("touched");
 
         soundManager.playDeath();
         soundManager.fadeOutMusicAndStop();
@@ -7031,6 +7265,8 @@ public final class Game implements Runnable {
         if (playerDead || deathAnimationDone) {
             return;
         }
+
+        recordRunDeathCause("electrocuted");
 
         soundManager.playElectrocuted();
         soundManager.fadeOutMusicAndStop();
@@ -7082,7 +7318,7 @@ public final class Game implements Runnable {
 
     public void damagePacmanWithExplosion() {
         if (!isMetalPacmanActive()) {
-            startDeathAnimation();
+            startDeathAnimationWithCause("bomb");
             return;
         }
 
@@ -7091,7 +7327,7 @@ public final class Game implements Runnable {
             return;
         }
 
-        forceStartDeathAnimation();
+        startDeathAnimationWithCause("bomb");
     }
 
     public void applyPlayerBrainFreeze(boolean icePowerDropped) {
@@ -7239,6 +7475,11 @@ public final class Game implements Runnable {
     }
 
     public boolean killGhostAt(int index, int points, boolean leaveAsh, int killSound, boolean allowMetalKill) {
+        return killGhostAt(index, points, leaveAsh, killSound, allowMetalKill, null);
+    }
+
+    public boolean killGhostAt(int index, int points, boolean leaveAsh, int killSound,
+            boolean allowMetalKill, String statsCause) {
         Ghost ghost = ghosts.get(index);
         if (ghost.type == ghostMetalType) {
             if (allowMetalKill) {
@@ -7252,6 +7493,13 @@ public final class Game implements Runnable {
 
         if (points != 0) {
             addScore(getAdjustedGhostKillScore(ghost, points));
+        }
+        if (runStats != null) {
+            String resolvedCause = statsCause == null
+                    ? getDefaultGhostKillStatsCause(killSound)
+                    : statsCause;
+            runStats.recordGhostKilled(resolvedCause);
+            recordGhostKillAchievement(resolvedCause, ghost);
         }
         if (ghost.type == ghostStoneType) {
             playWallBreakSound();
@@ -7286,6 +7534,16 @@ public final class Game implements Runnable {
             ghostFireExplosionLifeBoosted = previousFireLifeBoost;
         }
         return droppedIcePower;
+    }
+
+    public String getDefaultGhostKillStatsCause(int killSound) {
+        if (killSound == ghostKillSoundFire) {
+            return "burnt";
+        }
+        if (killSound == ghostKillSoundSpike) {
+            return "spike";
+        }
+        return "eaten";
     }
 
     public void armMetalGhostExplosion(Ghost ghost) {
@@ -7564,7 +7822,7 @@ public final class Game implements Runnable {
             }
 
             if (ghostIntersectsBombBlast(ghosts.get(i), blastTiles)) {
-                killGhostAt(i, 0, true, ghostKillSoundEat, true);
+                killGhostAt(i, 0, true, ghostKillSoundEat, true, "bomb");
             }
         }
     }
@@ -7660,7 +7918,7 @@ public final class Game implements Runnable {
     public void killGhostsInBombBlast(ArrayList<int[]> blastTiles, int score) {
         for (int i = ghosts.size() - 1; i >= 0; i--) {
             if (ghostIntersectsBombBlast(ghosts.get(i), blastTiles)) {
-                killGhostAt(i, score, true, ghostKillSoundEat, true);
+                killGhostAt(i, score, true, ghostKillSoundEat, true, "bomb");
             }
         }
     }
@@ -7686,6 +7944,10 @@ public final class Game implements Runnable {
         frozenGhost.tileY = tileY;
         frozenGhost.mortisBuffed = ghost.mortisBuffed;
         frozenGhosts.add(frozenGhost);
+        if (runStats != null) {
+            runStats.recordGhostKilled("freeze");
+            recordGhostKillAchievement("freeze", ghost);
+        }
         ghosts.remove(ghostIndex);
     }
 
@@ -7902,7 +8164,7 @@ public final class Game implements Runnable {
             if (!isGhostElectrified(ghost)
                     && ghost.type != ghostMetalType
                     && ghostIntersectsRect(ghost, beam[0], beam[1], beam[2], beam[3])) {
-                killGhostAt(i, getGhostEatScore(), true, ghostKillSoundFire, true);
+                killGhostAt(i, getGhostEatScore(), true, ghostKillSoundFire, true, "lasered");
             }
         }
 
@@ -7936,7 +8198,7 @@ public final class Game implements Runnable {
                 if (!isGhostElectrified(ghost)
                         && ghost.type != ghostMetalType
                         && ghostIntersectsRect(ghost, beam[0], beam[1], beam[2], beam[3])) {
-                    killGhostAt(i, 0, true, ghostKillSoundFire, true);
+                    killGhostAt(i, 0, true, ghostKillSoundFire, true, "lasered");
                     if (!pacClones.contains(clone)) {
                         return;
                     }
@@ -8003,7 +8265,7 @@ public final class Game implements Runnable {
             startSmokeIgnitionInRect(beam[0], beam[1], beam[2], beam[3]);
 
             if (playerIntersectsRect(beam[0], beam[1], beam[2], beam[3])) {
-                startDeathAnimation();
+                startDeathAnimationWithCause("lasered");
                 return;
             }
 
@@ -8018,7 +8280,7 @@ public final class Game implements Runnable {
                 if (!isGhostElectrified(targetGhost)
                         && targetGhost.type != ghostMetalType
                         && ghostIntersectsRect(targetGhost, beam[0], beam[1], beam[2], beam[3])) {
-                    killGhostAt(j, 0, true, ghostKillSoundFire, true);
+                    killGhostAt(j, 0, true, ghostKillSoundFire, true, "lasered");
                     return;
                 }
             }
@@ -8038,7 +8300,7 @@ public final class Game implements Runnable {
             if (fireTrail.ghostFire) {
                 if (playerIntersectsRect(minX, minY, maxX, maxY)) {
                     if (!isStoneRollingActive()) {
-                        startDeathAnimation();
+                        startDeathAnimationWithCause("burnt");
                     }
                     return;
                 }
@@ -8743,6 +9005,7 @@ public final class Game implements Runnable {
         }
 
         finalScoreHandled = true;
+        commitRunStats();
         pendingFinalScore = calculateFinalScore();
         score = pendingFinalScore;
 
@@ -8750,6 +9013,283 @@ public final class Game implements Runnable {
             nameEntry = new char[] { 'A', 'A', 'A' };
             nameEntryIndex = 0;
             screenState = STATE_NAME_ENTRY;
+        }
+    }
+
+    public void commitRunStats() {
+        if (runStats == null || selectedSaveSlot < 0) {
+            return;
+        }
+
+        playerStats.merge(runStats);
+        playerStats.save(getSaveSlotFile(selectedSaveSlot));
+        runStats = null;
+    }
+
+    public int getDraftAchievementPoints() {
+        return calculateAchievementPoints(
+                draftGhostSpeed,
+                draftPlayerSpeed,
+                draftGhostSpawnSeconds,
+                draftGhostPerWave,
+                draftPelletSeconds,
+                draftPowerSeconds,
+                draftSpecialGhostChancePercent,
+                draftSpecialGhostPowerDropChancePercent,
+                draftMazeWidth,
+                draftMazeHeight,
+                draftSpawnGhostEnabled,
+                draftDroppedPowerEnabled);
+    }
+
+    public int getCurrentAchievementPoints() {
+        return calculateAchievementPoints(
+                ghostSpeed,
+                playerSpeed,
+                ghostSpawnInterval / framesPerSecond,
+                ghostPerWave,
+                powerPelletDuration / framesPerSecond,
+                powerUpDuration / framesPerSecond,
+                specialGhostChancePercent,
+                specialGhostPowerDropChancePercent,
+                maxScreenCol,
+                maxScreenRow,
+                spawnGhostEnabled,
+                droppedPowerEnabled);
+    }
+
+    public int calculateAchievementPoints(double ghostSpeedValue, double playerSpeedValue,
+            int spawnSeconds, int ghostsPerWaveValue, int pelletSeconds, int powerSeconds,
+            int specialChancePercent, int powerDropChancePercent, int mazeWidth, int mazeHeight,
+            boolean[] enabledGhosts, boolean[] enabledPowers) {
+        int points = baseAchievementPoints;
+        // Java's cast matches the examples: 1.0 - 4.5 contributes -3 before the +2 offset.
+        points += (int) (ghostSpeedValue - playerSpeedValue) + 2;
+        points += ((defaultAchievementSpawnSeconds - spawnSeconds) / 2) * ghostsPerWaveValue;
+        points += defaultAchievementPelletSeconds - pelletSeconds;
+        points += defaultAchievementPowerSeconds - powerSeconds;
+        points += (specialChancePercent - defaultAchievementSpecialChancePercent) / 3;
+        points += (defaultAchievementPowerDropChancePercent - powerDropChancePercent) / 3;
+        points += mazeWidth - defaultAchievementMazeWidth;
+        points += mazeHeight - defaultAchievementMazeHeight;
+        points -= countDisabledSpecialGhosts(enabledGhosts, enabledPowers)
+                * achievementPointsPerDisabledSpecialGhost;
+        return points;
+    }
+
+    public int countDisabledSpecialGhosts(boolean[] enabledGhosts, boolean[] enabledPowers) {
+        int disabled = 0;
+        for (int ghostType : getSpecialGhostTypes()) {
+            boolean ghostEnabled = ghostType >= 0
+                    && ghostType < enabledGhosts.length
+                    && enabledGhosts[ghostType];
+            if (!ghostEnabled || !isSpecialGhostPowerEnabled(ghostType, enabledPowers)) {
+                disabled++;
+            }
+        }
+        return disabled;
+    }
+
+    public boolean isSpecialGhostPowerEnabled(int ghostType, boolean[] enabledPowers) {
+        if (isFireBombGhostType(ghostType)) {
+            return isPowerEnabledForAchievement(powerFireType, enabledPowers)
+                    && isPowerEnabledForAchievement(powerBombType, enabledPowers);
+        }
+        if (isIceBombGhostType(ghostType)) {
+            return isPowerEnabledForAchievement(powerIceType, enabledPowers)
+                    && isPowerEnabledForAchievement(powerBombType, enabledPowers);
+        }
+
+        int powerType = getPowerUpTypeForGhostType(ghostType);
+        return powerType < 0 || powerType == powerSerumType
+                || isPowerEnabledForAchievement(powerType, enabledPowers);
+    }
+
+    public boolean isPowerEnabledForAchievement(int powerType, boolean[] enabledPowers) {
+        return powerType >= 0 && powerType < enabledPowers.length && enabledPowers[powerType];
+    }
+
+    public Map<String, Object> buildAchievementSettingsTarget() {
+        Map<String, Object> target = new LinkedHashMap<>();
+        target.put("ap", getCurrentAchievementPoints());
+        target.put("ghost_speed_difference", (int) (ghostSpeed - playerSpeed));
+        target.put("spawn_timer", ghostSpawnInterval / framesPerSecond);
+        target.put("spawn_timer_max", ghostSpawnInterval / framesPerSecond);
+        target.put("ghosts_per_wave", ghostPerWave);
+        target.put("spawn_waves", ghostPerWave);
+        target.put("power_time", powerUpDuration / framesPerSecond);
+        target.put("pellet_time", powerPelletDuration / framesPerSecond);
+        target.put("maze_width", maxScreenCol);
+        target.put("maze_height", maxScreenRow);
+        target.put("maze_size", maxScreenCol == 11 && maxScreenRow == 11
+                ? "minimum_valid" : "custom");
+        target.put("special_ghost_chance", specialGhostChancePercent);
+        target.put("power_disabled", getEnabledPowerDropTypes(false).length == 0);
+        target.put("time", elapsedFrames / framesPerSecond);
+        target.put("maximum_clear_percentage", getBoardClearPercentage());
+        return target;
+    }
+
+    public int getBoardClearPercentage() {
+        if (initialPelletCount <= 0) {
+            return 0;
+        }
+        int cleared = initialPelletCount - getRemainingPelletCount();
+        return clampInt(cleared * 100 / initialPelletCount, 0, 100);
+    }
+
+    public void recordSettingAchievementEvent(String type) {
+        recordAchievementEvent(type, buildAchievementSettingsTarget(), 1);
+    }
+
+    public void recordAchievementEvent(String type, String target) {
+        recordAchievementEvent(type, target, 1);
+    }
+
+    public void recordAchievementEvent(String type, Object target, long amount) {
+        if (runStats == null || type == null || type.isBlank() || amount <= 0) {
+            return;
+        }
+
+        for (AchievementDefinition definition : achievementDefinitions) {
+            if (!runAchievementsEnabled && !definition.apOverride()) {
+                continue;
+            }
+            boolean repeatableBonus = definition.ingameBonus();
+            boolean alreadyCompleted = runStats.isAchievementUnlocked(definition.key())
+                    || playerStats.isAchievementUnlocked(definition.key());
+            if ((!repeatableBonus && alreadyCompleted)
+                    || (repeatableBonus && runStats.hasAchievementBonusAwarded(definition.key()))
+                    || !definition.condition().type().equalsIgnoreCase(type)
+                    || !achievementTargetMatches(definition.condition().target(), target)) {
+                continue;
+            }
+
+            runStats.addAchievementProgress(definition.key(), amount);
+            if (runStats.getAchievementProgress(definition.key()) < definition.condition().count()) {
+                continue;
+            }
+
+            if (repeatableBonus) {
+                if (runStats.markAchievementBonusAwarded(definition.key())
+                        && definition.score() > 0) {
+                    addScore(definition.score());
+                }
+                runStats.unlockAchievement(definition.key());
+            } else {
+                runStats.unlockAchievement(definition.key());
+            }
+        }
+    }
+
+    public boolean achievementTargetMatches(Object expected, Object actual) {
+        if (expected == null || (expected instanceof String string && string.isBlank())) {
+            return true;
+        }
+        if (expected instanceof String string && isAchievementApComparison(string)) {
+            Object actualAp = actual instanceof Map<?, ?> actualMap ? actualMap.get("ap") : actual;
+            return actualAp instanceof Number number
+                    && compareAchievementAp(number.doubleValue(), string);
+        }
+        if (expected instanceof Map<?, ?> expectedMap) {
+            if (!(actual instanceof Map<?, ?> actualMap)) {
+                return false;
+            }
+            for (Map.Entry<?, ?> entry : expectedMap.entrySet()) {
+                Object actualValue = actualMap.get(entry.getKey());
+                String key = String.valueOf(entry.getKey());
+                boolean rangeKey = key.equalsIgnoreCase("time")
+                        || key.equalsIgnoreCase("maximum_clear_percentage");
+                if (!actualMap.containsKey(entry.getKey())
+                        || !achievementSettingRangeMatches(key, entry.getValue(), actualValue)
+                        || (!rangeKey && !achievementTargetMatches(entry.getValue(), actualValue))) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        if (expected instanceof Number expectedNumber && actual instanceof Number actualNumber) {
+            return Double.compare(expectedNumber.doubleValue(), actualNumber.doubleValue()) == 0;
+        }
+        return actual != null && expected.toString().equalsIgnoreCase(actual.toString());
+    }
+
+    public boolean achievementSettingRangeMatches(String key, Object expected, Object actual) {
+        if (!(expected instanceof Number expectedNumber) || !(actual instanceof Number actualNumber)) {
+            return true;
+        }
+        double expectedValue = expectedNumber.doubleValue();
+        double actualValue = actualNumber.doubleValue();
+        if (key.equalsIgnoreCase("time")) {
+            return actualValue >= expectedValue;
+        }
+        if (key.equalsIgnoreCase("maximum_clear_percentage")) {
+            return actualValue <= expectedValue;
+        }
+        return true;
+    }
+
+    public boolean isAchievementApComparison(String value) {
+        String comparison = value.replace(" ", "").toLowerCase(Locale.ROOT);
+        return comparison.startsWith("ap>") || comparison.startsWith("ap<");
+    }
+
+    public boolean compareAchievementAp(double actualAp, String comparison) {
+        String normalized = comparison.replace(" ", "").toLowerCase(Locale.ROOT);
+        int operatorStart = normalized.startsWith("ap") ? 2 : -1;
+        if (operatorStart < 0 || normalized.length() <= operatorStart + 1) {
+            return false;
+        }
+
+        String operator = normalized.substring(operatorStart, operatorStart + 1);
+        boolean inclusive = normalized.length() > operatorStart + 1
+                && normalized.charAt(operatorStart + 1) == '=';
+        int numberStart = operatorStart + (inclusive ? 2 : 1);
+        try {
+            double expectedAp = Double.parseDouble(normalized.substring(numberStart));
+            if (operator.equals(">")) {
+                return inclusive ? actualAp >= expectedAp : actualAp > expectedAp;
+            }
+            return inclusive ? actualAp <= expectedAp : actualAp < expectedAp;
+        } catch (NumberFormatException exception) {
+            return false;
+        }
+    }
+
+    public String getGhostStatsKey(Ghost ghost) {
+        GhostDefinition definition = ghost == null ? null : getGhostDefinition(ghost.type);
+        return definition == null
+                ? "ghost_" + (ghost == null ? -1 : ghost.type)
+                : definition.key().toLowerCase(Locale.ROOT);
+    }
+
+    public void recordGhostKillAchievement(String cause, Ghost ghost) {
+        String target = getGhostStatsKey(ghost);
+        if (cause == null) {
+            return;
+        }
+
+        switch (cause) {
+            case "bomb" -> {
+                recordAchievementEvent("kill_with_bomb", target);
+                recordAchievementEvent("kill_bomb", target);
+            }
+            case "burnt" -> recordAchievementEvent("kill_fire", target);
+            case "freeze" -> {
+                recordAchievementEvent("kill_ice", target);
+                recordAchievementEvent("freeze", target);
+            }
+            case "lasered" -> {
+                recordAchievementEvent("kill_laser", target);
+                if (ghost != null && ghost.type == ghostLaserType && ghost.laserActive) {
+                    recordAchievementEvent("kill_laser_active", target);
+                }
+            }
+            case "spike" -> recordAchievementEvent("kill_spike", target);
+            case "squished" -> recordAchievementEvent("kill_with_ice_cube", target);
+            default -> {
+                // Ordinary ghost eating has no generic achievement condition yet.
+            }
         }
     }
 
@@ -10503,7 +11043,7 @@ public final class Game implements Runnable {
                 if (isMetalPacmanActive() || isStoneRollingActive()) {
                     return;
                 }
-                startDeathAnimation();
+                startDeathAnimationWithCause("spike");
                 return;
             }
         }
@@ -10541,7 +11081,7 @@ public final class Game implements Runnable {
     }
 
     public ArrayList<int[]> findAStarPath(int startX, int startY, int goalX, int goalY) {
-        ArrayList<PathNode> openNodes = new ArrayList<>();
+        PriorityQueue<PathNode> openNodes = new PriorityQueue<>(Comparator.comparingInt(PathNode::getTotalCost));
         boolean[][] closed = new boolean[maxScreenCol][maxScreenRow];
         int[][] bestCost = new int[maxScreenCol][maxScreenRow];
 
@@ -10555,7 +11095,7 @@ public final class Game implements Runnable {
         bestCost[startX][startY] = 0;
 
         while (!openNodes.isEmpty()) {
-            PathNode current = removeBestNode(openNodes);
+            PathNode current = openNodes.poll();
 
             if (current.x == goalX && current.y == goalY) {
                 return buildPath(current);
@@ -10563,9 +11103,12 @@ public final class Game implements Runnable {
 
             closed[current.x][current.y] = true;
 
-            for (int[] neighbor : getWalkableNeighbors(current.x, current.y)) {
-                int nextX = neighbor[0];
-                int nextY = neighbor[1];
+            for (int direction = 0; direction < 4; direction++) {
+                int nextX = current.x + CARDINAL_X[direction];
+                int nextY = current.y + CARDINAL_Y[direction];
+                if (!canMove(nextX, nextY)) {
+                    continue;
+                }
                 int nextCost = current.costFromStart + 1;
 
                 if (closed[nextX][nextY] || nextCost >= bestCost[nextX][nextY]) {
@@ -10575,21 +11118,19 @@ public final class Game implements Runnable {
                 bestCost[nextX][nextY] = nextCost;
                 openNodes.add(new PathNode(nextX, nextY, nextCost, getAStarHeuristic(nextX, nextY, goalX, goalY), current));
             }
-        }
 
-        return new ArrayList<int[]>();
-    }
-
-    public PathNode removeBestNode(ArrayList<PathNode> openNodes) {
-        int bestIndex = 0;
-
-        for (int i = 1; i < openNodes.size(); i++) {
-            if (openNodes.get(i).getTotalCost() < openNodes.get(bestIndex).getTotalCost()) {
-                bestIndex = i;
+            if (isPortalTile(current.x, current.y)) {
+                int[] portal = getOppositePortalTile(current.x, current.y);
+                int nextCost = current.costFromStart + 1;
+                if (!closed[portal[0]][portal[1]] && nextCost < bestCost[portal[0]][portal[1]]) {
+                    bestCost[portal[0]][portal[1]] = nextCost;
+                    openNodes.add(new PathNode(portal[0], portal[1], nextCost,
+                            getAStarHeuristic(portal[0], portal[1], goalX, goalY), current));
+                }
             }
         }
 
-        return openNodes.remove(bestIndex);
+        return new ArrayList<int[]>();
     }
 
     public ArrayList<int[]> buildPath(PathNode goalNode) {
@@ -10597,9 +11138,10 @@ public final class Game implements Runnable {
         PathNode current = goalNode;
 
         while (current.parent != null) {
-            path.add(0, new int[] { current.x, current.y });
+            path.add(new int[] { current.x, current.y });
             current = current.parent;
         }
+        java.util.Collections.reverse(path);
 
         return path;
     }
@@ -10777,8 +11319,12 @@ public final class Game implements Runnable {
 
         g2.setColor(Color.YELLOW.darker().darker());
 
-        for (int x = 1; x < maxScreenCol - 1; x++) {
-            for (int y = 1; y < maxScreenRow - 1; y++) {
+        int minX = firstVisibleTileX(worldOffsetX, 1);
+        int maxX = lastVisibleTileX(worldOffsetX, maxScreenCol - 2);
+        int minY = firstVisibleTileY(worldOffsetY, 1);
+        int maxY = lastVisibleTileY(worldOffsetY, maxScreenRow - 2);
+        for (int x = minX; x <= maxX; x++) {
+            for (int y = minY; y <= maxY; y++) {
                 if (boardMaze[x][y]) {
                     drawTile(g2, x, y, worldOffsetX, worldOffsetY,
                             boardBlockTextureIndexes, boardWallTextureIndexes,
@@ -10793,8 +11339,12 @@ public final class Game implements Runnable {
             return;
         }
 
-        for (int x = 1; x < maxScreenCol - 1; x++) {
-            for (int y = 1; y < maxScreenRow - 1; y++) {
+        int minX = firstVisibleTileX(renderWorldOffsetX, 1);
+        int maxX = lastVisibleTileX(renderWorldOffsetX, maxScreenCol - 2);
+        int minY = firstVisibleTileY(renderWorldOffsetY, 1);
+        int maxY = lastVisibleTileY(renderWorldOffsetY, maxScreenRow - 2);
+        for (int x = minX; x <= maxX; x++) {
+            for (int y = minY; y <= maxY; y++) {
                 int debrisIndex = debrisIndexes[x][y];
 
                 if (debrisIndex >= 0 && debrisIndex < debrisCount) {
@@ -10814,8 +11364,12 @@ public final class Game implements Runnable {
             return;
         }
 
-        for (int x = 1; x < maxScreenCol - 1; x++) {
-            for (int y = 1; y < maxScreenRow - 1; y++) {
+        int minX = firstVisibleTileX(worldOffsetX, 1);
+        int maxX = lastVisibleTileX(worldOffsetX, maxScreenCol - 2);
+        int minY = firstVisibleTileY(worldOffsetY, 1);
+        int maxY = lastVisibleTileY(worldOffsetY, maxScreenRow - 2);
+        for (int x = minX; x <= maxX; x++) {
+            for (int y = minY; y <= maxY; y++) {
                 if (boardDots[x][y]) {
                     drawImageAtTile(g2, dotSmall, x, y, worldOffsetX, worldOffsetY);
                 } else if (boardBigDots[x][y]) {
@@ -11805,6 +12359,71 @@ public final class Game implements Runnable {
         }
     }
 
+    public void drawSaveSlots(Graphics2D g2) {
+        drawCenteredImage(g2, blankMenuScreen);
+
+        int centerX = getWidth() / 2;
+        g2.setFont(new Font("Bahnschrift SemiBold", Font.BOLD, 30));
+        drawCenteredMenuText(g2, "SELECT SAVE SLOT", centerX, 92);
+
+        for (int i = 0; i < saveSlotCount; i++) {
+            int boxWidth = Math.min(470, getWidth() - 80);
+            int boxHeight = 112;
+            int boxX = centerX - boxWidth / 2;
+            int boxY = 145 + i * 132;
+            boolean selected = i == saveSlotChoice;
+            boolean existing = getSaveSlotFile(i).isFile();
+            PlayerStats slotStats = existing ? PlayerStats.load(getSaveSlotFile(i)) : new PlayerStats();
+
+            g2.setColor(selected ? new Color(0x303030) : Color.BLACK);
+            g2.fillRect(boxX, boxY, boxWidth, boxHeight);
+            g2.setColor(selected ? menuTextColor : Color.WHITE);
+            g2.drawRect(boxX, boxY, boxWidth, boxHeight);
+
+            g2.setFont(new Font("Bahnschrift SemiBold", Font.BOLD, 23));
+            String slotLabel = (selected ? "> " : "") + "SLOT " + (i + 1) + (selected ? " <" : "");
+            drawCenteredMenuText(g2, slotLabel, centerX, boxY + 37);
+
+            g2.setFont(new Font("Bahnschrift SemiBold", Font.BOLD, 16));
+            drawCenteredWhiteText(g2,
+                    existing
+                            ? "ACHIEVEMENTS: " + getAchievementCompletionPercent(slotStats) + "%"
+                            : "EMPTY SLOT   ACHIEVEMENTS: 0%",
+                    centerX, boxY + 72);
+        }
+
+        g2.setFont(new Font("Bahnschrift SemiBold", Font.BOLD, 15));
+        drawCenteredWhiteText(g2, "UP/DOWN SELECT   ENTER CONFIRM   ESC QUIT",
+                centerX, getHeight() - 34);
+    }
+
+    public File getSaveSlotFile(int slot) {
+        return new File(saveDirectory, "slot" + (slot + 1) + ".sav");
+    }
+
+    public void handleSaveSlotsKey(int keyCode) {
+        if (isMoveUpKey(keyCode) || isMoveLeftKey(keyCode)) {
+            saveSlotChoice = (saveSlotChoice + saveSlotCount - 1) % saveSlotCount;
+            soundManager.playMenuMove();
+        } else if (isMoveDownKey(keyCode) || isMoveRightKey(keyCode)) {
+            saveSlotChoice = (saveSlotChoice + 1) % saveSlotCount;
+            soundManager.playMenuMove();
+        } else if (keyCode == KeyEvent.VK_ENTER || keyCode == KeyEvent.VK_SPACE) {
+            soundManager.playMenuConfirm();
+            selectSaveSlot(saveSlotChoice);
+        } else if (keyCode == KeyEvent.VK_ESCAPE) {
+            quitGame();
+        }
+    }
+
+    public void selectSaveSlot(int slot) {
+        selectedSaveSlot = clampInt(slot, 0, saveSlotCount - 1);
+        playerStats = PlayerStats.load(getSaveSlotFile(selectedSaveSlot));
+        runStats = null;
+        menuChoice = 0;
+        screenState = STATE_MENU;
+    }
+
     public void drawOptions(Graphics2D g2) {
         drawCenteredImage(g2, blankMenuScreen);
         if (optionCategory == -1) {
@@ -11873,6 +12492,9 @@ public final class Game implements Runnable {
 
             g2.setFont(new Font("Bahnschrift SemiBold", Font.BOLD, 25));
             drawCenteredMenuText(g2, getOptionCategoryTitle(), centerX, 52);
+            if (optionCategory == 0) {
+                drawAchievementPointStatus(g2, centerX, 78);
+            }
             g2.setFont(new Font("Bahnschrift SemiBold", Font.BOLD, 18));
 
             for (int row = 0; row < visibleRows; row++) {
@@ -11896,6 +12518,9 @@ public final class Game implements Runnable {
 
         g2.setFont(new Font("Bahnschrift SemiBold", Font.BOLD, 25));
         drawCenteredMenuText(g2, getOptionCategoryTitle(), centerX, titleY);
+        if (optionCategory == 0) {
+            drawAchievementPointStatus(g2, centerX, titleY + 26);
+        }
         g2.setFont(new Font("Bahnschrift SemiBold", Font.BOLD, 18));
 
         for (int i = 0; i < options.length; i++) {
@@ -12124,6 +12749,34 @@ public final class Game implements Runnable {
     public void drawAlmanac(Graphics2D g2) {
         drawCenteredImage(g2, blankMenuScreen);
 
+        drawAlmanacTabs(g2);
+
+        if (almanacTab == ALMANAC_POWER_TAB) {
+            drawPowerAlmanac(g2);
+        } else if (almanacTab == ALMANAC_STATS_TAB) {
+            drawStatsAlmanac(g2);
+        } else if (almanacTab == ALMANAC_ACHIEVEMENT_TAB) {
+            drawAchievementAlmanacPlaceholder(g2);
+        } else {
+            drawGhostAlmanac(g2);
+        }
+    }
+
+    public void drawAlmanacTabs(Graphics2D g2) {
+        String[] labels = { "GHOSTS", "POWERS", "STATS", "ACHIEVEMENTS" };
+        int centerX = getWidth() / 2;
+        int spacing = 132;
+        int startX = centerX - spacing * (labels.length - 1) / 2;
+
+        g2.setFont(new Font("Bahnschrift SemiBold", Font.BOLD, 15));
+        for (int i = 0; i < labels.length; i++) {
+            String label = i == almanacTab ? ">" + labels[i] + "<" : labels[i];
+            drawCenteredMenuText(g2, label, startX + i * spacing, 30);
+        }
+    }
+
+    public void drawGhostAlmanac(Graphics2D g2) {
+
         if (almanacTitles.isEmpty()) {
             loadAlmanacEntries();
         }
@@ -12164,9 +12817,262 @@ public final class Game implements Runnable {
         g2.setFont(new Font("Bahnschrift SemiBold", Font.BOLD, 15));
         drawCenteredAlmanacText(g2,
                 (almanacIndex + 1) + "/" + almanacTitles.size()
-                        + "   LEFT/RIGHT PAGE   UP/DOWN SCROLL   ESC BACK",
+                        + "   LEFT/RIGHT PAGE   UP/DOWN SCROLL   Q/E TAB   ESC BACK",
                 getWidth() / 2,
                 getHeight() - 58);
+    }
+
+    public void drawPowerAlmanac(Graphics2D g2) {
+        almanacIndex = clampInt(almanacIndex, 0, powerUpTypeCount - 1);
+        BufferedImage sprite = powerUpSprites[almanacIndex];
+        int spriteSize = 112;
+        int spriteX = 78;
+        int spriteY = 138;
+
+        if (sprite != null) {
+            g2.drawImage(sprite, spriteX, spriteY, spriteSize, spriteSize, null);
+        }
+
+        g2.setFont(new Font("Bahnschrift SemiBold", Font.BOLD, 28));
+        drawAlmanacText(g2, getPowerUpName(almanacIndex), 230, 105);
+
+        String body = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. "
+                + "This power's lore and gameplay description can be filled in later.\n\n"
+                + "Collected in this slot: "
+                + getPowerCollectedStat(almanacIndex);
+        drawAlmanacBody(g2, body, 220, 130, getWidth() - 245, getWidth() - 270);
+
+        g2.setFont(new Font("Bahnschrift SemiBold", Font.BOLD, 15));
+        drawCenteredAlmanacText(g2,
+                (almanacIndex + 1) + "/" + powerUpTypeCount
+                        + "   LEFT/RIGHT PAGE   UP/DOWN SCROLL   Q/E TAB   ESC BACK",
+                getWidth() / 2,
+                getHeight() - 58);
+    }
+
+    public void drawStatsAlmanac(Graphics2D g2) {
+        g2.setFont(new Font("Bahnschrift SemiBold", Font.BOLD, 28));
+        drawAlmanacText(g2, "PLAYER STATS", 42, 82);
+
+        String body = buildStatsAlmanacText();
+        drawAlmanacBody(g2, body, 36, 100, getWidth() - 65, getWidth() - 90);
+
+        g2.setFont(new Font("Bahnschrift SemiBold", Font.BOLD, 15));
+        drawCenteredAlmanacText(g2,
+                "UP/DOWN SCROLL   Q/E TAB   ESC BACK",
+                getWidth() / 2,
+                getHeight() - 58);
+    }
+
+    public void drawAchievementPointStatus(Graphics2D g2, int centerX, int y) {
+        g2.setFont(new Font("Bahnschrift SemiBold", Font.BOLD, 14));
+        int achievementPoints = getDraftAchievementPoints();
+        String status = achievementPoints > 0 ? "ENABLED" : "DISABLED";
+        String text = "ACHIEVEMENT POINTS: " + achievementPoints + " (" + status + ")";
+        int textX = centerX - g2.getFontMetrics().stringWidth(text) / 2;
+        Color textColor = achievementPoints > 0 ? new Color(0x00ff7f) : new Color(0xff5050);
+        g2.setColor(Color.BLACK);
+        g2.drawString(text, textX - 1, y);
+        g2.drawString(text, textX + 1, y);
+        g2.setColor(textColor);
+        g2.drawString(text, textX, y);
+    }
+
+    public void drawAchievementAlmanacPlaceholder(Graphics2D g2) {
+        if (achievementDefinitions.isEmpty()) {
+            g2.setFont(new Font("Bahnschrift SemiBold", Font.BOLD, 28));
+            drawAlmanacText(g2, "ACHIEVEMENTS", 42, 105);
+            g2.setFont(new Font("Bahnschrift SemiBold", Font.BOLD, 18));
+            drawAlmanacText(g2, "No achievement definitions were loaded.", 42, 160);
+            return;
+        }
+
+        almanacIndex = clampInt(almanacIndex, 0, achievementDefinitions.size() - 1);
+        AchievementDefinition achievement = achievementDefinitions.get(almanacIndex);
+        boolean unlocked = playerStats.isAchievementUnlocked(achievement.key());
+        BufferedImage icon = getAchievementSprite(almanacIndex, unlocked);
+
+        int centerX = getWidth() / 2;
+        g2.setFont(new Font("Bahnschrift SemiBold", Font.BOLD, 28));
+        String title = achievement.name();
+        drawCenteredAlmanacText(g2, title, centerX, 95);
+
+        int iconSize = 112;
+        int iconY = 116;
+        if (icon != null) {
+            g2.drawImage(icon, centerX - iconSize / 2, iconY, iconSize, iconSize, null);
+        }
+
+        String description = unlocked ? achievement.description() : "???";
+        int bodyX = 52;
+        int bodyY = iconY + iconSize + 18;
+        int bodyWidth = getWidth() - 92;
+        int bodyHeight = Math.max(1, getHeight() - bodyY - 100);
+        int bodyTextWidth = getWidth() - 120;
+        int tipLineHeight = 29;
+        int descriptionLineHeight = almanacScrollLineHeight;
+
+        g2.setFont(new Font("Bahnschrift SemiBold", Font.BOLD, 20));
+        int tipsHeight = getWrappedAlmanacTextHeight(
+                g2, achievement.tips(), bodyTextWidth, tipLineHeight);
+        g2.setFont(new Font("Bahnschrift SemiBold", Font.BOLD, 16));
+        int descriptionHeight = getWrappedAlmanacTextHeight(
+                g2, description, bodyTextWidth, descriptionLineHeight);
+        int sectionSpacing = almanacScrollLineHeight / 2;
+        int contentHeight = tipsHeight + sectionSpacing + descriptionHeight;
+        int maxScroll = Math.max(0, contentHeight - bodyHeight + almanacScrollLineHeight);
+        almanacScrollOffset = clampInt(almanacScrollOffset, 0, maxScroll);
+
+        Graphics2D bodyGraphics = (Graphics2D) g2.create();
+        bodyGraphics.clipRect(bodyX, bodyY, bodyWidth, bodyHeight);
+        bodyGraphics.translate(0, -almanacScrollOffset);
+
+        bodyGraphics.setFont(new Font("Bahnschrift SemiBold", Font.BOLD, 20));
+        drawWrappedCenteredAlmanacText(bodyGraphics, achievement.tips(), centerX, bodyY + 15,
+                bodyTextWidth, tipLineHeight, new Color(0x00ff7f));
+
+        bodyGraphics.setFont(new Font("Bahnschrift SemiBold", Font.BOLD, 16));
+        drawWrappedAlmanacText(bodyGraphics, description, bodyX + 10,
+                bodyY + 15 + tipsHeight + sectionSpacing,
+                bodyTextWidth, descriptionLineHeight);
+        bodyGraphics.dispose();
+        drawAlmanacScrollBar(g2, contentHeight, bodyHeight, almanacScrollOffset,
+                getWidth() - 22, bodyY, bodyHeight);
+
+        g2.setFont(new Font("Bahnschrift SemiBold", Font.BOLD, 15));
+        drawCenteredAlmanacText(g2,
+                (almanacIndex + 1) + "/" + achievementDefinitions.size()
+                        + "   LEFT/RIGHT PAGE   UP/DOWN SCROLL   Q/E TAB   ESC BACK",
+                getWidth() / 2,
+                getHeight() - 58);
+    }
+
+    public BufferedImage getAchievementSprite(int index, boolean unlocked) {
+        if (index >= 0 && index < achievementDefinitions.size()
+                && !unlocked && achievementDefinitions.get(index).secret()) {
+            return achievementSecretSprite;
+        }
+
+        BufferedImage[] sprites = unlocked ? achievementSprites : achievementGrayscaleSprites;
+        if (index < 0 || index >= sprites.length) {
+            return null;
+        }
+        return sprites[index];
+    }
+
+    public int getAchievementCompletionPercent() {
+        return getAchievementCompletionPercent(playerStats);
+    }
+
+    public int getAchievementCompletionPercent(PlayerStats stats) {
+        if (achievementDefinitions.isEmpty()) {
+            return 0;
+        }
+
+        int unlocked = 0;
+        for (AchievementDefinition definition : achievementDefinitions) {
+            if (stats.isAchievementUnlocked(definition.key())) {
+                unlocked++;
+            }
+        }
+        return unlocked * 100 / achievementDefinitions.size();
+    }
+
+    public void drawAlmanacBody(Graphics2D g2, String text, int bodyX, int bodyY,
+            int bodyWidth, int bodyTextWidth) {
+        g2.setFont(new Font("Bahnschrift SemiBold", Font.BOLD, 16));
+        int bodyHeight = Math.max(1, getHeight() - bodyY - 100);
+        int contentHeight = getWrappedAlmanacTextHeight(g2, text, bodyTextWidth, almanacScrollLineHeight);
+        int maxScroll = Math.max(0, contentHeight - bodyHeight + almanacScrollLineHeight);
+        almanacScrollOffset = clampInt(almanacScrollOffset, 0, maxScroll);
+
+        Graphics2D bodyGraphics = (Graphics2D) g2.create();
+        bodyGraphics.clipRect(bodyX, bodyY, bodyWidth, bodyHeight);
+        bodyGraphics.translate(0, -almanacScrollOffset);
+        drawWrappedAlmanacText(bodyGraphics, text, bodyX + 10, bodyY + 15,
+                bodyTextWidth, almanacScrollLineHeight);
+        bodyGraphics.dispose();
+        drawAlmanacScrollBar(g2, contentHeight, bodyHeight, almanacScrollOffset,
+                getWidth() - 22, bodyY, bodyHeight);
+    }
+
+    public String buildStatsAlmanacText() {
+        StringBuilder text = new StringBuilder();
+        text.append("LIFETIME TOTALS\n");
+        text.append("Pellets consumed: ").append(playerStats.getPelletsConsumed()).append("\n");
+        text.append("Power pellets eaten: ").append(playerStats.getPowerPelletsConsumed()).append("\n");
+        text.append("Full rooms cleared: ").append(playerStats.getFullRoomsCleared()).append("\n");
+        text.append("Highest level: ").append(playerStats.getHighestLevel()).append("\n");
+        text.append("Total levels cleared: ").append(playerStats.getTotalLevelsCleared()).append("\n");
+        text.append("Tiles walked: ").append(playerStats.getTilesWalked()).append("\n");
+        text.append("Time spent: ").append(formatStatsTime(playerStats.getTimeSpentFrames())).append("\n\n");
+
+        text.append("POWER COLLECTED\n");
+        for (int powerType = 0; powerType < powerUpTypeCount; powerType++) {
+            String key = getPowerStatsKey(powerType);
+            long collected = powerType == powerPelletType
+                    ? playerStats.getPowerPelletsConsumed()
+                    : playerStats.getPowerCollected().getOrDefault(key, 0L);
+            text.append(getPowerUpName(powerType)).append(": ")
+                    .append(collected).append("\n");
+        }
+        text.append("PILL: ")
+                .append(playerStats.getPowerCollected().getOrDefault("pill", 0L)).append("\n\n");
+
+        text.append("GHOSTS KILLED BY\n");
+        appendStatsValues(text, playerStats.getGhostsKilledByCause(),
+                new String[] { "bomb", "electrocute", "crushed", "freeze", "burnt",
+                        "lasered", "eaten", "squished", "spike" });
+        text.append("\nDEATHS BY GHOST\n");
+        for (GhostDefinition definition : ghostDefinitions) {
+            text.append(definition.name()).append(": ")
+                    .append(playerStats.getDeathsByGhost()
+                            .getOrDefault(definition.key().toLowerCase(Locale.ROOT), 0L))
+                    .append("\n");
+        }
+
+        text.append("\nDEATHS BY CAUSE\n");
+        appendStatsValues(text, playerStats.getDeathsByCause(),
+                new String[] { "bomb", "electrocuted", "crushed", "freeze", "burnt",
+                        "lasered", "touched", "squished", "spike" });
+        return text.toString();
+    }
+
+    public long getPowerCollectedStat(int powerType) {
+        if (powerType == powerPelletType) {
+            return playerStats.getPowerPelletsConsumed();
+        }
+        return playerStats.getPowerCollected().getOrDefault(getPowerStatsKey(powerType), 0L);
+    }
+
+    public void appendStatsValues(StringBuilder text, Map<String, Long> values, String[] keys) {
+        for (String key : keys) {
+            text.append(formatStatsLabel(key)).append(": ")
+                    .append(values.getOrDefault(key, 0L)).append("\n");
+        }
+    }
+
+    public String formatStatsLabel(String key) {
+        String[] words = key.split("_");
+        StringBuilder label = new StringBuilder();
+        for (String word : words) {
+            if (word.isEmpty()) {
+                continue;
+            }
+            if (label.length() > 0) {
+                label.append(' ');
+            }
+            label.append(Character.toUpperCase(word.charAt(0))).append(word.substring(1));
+        }
+        return label.toString();
+    }
+
+    public String formatStatsTime(long frames) {
+        long totalSeconds = Math.max(0L, frames / framesPerSecond);
+        long hours = totalSeconds / 3600;
+        long minutes = (totalSeconds % 3600) / 60;
+        long seconds = totalSeconds % 60;
+        return String.format(Locale.ROOT, "%02d:%02d:%02d", hours, minutes, seconds);
     }
 
     public void drawAlmanacSprite(Graphics2D g2, BufferedImage sprite, int x, int y, int size) {
@@ -12258,33 +13164,94 @@ public final class Game implements Runnable {
     }
 
     public void drawWrappedAlmanacText(Graphics2D g2, String text, int x, int y, int maxWidth, int lineHeight) {
+        drawWrappedAlmanacText(g2, text, x, y, maxWidth, lineHeight, null);
+    }
+
+    public void drawWrappedAlmanacText(Graphics2D g2, String text, int x, int y,
+            int maxWidth, int lineHeight, Color textColor) {
         FontMetrics metrics = g2.getFontMetrics();
         int currentY = y;
         String[] paragraphs = text.split("\\R\\s*\\R");
 
         for (String paragraph : paragraphs) {
-            String[] words = paragraph.replace('\n', ' ').trim().split("\\s+");
-            String line = "";
+            String[] lines = paragraph.split("\\R", -1);
+            for (String rawLine : lines) {
+                String[] words = rawLine.trim().isEmpty() ? new String[0] : rawLine.trim().split("\\s+");
+                String line = "";
 
-            for (String word : words) {
-                String candidate = line.isEmpty() ? word : line + " " + word;
+                for (String word : words) {
+                    String candidate = line.isEmpty() ? word : line + " " + word;
 
-                if (metrics.stringWidth(candidate) > maxWidth && !line.isEmpty()) {
-                    drawAlmanacText(g2, line, x, currentY);
-                    currentY += lineHeight;
-                    line = word;
-                } else {
-                    line = candidate;
+                    if (metrics.stringWidth(candidate) > maxWidth && !line.isEmpty()) {
+                        drawAlmanacLine(g2, line, x, currentY, textColor);
+                        currentY += lineHeight;
+                        line = word;
+                    } else {
+                        line = candidate;
+                    }
                 }
-            }
 
-            if (!line.isEmpty()) {
-                drawAlmanacText(g2, line, x, currentY);
-                currentY += lineHeight;
+                if (!line.isEmpty()) {
+                    drawAlmanacLine(g2, line, x, currentY, textColor);
+                    currentY += lineHeight;
+                } else {
+                    currentY += lineHeight;
+                }
             }
 
             currentY += lineHeight / 2;
         }
+    }
+
+    public void drawWrappedCenteredAlmanacText(Graphics2D g2, String text, int centerX, int y,
+            int maxWidth, int lineHeight, Color textColor) {
+        FontMetrics metrics = g2.getFontMetrics();
+        int currentY = y;
+        String[] paragraphs = text.split("\\R\\s*\\R");
+
+        for (String paragraph : paragraphs) {
+            String[] lines = paragraph.split("\\R", -1);
+            for (String rawLine : lines) {
+                String[] words = rawLine.trim().isEmpty() ? new String[0] : rawLine.trim().split("\\s+");
+                String line = "";
+
+                for (String word : words) {
+                    String candidate = line.isEmpty() ? word : line + " " + word;
+                    if (metrics.stringWidth(candidate) > maxWidth && !line.isEmpty()) {
+                        drawCenteredAlmanacLine(g2, line, centerX, currentY, textColor);
+                        currentY += lineHeight;
+                        line = word;
+                    } else {
+                        line = candidate;
+                    }
+                }
+
+                if (!line.isEmpty()) {
+                    drawCenteredAlmanacLine(g2, line, centerX, currentY, textColor);
+                    currentY += lineHeight;
+                } else {
+                    currentY += lineHeight;
+                }
+            }
+
+            currentY += lineHeight / 2;
+        }
+    }
+
+    public void drawCenteredAlmanacLine(Graphics2D g2, String text, int centerX, int y,
+            Color textColor) {
+        int textWidth = g2.getFontMetrics().stringWidth(text);
+        drawAlmanacLine(g2, text, centerX - textWidth / 2, y, textColor);
+    }
+
+    public void drawAlmanacLine(Graphics2D g2, String text, int x, int y, Color textColor) {
+        if (textColor == null) {
+            drawAlmanacText(g2, text, x, y);
+            return;
+        }
+
+        g2.setColor(textColor);
+        g2.drawString(text, x, y);
     }
 
     public int getWrappedAlmanacTextHeight(Graphics2D g2, String text, int maxWidth, int lineHeight) {
@@ -12293,25 +13260,26 @@ public final class Game implements Runnable {
         String[] paragraphs = text.split("\\R\\s*\\R");
 
         for (String paragraph : paragraphs) {
-            String[] words = paragraph.replace('\n', ' ').trim().split("\\s+");
-            String line = "";
+            String[] lines = paragraph.split("\\R", -1);
+            for (String rawLine : lines) {
+                String[] words = rawLine.trim().isEmpty() ? new String[0] : rawLine.trim().split("\\s+");
+                String line = "";
 
-            for (String word : words) {
-                if (word.isEmpty()) {
-                    continue;
+                for (String word : words) {
+                    String candidate = line.isEmpty() ? word : line + " " + word;
+                    if (metrics.stringWidth(candidate) > maxWidth && !line.isEmpty()) {
+                        lineCount++;
+                        line = word;
+                    } else {
+                        line = candidate;
+                    }
                 }
 
-                String candidate = line.isEmpty() ? word : line + " " + word;
-                if (metrics.stringWidth(candidate) > maxWidth && !line.isEmpty()) {
+                if (!line.isEmpty()) {
                     lineCount++;
-                    line = word;
                 } else {
-                    line = candidate;
+                    lineCount++;
                 }
-            }
-
-            if (!line.isEmpty()) {
-                lineCount++;
             }
         }
 
@@ -12411,6 +13379,11 @@ public final class Game implements Runnable {
 
     public void startNewRun() {
         resetGame();
+        runStats = new PlayerStats();
+        runAchievementPoints = getCurrentAchievementPoints();
+        runAchievementsEnabled = runAchievementPoints > 0;
+        runStats.recordLevelReached(level);
+        runDeathRecorded = false;
         screenState = STATE_GAME;
         soundManager.startMusic();
     }
@@ -12457,7 +13430,7 @@ public final class Game implements Runnable {
         draftPelletSeconds = 5;
         draftPowerSeconds = 5;
         draftSpecialGhostChancePercent = 10;
-        draftSpecialGhostPowerDropChancePercent = 20;
+        draftSpecialGhostPowerDropChancePercent = defaultAchievementPowerDropChancePercent;
         draftClonyMaximumCount = minClonyMaximumCount;
         draftDisableTransitionAnimation = false;
         draftAllowResize = false;
@@ -12607,6 +13580,7 @@ public final class Game implements Runnable {
             } else if (menuChoice == 1) {
                 openOptions();
             } else if (menuChoice == 2) {
+                almanacTab = ALMANAC_GHOST_TAB;
                 almanacIndex = 0;
                 almanacScrollOffset = 0;
                 screenState = STATE_ALMANAC;
@@ -13058,6 +14032,9 @@ public final class Game implements Runnable {
         if (powerUpType == powerBonusType) {
             return "BONUS";
         }
+        if (powerUpType == powerPelletType) {
+            return "POWER PELLET";
+        }
         if (powerUpType == powerBombType) {
             return "BOMB";
         }
@@ -13093,6 +14070,28 @@ public final class Game implements Runnable {
         }
 
         return "POWER";
+    }
+
+    public String getPowerStatsKey(int powerUpType) {
+        return switch (powerUpType) {
+            case powerMagnetType -> "magnet";
+            case powerSpikeType -> "spike";
+            case powerSpeedType -> "speed";
+            case powerBonusType -> "bonus";
+            case powerPelletType -> "power_pellet";
+            case powerBombType -> "bomb";
+            case powerLaserType -> "laser";
+            case powerCloneType -> "clone";
+            case powerFireType -> "fire";
+            case powerIceType -> "ice";
+            case powerMetalType -> "metal";
+            case powerWaterType -> "water";
+            case powerElectricType -> "electric";
+            case powerStoneType -> "stone";
+            case powerStealthType -> "stealth";
+            case powerSerumType -> "serum";
+            default -> "power";
+        };
     }
 
     public Color getPowerUpHudColor(int powerUpType) {
@@ -13289,9 +14288,20 @@ public final class Game implements Runnable {
             return;
         }
 
+        int outlineColor = 0xff000000 | (color.getRGB() & 0x00ffffff);
+        Map<Integer, BufferedImage> outlinesForSprite = pixelOutlineCache.computeIfAbsent(
+                sprite, ignored -> new HashMap<>());
+        BufferedImage outline = outlinesForSprite.get(outlineColor);
+        if (outline == null) {
+            outline = createPixelOutline(sprite, outlineColor);
+            outlinesForSprite.put(outlineColor, outline);
+        }
+        g2.drawImage(outline, screenX, screenY, tileSize, tileSize, null);
+    }
+
+    private BufferedImage createPixelOutline(BufferedImage sprite, int outlineColor) {
         BufferedImage outline = new BufferedImage(
                 sprite.getWidth(), sprite.getHeight(), BufferedImage.TYPE_INT_ARGB);
-        int outlineColor = 0xff000000 | (color.getRGB() & 0x00ffffff);
         for (int y = 0; y < sprite.getHeight(); y++) {
             for (int x = 0; x < sprite.getWidth(); x++) {
                 if ((sprite.getRGB(x, y) >>> 24) == 0) {
@@ -13311,7 +14321,7 @@ public final class Game implements Runnable {
                 }
             }
         }
-        g2.drawImage(outline, screenX, screenY, tileSize, tileSize, null);
+        return outline;
     }
 
     public BufferedImage getGhostSprite(Ghost ghost) {
@@ -13442,6 +14452,11 @@ public final class Game implements Runnable {
 
     public void handleKeyPressed(int keyCode) {
 
+        if (screenState == STATE_SAVE_SLOTS) {
+            handleSaveSlotsKey(keyCode);
+            return;
+        }
+
         if (screenState == STATE_MENU) {
             handleMenuKey(keyCode);
             return;
@@ -13480,8 +14495,22 @@ public final class Game implements Runnable {
             return;
         }
 
+        if (keyCode == KeyEvent.VK_ESCAPE && deathAnimationDone) {
+            runStats = null;
+            resetGame();
+            screenState = STATE_MENU;
+            soundManager.fadeOutMusicAndStop();
+            return;
+        }
+
         if (keyCode == KeyEvent.VK_ESCAPE && !playerDead && !deathAnimationDone) {
             handleGameEscape();
+            return;
+        }
+
+        if (keyCode == KeyEvent.VK_P && paused && quitConfirmVisible) {
+            quitConfirmVisible = false;
+            soundManager.playMenuConfirm();
             return;
         }
 
@@ -13618,6 +14647,7 @@ public final class Game implements Runnable {
             return;
         }
 
+        runStats = null;
         resetGame();
         screenState = STATE_MENU;
         soundManager.fadeOutMusicAndStop();
@@ -13646,16 +14676,47 @@ public final class Game implements Runnable {
             return;
         }
 
-        if (almanacTitles.isEmpty()) {
+        if (keyCode == KeyEvent.VK_Q || keyCode == KeyEvent.VK_E) {
+            if (keyCode == KeyEvent.VK_Q) {
+                almanacTab = (almanacTab + ALMANAC_TAB_COUNT - 1) % ALMANAC_TAB_COUNT;
+            } else {
+                almanacTab = (almanacTab + 1) % ALMANAC_TAB_COUNT;
+            }
+            almanacIndex = 0;
+            almanacScrollOffset = 0;
+            soundManager.playMenuMove();
             return;
         }
 
-        if (isMoveLeftKey(keyCode)) {
+        if (almanacTab == ALMANAC_GHOST_TAB && almanacTitles.isEmpty()) {
+            loadAlmanacEntries();
+        }
+
+        if (almanacTab == ALMANAC_GHOST_TAB && isMoveLeftKey(keyCode)) {
             almanacIndex = (almanacIndex + almanacTitles.size() - 1) % almanacTitles.size();
             almanacScrollOffset = 0;
             soundManager.playMenuMove();
-        } else if (isMoveRightKey(keyCode)) {
+        } else if (almanacTab == ALMANAC_GHOST_TAB && isMoveRightKey(keyCode)) {
             almanacIndex = (almanacIndex + 1) % almanacTitles.size();
+            almanacScrollOffset = 0;
+            soundManager.playMenuMove();
+        } else if (almanacTab == ALMANAC_POWER_TAB && isMoveLeftKey(keyCode)) {
+            almanacIndex = (almanacIndex + powerUpTypeCount - 1) % powerUpTypeCount;
+            almanacScrollOffset = 0;
+            soundManager.playMenuMove();
+        } else if (almanacTab == ALMANAC_POWER_TAB && isMoveRightKey(keyCode)) {
+            almanacIndex = (almanacIndex + 1) % powerUpTypeCount;
+            almanacScrollOffset = 0;
+            soundManager.playMenuMove();
+        } else if (almanacTab == ALMANAC_ACHIEVEMENT_TAB && isMoveLeftKey(keyCode)
+                && !achievementDefinitions.isEmpty()) {
+            almanacIndex = (almanacIndex + achievementDefinitions.size() - 1)
+                    % achievementDefinitions.size();
+            almanacScrollOffset = 0;
+            soundManager.playMenuMove();
+        } else if (almanacTab == ALMANAC_ACHIEVEMENT_TAB && isMoveRightKey(keyCode)
+                && !achievementDefinitions.isEmpty()) {
+            almanacIndex = (almanacIndex + 1) % achievementDefinitions.size();
             almanacScrollOffset = 0;
             soundManager.playMenuMove();
         } else if (isMoveUpKey(keyCode)) {
